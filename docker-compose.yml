@@ -1,0 +1,9 @@
+# Docker Compose — services will be defined in M0 implementation.
+#
+# Planned:
+#   - postgres (pgvector/pgvector:pg16) for checkpoints + later embeddings
+#   - neo4j community for later graph memory / codebase KG
+#
+# This file is intentionally empty of services until M0 coding is approved.
+
+services: {}

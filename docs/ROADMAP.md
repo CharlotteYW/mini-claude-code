@@ -1,0 +1,52 @@
+# Milestone Roadmap
+
+Learning path for mini Claude Code (LangGraph). One milestone at a time; approve Plan before coding; fill Results (commands, why, graphs) before Done.
+
+Target: understand LangGraph + LangChain ecosystem pieces and be able to design/build agents independently.
+
+## Tier 0 — Bootstrap / infra
+
+| ID | Title | Goal |
+|---|---|---|
+| [M0](milestones/M0-environment.md) | Environment & provider skeleton | Docker Compose (Postgres+pgvector, Neo4j), `uv` backend skeleton, LLM factory stubs for ollama / anthropic / openai / openrouter (default `ollama`+`gemma4:31b`), idempotent `setup.sh` / smoke `run.sh`. |
+
+## Tier 1 — Core loop & tools
+
+| ID | Title | Goal |
+|---|---|---|
+| M1 | LLM provider abstraction & tool-calling parity | Real chat models for all four providers; same tool on each; document protocol families and Gemma thinking-channel pitfalls. |
+| M2 | Minimal ReAct StateGraph | Messages loop with stub tools; why StateGraph + conditional edges beat a manual `while`. |
+| M3 | Filesystem tools | read / write / diff-edit / glob / grep; path jail (**simplification:** process-local FS). |
+| M4 | Shell & git tools | Shell + git wrappers; still host subprocess (**temporary insecurity** until sandbox). |
+| M5 | Postgres checkpointer & resume | Durable `thread_id` resume; MemorySaver vs Postgres. |
+| M6 | Streaming CLI | Token/tool-event streaming; frontend still deferred. |
+
+## Tier 2 — Context, memory, safety
+
+| ID | Title | Goal |
+|---|---|---|
+| M7 | Context compaction | Auto-summarize past a token threshold. |
+| M8 | Project + long-term memory | `AGENT.md`-style inject; Postgres and/or Neo4j facts; when files vs graph vs vectors win. |
+| M9 | Permissions & Plan Mode | Per-tool auto/ask/deny + read-only Plan Mode. |
+| M10 | Human-in-the-loop (`interrupt`) | LangGraph interrupt for ask-mode tools; policy vs runtime pause. |
+| M11 | Docker sandbox | Shell/code in ephemeral containers; host subprocess deny-by-default. |
+
+## Tier 3 — Extensibility
+
+| ID | Title | Goal |
+|---|---|---|
+| M12 | Sub-agents | YAML/Markdown-defined subagents; isolated context; works on all four LLM providers; same model for parent/child first. |
+| M13 | Skills (progressive disclosure) | Name+description always in context; full body/scripts on match. |
+| M14 | MCP client | Discover/merge MCP tools; dissect adapter → LangGraph tools. |
+| M15 | Hooks | PreToolUse / PostToolUse / Stop-style lifecycle hooks. |
+| M16 | Plugins & slash commands | Declarative plugin packs + `/command` templates. |
+
+## Tier 4 — Optional
+
+| ID | Title | Goal |
+|---|---|---|
+| M17 | Eval harness & cost/retry | Tiny evals; retries/backoff; token accounting; optional Anthropic prompt caching. |
+
+## Status legend
+
+Milestone files use: `Planned` / `In Progress` / `Done`. Only M0 has a full Plan doc so far; later files are created when we enter that milestone.

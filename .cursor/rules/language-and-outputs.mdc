@@ -1,0 +1,11 @@
+---
+description: Language and output conventions for this learning repo
+alwaysApply: true
+---
+
+# Language and outputs
+
+- Chat with the user/mentor: Chinese, English, or mixed — fine.
+- **All repo artifacts must be English:** README, milestone docs, architecture, LEARNING_LOG, code, comments, commit messages, file/directory names, CLI help text.
+- Do not add Chinese prose into committed docs or source files.
+- Prefer precise agent/LLM vocabulary (checkpointer, interrupt, tool_calls, progressive disclosure) over vague marketing language.

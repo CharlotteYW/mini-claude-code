@@ -1,0 +1,44 @@
+---
+description: Milestone docs, Results template, graphs, and Done criteria
+alwaysApply: true
+---
+
+# Milestones and documentation
+
+## Workflow
+
+1. Write Plan sections in `docs/milestones/M<N>-<slug>.md` first.
+2. Wait for explicit user **approved** before coding that milestone.
+3. After implementation: fill Results, append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
+4. Do not mark Done until the close-out checklist passes.
+
+## Required sections in every milestone file
+
+- Status, Goal, Why this milestone, Concepts introduced
+- Design decisions & alternatives considered
+- **Architecture graph (planned)** — Mermaid; freeze after approval
+- Tasks, Demo / acceptance criteria
+- **Results** with all of: What we did; Commands & how to reproduce; **As-built graph** (Mermaid) + delta vs planned; Why this approach; Deviations; Pitfalls & aha moments; Open questions / next dig
+
+Full template copy lives in `docs/milestones/M0-environment.md` (reuse structure for later milestones).
+
+## Graphs (mandatory)
+
+- Plan graph before approval; Results as-built graph after coding (or note "unchanged").
+- From M2+: include LangGraph node/edge topology (Mermaid; optional `draw_mermaid()` paste).
+- Chat diagrams are ephemeral — copy into the milestone file.
+- `docs/architecture.md` = current state only; milestone files = history.
+
+## Close-out checklist
+
+- Plan approved before coding
+- Implementation landed
+- Results complete (commands + why + graphs)
+- LEARNING_LOG.md entry added
+- architecture.md updated if needed
+- Changes committed (English message) and pushed to GitHub
+- Stop and wait for next approval
+
+## Simplifications
+
+Label teaching shortcuts as **simplification** and note what production would still need.
