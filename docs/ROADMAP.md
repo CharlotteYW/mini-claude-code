@@ -14,7 +14,7 @@ Target: understand LangGraph + LangChain ecosystem pieces and be able to design/
 
 | ID | Title | Goal |
 |---|---|---|
-| M1 | LLM provider abstraction & tool-calling parity | Real chat models for all four providers; same tool on each; document protocol families and Gemma thinking-channel pitfalls. |
+| [M1](milestones/M1-tool-calling-parity.md) | LLM provider abstraction & tool-calling parity | **Planned.** Same tool across all four providers; document protocol families and Gemma thinking-channel pitfalls. |
 | M2 | Minimal ReAct StateGraph | Messages loop with stub tools; why StateGraph + conditional edges beat a manual `while`. |
 | M3 | Filesystem tools | read / write / diff-edit / glob / grep; path jail (**simplification:** process-local FS). |
 | M4 | Shell & git tools | Shell + git wrappers; still host subprocess (**temporary insecurity** until sandbox). |
