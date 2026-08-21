@@ -35,4 +35,4 @@ cd backend && uv run pytest -m integration   # needs services/keys as applicable
 
 ## Retroactive debt (M0 / M1)
 
-M0 and M1 closed before this rule. Their milestone docs now include Testing plans; implement those tests **before starting M2 implementation** (or as the first tasks inside M2 Plan if bundled — prefer a short testing catch-up commit first).
+**Cleared:** pytest suites under `backend/tests/` cover M0 factory/settings + Compose reachability and M1 tool/parity helpers + live Ollama probe. Cloud provider integration tests skip without API keys.

@@ -8,7 +8,7 @@ Target: understand LangGraph + LangChain ecosystem pieces and be able to design/
 
 Every milestone Plan must include **unit + integration** test cases; Done requires unit tests green and integration tests present (skip if no creds/services). See [notes/testing.md](notes/testing.md).
 
-**Catch-up:** implement M0 + M1 testing debt **before M2 implementation**.
+**Catch-up:** M0 + M1 testing debt **cleared** (`backend/tests/`).
 
 ## Tier 0 — Bootstrap / infra
 

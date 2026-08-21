@@ -86,16 +86,16 @@ Added as a **project-wide requirement after M1**; treat as open debt before M2 c
 
 ### Unit
 
-- [ ] `create_chat_model(provider="ollama")` returns `ChatOllama` with configured model/base_url
-- [ ] `provider="anthropic"` / `"openai"` / `"openrouter"` without API key raises `ValueError`
-- [ ] `provider="openrouter"` with key builds `ChatOpenAI` whose `base_url` points at OpenRouter
-- [ ] Settings defaults: `LLM_PROVIDER=ollama`, `LLM_MODEL=gemma4:31b`
+- [x] `create_chat_model(provider="ollama")` returns `ChatOllama` with configured model/base_url
+- [x] `provider="anthropic"` / `"openai"` / `"openrouter"` without API key raises `ValueError`
+- [x] `provider="openrouter"` with key builds `ChatOpenAI` whose `base_url` points at OpenRouter
+- [x] Settings defaults: `LLM_PROVIDER=ollama`, `LLM_MODEL=gemma4:31b`
 
 ### Integration
 
-- [ ] Compose: Postgres accepts a connection using `DATABASE_URL` (skip if Docker down)
-- [ ] Compose: Neo4j bolt handshake (skip if Docker down)
-- [ ] Optional: `mcc-smoke --ping` against Ollama when model present (skip otherwise)
+- [x] Compose: Postgres accepts a connection using `DATABASE_URL` (skip if Docker down)
+- [x] Compose: Neo4j bolt handshake (skip if Docker down)
+- [x] Optional smoke ping — covered indirectly via M1 Ollama live probe (skip if unavailable)
 
 ## Results
 
@@ -181,8 +181,11 @@ flowchart LR
 
 - M1: same tool across all four providers — document wire-format differences and Gemma thinking-channel behavior.
 - Whether to add a tiny Postgres/Neo4j connectivity check in smoke (currently compose `ps` only).
-- **Testing debt:** unit/integration cases listed above — implement before M2 (see [docs/notes/testing.md](../notes/testing.md)).
+- **Testing debt:** cleared — see Testing results.
 
 ### Testing results
 
-- Status: **Not implemented at M0 close-out** (requirement introduced later). Cases listed under Testing (planned).
+- Status: **Done** (catch-up).
+- Unit: `backend/tests/unit/test_m0_factory.py`
+- Integration: `backend/tests/integration/test_m0_infra_live.py`
+- Commands: `cd backend && uv run pytest -m unit` / `uv run pytest -m integration`

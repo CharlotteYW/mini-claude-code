@@ -18,6 +18,13 @@ dependencies = [
 mcc-smoke = "mini_claude_code.smoke:main"
 mcc-tools-parity = "mini_claude_code.parity:main"
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "psycopg[binary]>=3.0",
+    "neo4j>=5.0",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -27,3 +34,13 @@ packages = ["src/mini_claude_code"]
 
 [tool.uv]
 package = true
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "unit: fast tests with no network or Docker",
+    "integration: needs Docker, Ollama, and/or API keys (skip if unavailable)",
+]
+addopts = "-q"

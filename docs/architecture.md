@@ -25,7 +25,7 @@ Agent code uses LangChain messages + `AIMessage.tool_calls`. Provider packages a
 
 ## Testing (project-wide)
 
-Every milestone ships unit + integration tests. Strategy: [notes/testing.md](notes/testing.md). M0/M1 test debt to clear before M2 coding.
+Every milestone ships unit + integration tests. Strategy: [notes/testing.md](notes/testing.md). M0/M1 catch-up tests are in `backend/tests/`.
 
 ## Layered runtime (Option B)
 

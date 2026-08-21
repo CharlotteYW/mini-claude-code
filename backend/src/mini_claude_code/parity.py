@@ -119,15 +119,19 @@ def probe_provider(
     *,
     model: str | None = None,
     round_trip: bool = True,
+    llm: Any | None = None,
 ) -> ProbeResult:
+    """Probe one provider. Pass `llm` to inject a fake model (unit tests)."""
     skip = _provider_ready(settings, provider)
     model_name = model or _default_model_for(provider, settings)
-    if skip:
+    if skip and llm is None:
         return ProbeResult(provider, model_name, "SKIP", skip)
 
     try:
-        llm = create_chat_model(settings, provider=provider, model=model_name)
-        bound = llm.bind_tools(demo_tools())
+        chat = llm or create_chat_model(
+            settings, provider=provider, model=model_name
+        )
+        bound = chat.bind_tools(demo_tools())
         first = bound.invoke([HumanMessage(content=Prompt)])
         if not isinstance(first, AIMessage):
             return ProbeResult(

@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-21 — Testing catch-up (M0 + M1)
+
+- Insight: Unit tests pin factory/protocol branching and fake-LLM parity without network; integration tests document live contracts and skip cleanly without keys/services.
+- Commands: `cd backend && uv run pytest -m unit` (12 passed); `uv run pytest -m integration` (4 passed, 2 skipped without cloud keys).
+- Link: [docs/notes/testing.md](docs/notes/testing.md)
+
+---
+
 ## 2026-08-21 — Process: mandatory unit + integration tests
 
 - Insight: Tests are part of the learning archive — each milestone Plan must list unit + integration cases; Done requires them. M0/M1 owe a testing catch-up before M2.

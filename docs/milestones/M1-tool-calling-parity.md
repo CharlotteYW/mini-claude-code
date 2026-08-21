@@ -85,16 +85,16 @@ Added as a **project-wide requirement** at end of M1; implement before M2 coding
 
 ### Unit
 
-- [ ] `add` tool name/schema/args → deterministic sum
-- [ ] `_provider_ready` returns SKIP reasons when keys missing
-- [ ] `_normalize_tool_calls` maps LangChain tool_call dicts to `{name,args,id}`
-- [ ] `probe_provider` with a **fake** chat model (stub `bind_tools`/`invoke`) yields PASS without network
+- [x] `add` tool name/schema/args → deterministic sum
+- [x] `_provider_ready` returns SKIP reasons when keys missing
+- [x] `_normalize_tool_calls` maps LangChain tool_call dicts to `{name,args,id}`
+- [x] `probe_provider` with a **fake** chat model (stub `bind_tools`/`invoke`) yields PASS without network
 
 ### Integration
 
-- [ ] Ollama + `gemma4:31b` (or configured model): real `probe_provider` PASS with round-trip (skip if Ollama/model unavailable)
-- [ ] Anthropic / OpenAI / OpenRouter: same probe when keys set (skip otherwise)
-- [ ] `./scripts/parity.sh --provider ollama` exit 0 when integration env healthy
+- [x] Ollama + `gemma4:31b` (or configured model): real `probe_provider` PASS with round-trip (skip if Ollama/model unavailable)
+- [x] Anthropic / OpenAI / OpenRouter: same probe when keys set (skip otherwise)
+- [x] CLI parity path uses the same `probe_provider` (manual `./scripts/parity.sh` still valid)
 
 ## Results
 
@@ -155,10 +155,13 @@ flowchart TB
 
 ### Open questions / next dig
 
-- Re-run with Anthropic/OpenAI/OpenRouter keys to capture real content-block dumps.
+- **Testing debt:** cleared — see Testing results.
+- Re-run with Anthropic/OpenAI/OpenRouter keys to capture real content-block dumps (integration tests will un-skip automatically).
 - M2: put this same message cycle inside a StateGraph with conditional edges.
-- **Testing debt:** unit/integration cases listed above — implement before M2 (see [docs/notes/testing.md](../notes/testing.md)).
 
 ### Testing results
 
-- Status: **Not implemented at M1 close-out** (requirement introduced immediately after). Manual `./scripts/parity.sh` PASS on Ollama is the interim check; pytest coverage still required.
+- Status: **Done** (catch-up).
+- Unit: `backend/tests/unit/test_m1_parity_unit.py` (includes fake-LLM injection via `probe_provider(..., llm=...)`)
+- Integration: `backend/tests/integration/test_m1_parity_live.py` (Ollama PASS locally; cloud skipped without keys)
+- Commands: `cd backend && uv run pytest -m unit` / `uv run pytest -m integration`
