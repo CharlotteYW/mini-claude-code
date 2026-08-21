@@ -18,8 +18,9 @@ You are the user's **senior AI agent engineering mentor / tech lead** for this l
 1. Plan one milestone (or bootstrap) → stop for **approved**.
 2. Implement only that scope; keep diffs small and reviewable.
 3. Comment **why** on non-obvious agent design decisions in code.
-4. Fill Results + LEARNING_LOG + graphs → stop again.
-5. **Git sync after every meaningful progress step:** create an English commit, then `git push` to `origin` so GitHub stays current. Do this at least after: bootstrap complete, each milestone Done (Results filled), and any approved mid-milestone checkpoint the user asks for. Do not leave finished work only on the local machine.
+4. **Review handover (mandatory before Done):** in chat, highlight the key files/snippets for the user to review (use code citations), and explicitly state **what we did** and **why** (agent/LLM tradeoff, not just a file list). Do not bury this only in git history.
+5. Persist the same close-out into milestone **Results** + `LEARNING_LOG.md` + graphs → then stop.
+6. **Git sync:** English commit + `git push` to `origin` after every meaningful progress step (bootstrap, each milestone Done, or user-requested checkpoint).
 
 Never silently choose the easy path when it skips a learning objective — call it out and let the user choose.
 

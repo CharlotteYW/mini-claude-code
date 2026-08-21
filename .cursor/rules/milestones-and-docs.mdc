@@ -9,8 +9,10 @@ alwaysApply: true
 
 1. Write Plan sections in `docs/milestones/M<N>-<slug>.md` first.
 2. Wait for explicit user **approved** before coding that milestone.
-3. After implementation: fill Results, append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
-4. Do not mark Done until the close-out checklist passes.
+3. After implementation:
+   - In **chat**: highlight review-worthy code (citations), explain what changed and why.
+   - In **docs**: fill Results, append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
+4. Commit + push, then do not mark Done until the close-out checklist passes.
 
 ## Required sections in every milestone file
 
@@ -33,7 +35,8 @@ Full template copy lives in `docs/milestones/M0-environment.md` (reuse structure
 
 - Plan approved before coding
 - Implementation landed
-- Results complete (commands + why + graphs)
+- Chat review handover: highlighted code + what/why explained
+- Results complete in the milestone file (commands + why + graphs)
 - LEARNING_LOG.md entry added
 - architecture.md updated if needed
 - Changes committed (English message) and pushed to GitHub

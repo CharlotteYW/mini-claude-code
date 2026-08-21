@@ -65,9 +65,10 @@ Until M0 implementation is approved and landed, `setup.sh` / `run.sh` are stubs.
 
 1. Plan a milestone → wait for explicit **approved**
 2. Implement one milestone (small, reviewable)
-3. Fill milestone **Results** (commands, why, as-built graph) + `LEARNING_LOG.md`
-4. **Commit and push** so GitHub stays in sync
-5. Stop and wait for the next approval
+3. In chat: **highlight key code** for review and explain **what / why**
+4. Fill milestone **Results** (commands, why, as-built graph) + `LEARNING_LOG.md`
+5. **Commit and push** so GitHub stays in sync
+6. Stop and wait for the next approval
 
 Details live in `.cursor/rules/`.
 
