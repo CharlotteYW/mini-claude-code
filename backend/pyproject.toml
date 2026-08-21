@@ -1,0 +1,28 @@
+[project]
+name = "mini-claude-code"
+version = "0.1.0"
+description = "Learning project: mini Claude Code agent with LangGraph"
+requires-python = ">=3.11"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "pydantic-settings>=2.0.0",
+    "langchain-core>=0.3.0",
+    "langchain-ollama>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-openai>=0.3.0",
+    # Declared early so later milestones can import without reshuffling deps.
+    "langgraph>=0.4.0",
+]
+
+[project.scripts]
+mcc-smoke = "mini_claude_code.smoke:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mini_claude_code"]
+
+[tool.uv]
+package = true

@@ -1,9 +1,51 @@
-# Docker Compose — services will be defined in M0 implementation.
-#
-# Planned:
-#   - postgres (pgvector/pgvector:pg16) for checkpoints + later embeddings
-#   - neo4j community for later graph memory / codebase KG
-#
-# This file is intentionally empty of services until M0 coding is approved.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mcc-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mcc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mcc}
+      POSTGRES_DB: ${POSTGRES_DB:-mini_claude_code}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-mcc} -d ${POSTGRES_DB:-mini_claude_code}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
-services: {}
+  neo4j:
+    image: neo4j:5-community
+    container_name: mcc-neo4j
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-mini-claude-code}
+      # Browser UI on :7474 helps inspect graph memory later (M8+).
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:7474 || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
+
+volumes:
+  postgres_data:
+  neo4j_data:

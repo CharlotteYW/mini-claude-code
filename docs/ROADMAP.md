@@ -8,7 +8,7 @@ Target: understand LangGraph + LangChain ecosystem pieces and be able to design/
 
 | ID | Title | Goal |
 |---|---|---|
-| [M0](milestones/M0-environment.md) | Environment & provider skeleton | Docker Compose (Postgres+pgvector, Neo4j), `uv` backend skeleton, LLM factory stubs for ollama / anthropic / openai / openrouter (default `ollama`+`gemma4:31b`), idempotent `setup.sh` / smoke `run.sh`. |
+| [M0](milestones/M0-environment.md) | Environment & provider skeleton | **Done.** Docker Compose (Postgres+pgvector, Neo4j), `uv` backend, LLM factory for ollama / anthropic / openai / openrouter (default `ollama`+`gemma4:31b`), `setup.sh` / `run.sh`. |
 
 ## Tier 1 — Core loop & tools
 

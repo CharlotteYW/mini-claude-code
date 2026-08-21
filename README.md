@@ -51,15 +51,18 @@ mini-claude-code/
     └── run.sh
 ```
 
-## Quick start (after M0 is implemented)
+## Quick start
 
 ```bash
-cp .env.example .env   # set keys / provider as needed
+cp .env.example .env   # or let setup create it
 ./scripts/setup.sh
 ./scripts/run.sh
+# optional live invoke (needs Ollama + model):
+# PULL_OLLAMA_MODEL=1 ./scripts/setup.sh
+# ./scripts/run.sh --ping
 ```
 
-Until M0 implementation is approved and landed, `setup.sh` / `run.sh` are stubs.
+Neo4j Browser: http://localhost:7474 (idle until memory milestones).
 
 ## Collaboration workflow
 
