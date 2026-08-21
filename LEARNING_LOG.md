@@ -13,6 +13,13 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-21 — Process: mandatory unit + integration tests
+
+- Insight: Tests are part of the learning archive — each milestone Plan must list unit + integration cases; Done requires them. M0/M1 owe a testing catch-up before M2.
+- Link: [docs/notes/testing.md](docs/notes/testing.md)
+
+---
+
 ## 2026-08-20 — M0: Environment & provider skeleton
 
 - Insight: **provider ≠ model ≠ protocol** — OpenRouter reuses `ChatOpenAI`; Anthropic is the odd wire format out. Naming OpenRouter as its own provider documents the gateway pattern instead of hiding it behind a manual `base_url`.

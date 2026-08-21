@@ -79,6 +79,23 @@ flowchart TB
 4. Missing providers are SKIP’d — **met**
 5. Still no LangGraph agent loop — **met**
 
+## Testing (planned)
+
+Added as a **project-wide requirement** at end of M1; implement before M2 coding.
+
+### Unit
+
+- [ ] `add` tool name/schema/args → deterministic sum
+- [ ] `_provider_ready` returns SKIP reasons when keys missing
+- [ ] `_normalize_tool_calls` maps LangChain tool_call dicts to `{name,args,id}`
+- [ ] `probe_provider` with a **fake** chat model (stub `bind_tools`/`invoke`) yields PASS without network
+
+### Integration
+
+- [ ] Ollama + `gemma4:31b` (or configured model): real `probe_provider` PASS with round-trip (skip if Ollama/model unavailable)
+- [ ] Anthropic / OpenAI / OpenRouter: same probe when keys set (skip otherwise)
+- [ ] `./scripts/parity.sh --provider ollama` exit 0 when integration env healthy
+
 ## Results
 
 ### What we did
@@ -140,3 +157,8 @@ flowchart TB
 
 - Re-run with Anthropic/OpenAI/OpenRouter keys to capture real content-block dumps.
 - M2: put this same message cycle inside a StateGraph with conditional edges.
+- **Testing debt:** unit/integration cases listed above — implement before M2 (see [docs/notes/testing.md](../notes/testing.md)).
+
+### Testing results
+
+- Status: **Not implemented at M1 close-out** (requirement introduced immediately after). Manual `./scripts/parity.sh` PASS on Ollama is the interim check; pytest coverage still required.

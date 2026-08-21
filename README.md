@@ -67,14 +67,14 @@ Neo4j Browser: http://localhost:7474 (idle until memory milestones).
 
 ## Collaboration workflow
 
-1. Plan a milestone → wait for explicit **approved**
-2. Implement one milestone (small, reviewable)
-3. In chat: **highlight key code** for review and explain **what / why**
-4. Fill milestone **Results** (commands, why, as-built graph) + `LEARNING_LOG.md`
+1. Plan a milestone → wait for explicit **approved** (Plan includes unit + integration tests)
+2. Implement one milestone (small, reviewable) **with tests**
+3. In chat: **highlight key code** for review and explain **what / why** (and which tests cover it)
+4. Fill milestone **Results** (commands, why, as-built graph, testing results) + `LEARNING_LOG.md`
 5. **Commit and push** so GitHub stays in sync
 6. Stop and wait for the next approval
 
-Details live in `.cursor/rules/`.
+Testing strategy: [docs/notes/testing.md](docs/notes/testing.md). Details live in `.cursor/rules/`.
 
 ## Language
 

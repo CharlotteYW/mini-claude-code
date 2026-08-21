@@ -4,6 +4,12 @@ Learning path for mini Claude Code (LangGraph). One milestone at a time; approve
 
 Target: understand LangGraph + LangChain ecosystem pieces and be able to design/build agents independently.
 
+## Cross-cutting: tests
+
+Every milestone Plan must include **unit + integration** test cases; Done requires unit tests green and integration tests present (skip if no creds/services). See [notes/testing.md](notes/testing.md).
+
+**Catch-up:** implement M0 + M1 testing debt **before M2 implementation**.
+
 ## Tier 0 — Bootstrap / infra
 
 | ID | Title | Goal |

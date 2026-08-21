@@ -1,5 +1,5 @@
 ---
-description: Milestone docs, Results template, graphs, and Done criteria
+description: Milestone docs, Results template, graphs, tests, and Done criteria
 alwaysApply: true
 ---
 
@@ -7,11 +7,12 @@ alwaysApply: true
 
 ## Workflow
 
-1. Write Plan sections in `docs/milestones/M<N>-<slug>.md` first.
+1. Write Plan sections in `docs/milestones/M<N>-<slug>.md` first (including **Testing**).
 2. Wait for explicit user **approved** before coding that milestone.
 3. After implementation:
    - In **chat**: highlight review-worthy code (citations), explain what changed and why.
-   - In **docs**: fill Results, append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
+   - In **docs**: fill Results (including Testing results), append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
+   - Land **unit + integration tests** for code added in this milestone (see `docs/notes/testing.md`).
 4. Commit + push, then do not mark Done until the close-out checklist passes.
 
 ## Required sections in every milestone file
@@ -19,10 +20,16 @@ alwaysApply: true
 - Status, Goal, Why this milestone, Concepts introduced
 - Design decisions & alternatives considered
 - **Architecture graph (planned)** — Mermaid; freeze after approval
+- **Testing (planned)** — concrete unit cases + integration cases (skip rules if no key/service)
 - Tasks, Demo / acceptance criteria
-- **Results** with all of: What we did; Commands & how to reproduce; **As-built graph** (Mermaid) + delta vs planned; Why this approach; Deviations; Pitfalls & aha moments; Open questions / next dig
+- **Results** with all of: What we did; Commands & how to reproduce; **As-built graph** + delta; Why this approach; Deviations; Pitfalls; **Testing results**; Open questions / next dig
 
-Full template copy lives in `docs/milestones/M0-environment.md` (reuse structure for later milestones).
+## Testing (mandatory every milestone)
+
+- Unit: no network; covers new pure/branching behavior.
+- Integration: real provider or Compose where relevant; skip if unavailable, but tests must exist.
+- Milestone is not Done if new production code has no matching tests.
+- Strategy: `docs/notes/testing.md`.
 
 ## Graphs (mandatory)
 
@@ -33,10 +40,11 @@ Full template copy lives in `docs/milestones/M0-environment.md` (reuse structure
 
 ## Close-out checklist
 
-- Plan approved before coding
+- Plan approved before coding (including Testing plan)
 - Implementation landed
+- Unit tests green; integration tests present (skip OK without creds/services)
 - Chat review handover: highlighted code + what/why explained
-- Results complete in the milestone file (commands + why + graphs)
+- Results complete (commands + why + graphs + testing results)
 - LEARNING_LOG.md entry added
 - architecture.md updated if needed
 - Changes committed (English message) and pushed to GitHub

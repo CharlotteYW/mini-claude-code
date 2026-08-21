@@ -23,6 +23,10 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 
 Agent code uses LangChain messages + `AIMessage.tool_calls`. Provider packages adapt wire formats. Details: [notes/tool-calling-parity.md](notes/tool-calling-parity.md).
 
+## Testing (project-wide)
+
+Every milestone ships unit + integration tests. Strategy: [notes/testing.md](notes/testing.md). M0/M1 test debt to clear before M2 coding.
+
 ## Layered runtime (Option B)
 
 ```mermaid
