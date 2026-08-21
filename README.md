@@ -57,6 +57,7 @@ mini-claude-code/
 cp .env.example .env   # or let setup create it
 ./scripts/setup.sh
 ./scripts/run.sh
+./scripts/parity.sh    # M1: tool-calling parity across configured providers
 # optional live invoke (needs Ollama + model):
 # PULL_OLLAMA_MODEL=1 ./scripts/setup.sh
 # ./scripts/run.sh --ping

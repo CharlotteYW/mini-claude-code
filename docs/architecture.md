@@ -2,23 +2,26 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M0 complete  
+**Last updated:** M1 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M0)
-
-Infra and LLM factory skeleton are live. No agent loop yet.
+## Current status (M1)
 
 | Piece | Status |
 |---|---|
-| Docker Compose (Postgres+pgvector, Neo4j) | Running via `./scripts/setup.sh` |
-| `create_chat_model()` (4 providers) | Done — construct-only smoke |
-| ReAct StateGraph / tools | Not started (M2+) |
+| Docker Compose (Postgres+pgvector, Neo4j) | M0 |
+| `create_chat_model()` (4 providers) | M0 |
+| Tool-calling parity harness (`./scripts/parity.sh`) | **M1 Done** — Ollama live; clouds SKIP without keys |
+| ReAct StateGraph / tools loop | Next: M2 |
 | Checkpointer / Neo4j queries | Provisioned, unused |
+
+## Message & tool compatibility (M1)
+
+Agent code uses LangChain messages + `AIMessage.tool_calls`. Provider packages adapt wire formats. Details: [notes/tool-calling-parity.md](notes/tool-calling-parity.md).
 
 ## Layered runtime (Option B)
 
@@ -94,5 +97,6 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 
 ## Milestone progress
 
-- **M0 Done** — see [milestones/M0-environment.md](milestones/M0-environment.md)
+- **M0 Done** — [milestones/M0-environment.md](milestones/M0-environment.md)
+- **M1 Done** — [milestones/M1-tool-calling-parity.md](milestones/M1-tool-calling-parity.md)
 - Full list: [ROADMAP.md](ROADMAP.md)
