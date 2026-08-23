@@ -21,7 +21,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | ID | Title | Goal |
 |---|---|---|
 | [M1](milestones/M1-tool-calling-parity.md) | LLM provider abstraction & tool-calling parity | **Done.** Same `add` tool across providers via `bind_tools`; Ollama PASS; clouds SKIP without keys; notes on message/`tool_calls` compatibility. |
-| M2 | Minimal ReAct StateGraph | Messages loop with stub tools; why StateGraph + conditional edges beat a manual `while`. |
+| [M2](milestones/M2-react-stategraph.md) | Minimal ReAct StateGraph | **Planned.** Messages loop with stub tools; why StateGraph + conditional edges beat a manual `while`. |
 | M3 | Filesystem tools | read / write / diff-edit / glob / grep; path jail (**simplification:** process-local FS). |
 | M4 | Shell & git tools | Shell + git wrappers; still host subprocess (**temporary insecurity** until sandbox). |
 | M5 | Postgres checkpointer & resume | Durable `thread_id` resume; MemorySaver vs Postgres. |
