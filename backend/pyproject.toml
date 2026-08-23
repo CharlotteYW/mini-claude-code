@@ -17,6 +17,7 @@ dependencies = [
 [project.scripts]
 mcc-smoke = "mini_claude_code.smoke:main"
 mcc-tools-parity = "mini_claude_code.parity:main"
+mcc-agent = "mini_claude_code.agent.cli:main"
 
 [dependency-groups]
 dev = [

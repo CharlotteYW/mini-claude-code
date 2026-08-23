@@ -58,6 +58,7 @@ cp .env.example .env   # or let setup create it
 ./scripts/setup.sh
 ./scripts/run.sh
 ./scripts/parity.sh    # M1: tool-calling parity across configured providers
+./scripts/agent.sh "Use the add tool to compute 17 + 25."
 cd backend && uv run pytest -m unit
 cd backend && uv run pytest -m integration   # skips if Docker/Ollama/keys missing
 # optional live invoke (needs Ollama + model):

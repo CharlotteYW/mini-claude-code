@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — M2: Minimal ReAct StateGraph
+
+- Insight: The ReAct loop is just M1’s message cycle with **explicit conditional edges**; LangGraph’s value is the runtime hook points (checkpointer/interrupt/stream/subgraph), not “tools magic.”
+- Insight: Prefer routing on `AIMessage.tool_calls`, not assistant text — empty content on tool turns is normal.
+- Pitfall: newer `ToolNode` wants graph runtime — don’t unit-test it with bare `.invoke` outside a compiled graph.
+- Link: [docs/milestones/M2-react-stategraph.md](docs/milestones/M2-react-stategraph.md)
+
+---
+
 ## 2026-08-21 — Testing catch-up (M0 + M1)
 
 - Insight: Unit tests pin factory/protocol branching and fake-LLM parity without network; integration tests document live contracts and skip cleanly without keys/services.

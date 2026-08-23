@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
@@ -27,12 +27,13 @@ Run a real **LangGraph** ReAct loop: `call_model` ↔ `tools` with conditional e
 | Decision | Choice | Alternatives rejected |
 |---|---|---|
 | State | LangGraph `MessagesState` (messages reducer) | Custom TypedDict without reducer (easy to get merge wrong) |
-| Tools | Reuse M1 `add`; optional second stub `get_agent_name` for multi-tool routing demo | Jump to filesystem tools (M3 scope) |
-| Checkpointer | **In-memory** `MemorySaver` for local multi-turn demo only | Postgres now (M5 — keep durable-store lesson separate) |
-| API surface | `build_agent_graph()` + `mcc-agent` / `scripts/agent.sh` CLI | Only notebook-style script (harder to test) |
+| Tools | Reuse M1 `add` + stub `get_agent_name` | Jump to filesystem tools (M3 scope) |
+| Tools node | LangGraph prebuilt `ToolNode` | Hand-rolled executor (reinvents id/error handling) |
+| Checkpointer | Optional in-process `MemorySaver` via CLI flags | Postgres now (M5) |
+| API surface | `build_agent_graph()` + `mcc-agent` / `scripts/agent.sh` | Notebook-only script |
 | Provider | Config-driven via `create_chat_model()` | Hardcode Ollama in graph |
 
-**Simplification:** no recursion limit tuning beyond a safe default; no parallel tool fan-out stress; no HITL. Production agents also set explicit recursion limits, timeout, and tool error handling policies.
+**Simplification:** recursion limit default 10; no parallel tool stress; no HITL. Production also needs timeouts and tool-error policies.
 
 ## Architecture graph (planned)
 
@@ -44,61 +45,90 @@ flowchart LR
   Tools --> CallModel
 ```
 
-Policy/extension plane (permissions, hooks, sandbox) remains **outside** this graph for M2.
-
 ## Testing (planned)
 
 ### Unit
 
-- [ ] `route_after_model`: AIMessage with `tool_calls` → `"tools"`; without → `END` (or `"__end__"`)
-- [ ] `tools` node: given AIMessage with `add` tool_call, appends `ToolMessage` with correct `tool_call_id` and sum content (no LLM)
-- [ ] `build_agent_graph()` compiles; graph node names include `call_model` and `tools`
-- [ ] Optional: fake LLM in `call_model` path via injectable model (same seam idea as M1 `llm=`) so unit test can run one full invoke without network
+- [x] `route_after_model`: AIMessage with `tool_calls` → `"tools"`; without → `END`
+- [x] `tools` node: `add` → `ToolMessage` with sum (via tiny graph — ToolNode needs runtime)
+- [x] `build_agent_graph()` compiles; nodes include `call_model` and `tools`
+- [x] Fake LLM full invoke without network
 
 ### Integration
 
-- [ ] Real provider (default Ollama): invoke graph with “use add to compute 17+25”; final state contains tool trail + answer mentioning 42 (skip if Ollama/model unavailable)
-- [ ] Graph respects `LLM_PROVIDER` / `LLM_MODEL` from settings (smoke: construct + one invoke when provider ready)
+- [x] Real provider: add 17+25 → tool trail + 42 (skip if unavailable)
+- [x] Uses configured `LLM_PROVIDER` / `LLM_MODEL`
 
 ## Tasks
 
-- [ ] Add `mini_claude_code/agent/` (state helpers, nodes, `build_agent_graph`)
-- [ ] Wire `create_chat_model` + `demo_tools()` / `add`
-- [ ] CLI `mcc-agent` + `scripts/agent.sh` (pass a prompt; print final messages)
-- [ ] Use `MemorySaver` only if we demo two turns in-process; document that durability is M5
-- [ ] Unit + integration tests as above
-- [ ] Update `docs/architecture.md` current status; fill Results + LEARNING_LOG; commit + push
+- [x] Add `mini_claude_code/agent/` (`graph.py`, `cli.py`)
+- [x] Wire factory + `demo_tools()` (`add`, `get_agent_name`)
+- [x] CLI `mcc-agent` + `scripts/agent.sh`
+- [x] Optional `MemorySaver` via `--thread-id` / `--new-thread`
+- [x] Unit + integration tests
+- [x] Docs + LEARNING_LOG; commit + push
 
 ## Demo / acceptance criteria
 
-1. `./scripts/agent.sh "Use the add tool to compute 17 + 25"` completes without crashing (with Ollama + model).
-2. Transcript shows a tool call and a final assistant message (42).
-3. Unit tests green without network; integration skips cleanly without Ollama.
-4. Still **no** read/write/grep/shell tools (M3/M4).
-5. Still **no** Postgres checkpointer (M5).
+1. Agent prompt for add 17+25 completes — **met** (Ollama live)
+2. Transcript shows tool call + final 42 — **met**
+3. Unit green; integration skips without Ollama — **met**
+4. No FS/shell — **met**
+5. No Postgres checkpointer — **met**
 
 ## Results
 
-*(Fill after implementation.)*
-
 ### What we did
 
+- Implemented thin ReAct `StateGraph`: `call_model` ↔ `ToolNode(tools)` with `route_after_model`.
+- CLI `mcc-agent` / `scripts/agent.sh`; optional process-local `MemorySaver`.
+- Second stub tool `get_agent_name` for multi-tool binding (not required by default demo).
+- Tests: unit (17 total suite includes M2) + live integration.
+
 ### Commands & how to reproduce
+
+```bash
+./scripts/agent.sh "Use the add tool to compute 17 + 25. Do not compute it yourself."
+# or:
+cd backend && uv run mcc-agent "Use the add tool to compute 17 + 25."
+cd backend && uv run pytest -m unit
+cd backend && uv run pytest -m integration
+```
 
 ### As-built graph
 
 ```mermaid
-%% fill after implementation
+flowchart LR
+  Start([START]) --> CallModel[call_model]
+  CallModel -->|tool_calls| Tools[ToolNode tools]
+  CallModel -->|else| EndNode([END])
+  Tools --> CallModel
 ```
 
-- Delta vs planned graph:
+- Delta vs planned graph: tools node is explicitly LangGraph `ToolNode` (same edges).
 
 ### Why this approach
 
+- Graph runtime is the attachment point for checkpointer / interrupt / streaming later.
+- `ToolNode` + conditional edge keeps cognition thin (Option B).
+- Without the graph: M1 message cycle works, but every later LangGraph primitive would be bolted onto a custom loop.
+
 ### Deviations from plan
+
+- Standalone `ToolNode.invoke` failed without graph runtime in current LangGraph — unit test invokes tools via a one-node compiled graph instead.
 
 ### Pitfalls & aha moments
 
+- Trust `tool_calls` for routing (empty AI `content` on tool turns still works — same M1 lesson).
+- `MemorySaver` is not durability; do not confuse CLI `--thread-id` with M5 Postgres.
+
 ### Testing results
 
+- Unit: `tests/unit/test_m2_agent_graph.py` — all green (full suite 17 passed).
+- Integration: `tests/integration/test_m2_agent_live.py` — PASS on Ollama; clouds skip without keys.
+- Live demo transcript: Human → AI tool_calls add(17,25) → Tool 42 → AI final text.
+
 ### Open questions / next dig
+
+- M3: real filesystem tools behind the same `ToolNode`.
+- M5: swap `MemorySaver` for Postgres checkpointer + real resume across processes.
