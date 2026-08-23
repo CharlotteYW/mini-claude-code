@@ -23,6 +23,7 @@ def clean_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
         "NEO4J_URI",
         "NEO4J_USER",
         "NEO4J_PASSWORD",
+        "WORKSPACE_ROOT",
     ):
         monkeypatch.delenv(key, raising=False)
 

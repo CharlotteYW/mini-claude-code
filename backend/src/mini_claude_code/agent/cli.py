@@ -11,7 +11,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
-from mini_claude_code.config import get_settings
+from mini_claude_code.config import get_settings, resolve_workspace_root
 
 
 def _load_dotenv_from_repo_root() -> None:
@@ -73,9 +73,10 @@ def main(argv: list[str] | None = None) -> int:
         checkpointer = MemorySaver()
         thread_id = thread_id or str(uuid4())
 
-    print("mini-claude-code agent (M2 ReAct)")
-    print(f"  provider: {settings.llm_provider}")
-    print(f"  model:    {settings.llm_model}")
+    print("mini-claude-code agent (M2 ReAct + M3 filesystem tools)")
+    print(f"  provider:  {settings.llm_provider}")
+    print(f"  model:     {settings.llm_model}")
+    print(f"  workspace: {resolve_workspace_root(settings)}")
     if thread_id:
         print(f"  thread:   {thread_id} (MemorySaver — process-local only)")
     print(f"  prompt:   {args.prompt}")

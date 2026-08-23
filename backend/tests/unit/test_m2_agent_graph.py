@@ -71,7 +71,7 @@ def test_tools_node_executes_add() -> None:
 
 
 def test_build_agent_graph_node_names() -> None:
-    graph = build_agent_graph(llm=_FakeLLM())
+    graph = build_agent_graph(llm=_FakeLLM(), tools=demo_tools())
     # Compiled graphs expose node names via get_graph / nodes depending on version.
     names = set(graph.get_graph().nodes)
     assert "call_model" in names
@@ -102,7 +102,7 @@ class _FakeLLM:
 
 
 def test_full_graph_invoke_with_fake_llm() -> None:
-    graph = build_agent_graph(llm=_FakeLLM())
+    graph = build_agent_graph(llm=_FakeLLM(), tools=demo_tools())
     result = graph.invoke(
         {
             "messages": [

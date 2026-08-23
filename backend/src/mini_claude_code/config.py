@@ -8,6 +8,7 @@ on Settings + create_chat_model(), never on a hardcoded vendor.
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -55,6 +56,21 @@ class Settings(BaseSettings):
     neo4j_uri: str = Field(default="bolt://localhost:7687", alias="NEO4J_URI")
     neo4j_user: str = Field(default="neo4j", alias="NEO4J_USER")
     neo4j_password: str = Field(default="mini-claude-code", alias="NEO4J_PASSWORD")
+
+    # Agent filesystem jail (M3). Empty → <repo>/workspace
+    workspace_root: str = Field(default="", alias="WORKSPACE_ROOT")
+
+
+def repo_root() -> Path:
+    """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""
+    return Path(__file__).resolve().parents[3]
+
+
+def resolve_workspace_root(settings: Settings | None = None) -> Path:
+    settings = settings or get_settings()
+    if settings.workspace_root.strip():
+        return Path(settings.workspace_root).expanduser().resolve()
+    return (repo_root() / "workspace").resolve()
 
 
 @lru_cache

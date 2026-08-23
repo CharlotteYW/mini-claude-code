@@ -2,25 +2,23 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M2 complete  
+**Last updated:** M3 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M2)
+## Current status (M3)
 
 | Piece | Status |
 |---|---|
-| Docker Compose (Postgres+pgvector, Neo4j) | M0 |
-| `create_chat_model()` (4 providers) | M0 |
-| Tool-calling parity harness | M1 |
-| ReAct StateGraph (`call_model` ↔ `tools`) | **M2 Done** |
-| Filesystem / shell tools | Next: M3 / M4 |
-| Postgres checkpointer | M5 (MemorySaver only for in-process demo) |
+| ReAct StateGraph | M2 |
+| Filesystem tools + path jail | **M3 Done** (`WORKSPACE_ROOT` / `workspace/`) |
+| Shell / git tools | Next: M4 |
+| Postgres checkpointer | M5 |
 
-## ReAct core (M2)
+## ReAct core (M2–M3)
 
 ```mermaid
 flowchart LR
@@ -30,7 +28,7 @@ flowchart LR
   Tools --> CallModel
 ```
 
-Built by `build_agent_graph()` in `backend/src/mini_claude_code/agent/graph.py`.
+Default tools: `build_coding_tools(workspace)` — read/write/edit/glob/grep. Inject `tools=` for demos/tests.
 
 ## Message & tool compatibility (M1)
 
@@ -117,4 +115,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M0 Done** — [milestones/M0-environment.md](milestones/M0-environment.md)
 - **M1 Done** — [milestones/M1-tool-calling-parity.md](milestones/M1-tool-calling-parity.md)
 - **M2 Done** — [milestones/M2-react-stategraph.md](milestones/M2-react-stategraph.md)
+- **M3 Done** — [milestones/M3-filesystem-tools.md](milestones/M3-filesystem-tools.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

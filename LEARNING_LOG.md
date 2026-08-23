@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — M3: Filesystem tools
+
+- Insight: Coding power is mostly **tool registration + path jail**, not new graph nodes — topology stayed `call_model` ↔ `tools`.
+- Insight: Unique `old_str` edits force the model to read before writing, matching how production coding agents keep diffs reviewable.
+- Link: [docs/milestones/M3-filesystem-tools.md](docs/milestones/M3-filesystem-tools.md)
+
+---
+
 ## 2026-08-23 — M2: Minimal ReAct StateGraph
 
 - Insight: The ReAct loop is just M1’s message cycle with **explicit conditional edges**; LangGraph’s value is the runtime hook points (checkpointer/interrupt/stream/subgraph), not “tools magic.”
