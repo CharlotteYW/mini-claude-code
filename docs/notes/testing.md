@@ -31,6 +31,10 @@ Run:
 ```bash
 cd backend && uv run pytest -m unit
 cd backend && uv run pytest -m integration   # needs services/keys as applicable
+# or from repo root (no manual venv activate):
+./scripts/test.sh
+./scripts/test.sh -m integration
+./scripts/test.sh tests/unit/test_m3_fs_tools.py -v
 ```
 
 ## Retroactive debt (M0 / M1)
