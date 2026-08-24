@@ -50,6 +50,7 @@ mini-claude-code/
     ├── setup.sh
     ├── smoke.sh              # M0: LLM factory smoke (not the agent)
     ├── agent.sh              # M2+: ReAct coding agent
+    ├── db-inspect.sh         # peek Postgres checkpointer + Neo4j
     ├── parity.sh
     └── test.sh
 ```
@@ -65,6 +66,8 @@ cp .env.example .env   # or let setup create it
 ./scripts/agent.sh "Use write_file to create demo.txt with hello, then read it."
 ./scripts/agent.sh --thread-id demo-1 "Remember the codeword ORANGE."
 ./scripts/agent.sh --thread-id demo-1 "What codeword did I tell you?"
+./scripts/db-inspect.sh        # Postgres checkpointer + Neo4j peek
+./scripts/db-inspect.sh postgres --thread-id demo-1
 ./scripts/test.sh              # default: unit tests
 ./scripts/test.sh -m integration
 ./scripts/test.sh tests/unit/test_m3_fs_tools.py -v

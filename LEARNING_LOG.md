@@ -6,6 +6,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — DB inspect helper (Postgres + Neo4j)
+
+- Insight: After M5, durable sessions are not magic — LangGraph writes `checkpoints` / `checkpoint_blobs` / `checkpoint_writes` keyed by `thread_id`. Inspecting the DB closes the loop between `--thread-id` demos and storage.
+- Insight: Neo4j is intentionally empty until memory milestones; the same inspect command still verifies Compose connectivity.
+- Commands: `./scripts/db-inspect.sh`; `./scripts/db-inspect.sh postgres --thread-id demo-1`
+- Simplification: metadata only by default — no full blob dumps.
+
+---
+
 ## 2026-08-23 — M5: Postgres checkpointer & sessions
 
 - Insight: **Same graph API**, different durability — `MemorySaver` dies with the process; `PostgresSaver` + `thread_id` is a real session.
