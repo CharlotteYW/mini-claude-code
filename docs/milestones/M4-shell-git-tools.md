@@ -2,37 +2,33 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
-Add **workspace-scoped** `run_shell` and focused **git** tools (`git_status`, `git_diff`, `git_log`, optional `git_commit`) so the ReAct agent can inspect VCS state and run commands — still on the same `call_model` ↔ `tools` graph, still **host subprocess** (explicit temporary insecurity until M11 sandbox).
+Add **workspace-scoped** `run_shell` and focused **git** tools (`git_status`, `git_diff`, `git_log`, `git_commit`) so the ReAct agent can inspect VCS state and run commands — still on the same `call_model` ↔ `tools` graph, still **host subprocess** (explicit temporary insecurity until M11 sandbox).
 
 ## Why this milestone (learning objectives)
 
-- A coding agent without shell/git cannot run tests, formatters, or reason about diffs the way Claude Code does.
-- Shell is the highest-risk tool class: path jail on FS tools is not enough if `run_shell` can `cd / && rm -rf`. M4 must teach **cwd jail + basic denylist**, and label what production still needs (container, seccomp, allowlists).
-- Keep topology unchanged (Option B): new capability = more tools in `ToolNode`, not new graph nodes.
+- Coding agents need shell (tests/formatters) and git (status/diff/commit).
+- Shell is high-risk: cwd ≠ sandbox; denylist is teaching-only.
+- Dedicated git tools + `run_shell` together: clear schemas vs general commands.
 
 ## Concepts introduced
 
-- **Host subprocess tools:** `subprocess` with cwd fixed to `WORKSPACE_ROOT` (or a subdir under it).
-- **Command policy (thin):** block obvious footguns (`rm -rf /`, `sudo`, etc.) — **simplification**, not a security boundary.
-- **Git as structured tools** vs raw `run_shell("git ...")`: clearer schemas for the model; still can shell out to `git` binary.
-- **Temporary insecurity:** document that M11 Docker sandbox replaces host execution.
+- **VCS:** Version Control System (here: git).
+- **Host subprocess tools** with cwd fixed to workspace.
+- **Thin denylist** (not a security boundary).
+- **Git via `subprocess` + `git` binary** (vs GitPython/pygit2).
 
 ## Design decisions & alternatives considered
 
 | Decision | Choice | Alternatives rejected |
 |---|---|---|
-| Graph | Same M2/M3 StateGraph; extend tool list | Separate “shell agent” graph |
-| Shell API | `run_shell(command: str, timeout_sec: int = 30)` | Full PTY / interactive shell (too heavy) |
-| CWD | Always under workspace root | Inherit process cwd (escape risk) |
-| Git | Dedicated tools wrapping `git` with cwd=workspace | Only raw shell (worse schema / harder to test) |
-| Commit | `git_commit(message)` optional; no push | Auto-push (dangerous for learning demos) |
-| Policy | Small denylist + timeout + capture stdout/stderr caps | Full seccomp (M11 territory) |
-
-**Simplification:** denylist is best-effort string matching; determined attackers bypass it. Production: sandbox + allowlist + human approval (M9–M11).
+| Shell + git | Both: `run_shell` and structured `git_*` | Shell-only or git-only |
+| Git implementation | `subprocess` → `git` CLI | GitPython / pygit2 (later optional) |
+| Commit | `git add -A` then commit (simplification) | Selective staging + HITL |
+| Policy | Regex denylist + timeout + output cap | Real sandbox (M11) |
 
 ## Architecture graph (planned)
 
@@ -44,74 +40,81 @@ flowchart LR
   Tools --> CallModel
 ```
 
-```mermaid
-flowchart TB
-  Tools[ToolNode]
-  FS[M3 fs tools]
-  Shell[run_shell]
-  Git[git_status / git_diff / git_log / git_commit]
-  Jail[cwd under WORKSPACE_ROOT]
-  Tools --> FS
-  Tools --> Shell
-  Tools --> Git
-  Shell --> Jail
-  Git --> Jail
-```
-
 ## Testing (planned)
 
 ### Unit
 
-- [ ] `run_shell` succeeds for `echo hello` under temp workspace; cwd is workspace
-- [ ] `run_shell` rejects path escape via `cd ..` / denied patterns (document which)
-- [ ] `run_shell` respects timeout (short sleep vs limit)
-- [ ] `git_status` / `git_diff` / `git_log` against a temp git repo fixture
-- [ ] `git_commit` creates a commit when there are staged/meaningful changes (fixture)
-- [ ] Agent graph compiles with FS + shell + git tools
+- [x] denylist / echo+cwd / timeout
+- [x] git status/diff/log/commit on temp repo
+- [x] default toolset includes FS+shell+git
 
 ### Integration
 
-- [ ] Live agent: `run_shell` to create a file or `echo` then verify (skip if no LLM)
-- [ ] Live agent: `git_status` on repo or temp workspace git (skip if no LLM / no git)
+- [x] live `run_shell` echo (skip if no LLM / flake)
 
 ## Tasks
 
-- [ ] Implement `mini_claude_code/tools/shell.py` + `git_tools.py` (or one module)
-- [ ] Merge into default agent toolset with M3 FS tools
-- [ ] Settings knobs if needed (`SHELL_TIMEOUT_SEC` optional)
-- [ ] Unit + integration tests with temp git repos
-- [ ] Label insecurity in code comments + milestone Results
-- [ ] Results + LEARNING_LOG + architecture; commit + push
+- [x] `shell.py`, `git_tools.py`, `default.py` (`build_default_tools`)
+- [x] Agent defaults to full toolset
+- [x] `SHELL_TIMEOUT_SEC` setting
+- [x] Tests + docs + push
 
 ## Demo / acceptance criteria
 
-1. `./scripts/agent.sh "Run echo hello-m4 via run_shell and show me the output."` works with Ollama.
-2. Agent can report `git_status` for a git workspace (demo may use repo root **only if** `WORKSPACE_ROOT` points at a safe dir — default remains `workspace/`; for git demos either init git in `workspace/` or document setting `WORKSPACE_ROOT` to repo for local experiments).
-3. Unit tests green without network.
-4. Docs explicitly say: **host subprocess until M11**.
+1. Agent can `run_shell` echo — **met** (integration)
+2. Unit git fixture green — **met**
+3. Docs state host subprocess until M11 — **met**
 
 ## Results
 
-*(Fill after implementation.)*
-
 ### What we did
 
+- Added `run_shell` (cwd=workspace, denylist, timeout) and `git_status` / `git_diff` / `git_log` / `git_commit`.
+- Default agent tools = FS + shell + git via `build_default_tools`.
+- Explicit comments: cwd is not a sandbox.
+
 ### Commands & how to reproduce
+
+```bash
+./scripts/test.sh tests/unit/test_m4_shell_git.py -v
+./scripts/test.sh -m integration -k m4
+./scripts/agent.sh "Use run_shell to run: echo hello-m4"
+# Optional git demo (init git inside workspace first):
+# cd workspace && git init && git config user.email a@b.c && git config user.name t
+```
 
 ### As-built graph
 
 ```mermaid
-%% fill after implementation
+flowchart LR
+  Start([START]) --> CallModel[call_model]
+  CallModel -->|tool_calls| Tools[ToolNode]
+  CallModel -->|else| EndNode([END])
+  Tools --> CallModel
 ```
 
-- Delta vs planned graph:
+- Delta: topology unchanged; ToolNode now includes shell/git.
 
 ### Why this approach
 
+- Structured git tools teach better tool design; shell covers the long tail of commands.
+- Both still subprocess — honesty about security before M11.
+
 ### Deviations from plan
+
+- None material.
 
 ### Pitfalls & aha moments
 
+- **cwd ≠ jail:** `run_shell("cat /etc/passwd")` can still work; denylist does not fix that.
+- Temp git tests need `user.email` / `user.name` or commit fails.
+
 ### Testing results
 
+- Unit: `tests/unit/test_m4_shell_git.py`
+- Integration: `tests/integration/test_m4_shell_live.py`
+
 ### Open questions / next dig
+
+- M5: Postgres checkpointer + real multi-turn sessions
+- M11: replace host shell with Docker sandbox

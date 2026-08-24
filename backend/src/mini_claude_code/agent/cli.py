@@ -73,10 +73,11 @@ def main(argv: list[str] | None = None) -> int:
         checkpointer = MemorySaver()
         thread_id = thread_id or str(uuid4())
 
-    print("mini-claude-code agent (M2 ReAct + M3 filesystem tools)")
+    print("mini-claude-code agent (FS + shell/git tools)")
     print(f"  provider:  {settings.llm_provider}")
     print(f"  model:     {settings.llm_model}")
     print(f"  workspace: {resolve_workspace_root(settings)}")
+    print("  note:      run_shell is host subprocess (not sandboxed until M11)")
     if thread_id:
         print(f"  thread:   {thread_id} (MemorySaver — process-local only)")
     print(f"  prompt:   {args.prompt}")

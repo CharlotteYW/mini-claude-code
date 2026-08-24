@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # Agent filesystem jail (M3). Empty → <repo>/workspace
     workspace_root: str = Field(default="", alias="WORKSPACE_ROOT")
 
+    # Host shell timeout (M4). Not a sandbox.
+    shell_timeout_sec: int = Field(default=30, alias="SHELL_TIMEOUT_SEC")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

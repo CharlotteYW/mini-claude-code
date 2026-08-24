@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — M4: Shell & git tools
+
+- Insight: **VCS** = version control (git here). Prefer structured `git_*` tools for clear schemas; keep `run_shell` for the long tail — both still `subprocess`.
+- Insight: **cwd ≠ sandbox** — denylist is a teaching brake; real isolation is M11.
+- Link: [docs/milestones/M4-shell-git-tools.md](docs/milestones/M4-shell-git-tools.md)
+
+---
+
 ## 2026-08-23 — M3: Filesystem tools
 
 - Insight: Coding power is mostly **tool registration + path jail**, not new graph nodes — topology stayed `call_model` ↔ `tools`.

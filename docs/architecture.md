@@ -2,23 +2,26 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M3 complete  
+**Last updated:** M4 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M3)
+## Current status (M4)
 
 | Piece | Status |
 |---|---|
 | ReAct StateGraph | M2 |
-| Filesystem tools + path jail | **M3 Done** (`WORKSPACE_ROOT` / `workspace/`) |
-| Shell / git tools | Next: M4 |
-| Postgres checkpointer | M5 |
+| Filesystem tools + path jail | M3 |
+| Shell + git tools (host subprocess) | **M4 Done** |
+| Postgres checkpointer / sessions | Next: M5 |
+| Docker sandbox for shell | M11 |
 
-## ReAct core (M2–M3)
+Default tools: `build_default_tools(workspace)` = FS + `run_shell` + `git_*`.
+
+## ReAct core (M2–M4)
 
 ```mermaid
 flowchart LR
@@ -28,7 +31,7 @@ flowchart LR
   Tools --> CallModel
 ```
 
-Default tools: `build_coding_tools(workspace)` — read/write/edit/glob/grep. Inject `tools=` for demos/tests.
+**Security note:** `run_shell` sets cwd to the workspace but is **not** a sandbox.
 
 ## Message & tool compatibility (M1)
 
@@ -116,4 +119,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M1 Done** — [milestones/M1-tool-calling-parity.md](milestones/M1-tool-calling-parity.md)
 - **M2 Done** — [milestones/M2-react-stategraph.md](milestones/M2-react-stategraph.md)
 - **M3 Done** — [milestones/M3-filesystem-tools.md](milestones/M3-filesystem-tools.md)
+- **M4 Done** — [milestones/M4-shell-git-tools.md](milestones/M4-shell-git-tools.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

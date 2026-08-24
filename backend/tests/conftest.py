@@ -24,6 +24,7 @@ def clean_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
         "NEO4J_USER",
         "NEO4J_PASSWORD",
         "WORKSPACE_ROOT",
+        "SHELL_TIMEOUT_SEC",
     ):
         monkeypatch.delenv(key, raising=False)
 

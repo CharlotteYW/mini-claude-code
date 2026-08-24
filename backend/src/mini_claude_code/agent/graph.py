@@ -1,7 +1,7 @@
 """Minimal ReAct agent as a LangGraph StateGraph (M2+).
 
-M3: default tools are workspace filesystem tools (path-jailed). Pass `tools=`
-to inject demos/fakes in tests. Topology stays call_model ↔ tools.
+Default tools: workspace FS (M3) + shell/git (M4). Pass `tools=` for tests.
+Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from langgraph.prebuilt import ToolNode
 
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
-from mini_claude_code.tools import build_coding_tools
+from mini_claude_code.tools import build_default_tools
 
 # Safe default for a toy ReAct loop (model → tools → model → …).
 DEFAULT_RECURSION_LIMIT = 10
@@ -50,7 +50,10 @@ def build_agent_graph(
     tool_list: list[BaseTool] = (
         list(tools)
         if tools is not None
-        else build_coding_tools(resolve_workspace_root(settings))
+        else build_default_tools(
+            resolve_workspace_root(settings),
+            shell_timeout_sec=settings.shell_timeout_sec,
+        )
     )
     bound = model.bind_tools(tool_list)
 
