@@ -25,7 +25,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | [M3](milestones/M3-filesystem-tools.md) | Filesystem tools | **Done.** read/write/edit/glob/grep with workspace path jail; same ReAct graph. |
 | [M4](milestones/M4-shell-git-tools.md) | Shell & git tools | **Done.** `run_shell` + git helpers (subprocess); cwd=workspace; host-insecure until M11. |
 | [M5](milestones/M5-postgres-checkpointer.md) | Postgres checkpointer & resume | **Done.** Durable `thread_id` sessions via Postgres checkpointer; MemorySaver for offline/tests; `--repl`. |
-| M6 | Streaming CLI | Token/tool-event streaming; frontend still deferred. |
+| M6 | [Streaming CLI](milestones/M6-streaming-cli.md) | **Planned.** Token + tool/node-event streaming on the same ReAct graph; `--no-stream` keeps invoke; frontend still deferred. |
 
 ## Tier 2 — Context, memory, safety
 
