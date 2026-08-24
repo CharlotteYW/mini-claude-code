@@ -52,6 +52,9 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | ID | Title | Goal |
 |---|---|---|
 | M17 | Eval harness & cost/retry | Tiny evals; retries/backoff; token accounting; optional Anthropic prompt caching. |
+| M18 | Chat channel → agent → open PR | Slack and/or Discord bot as a thin adapter: channel message → `thread_id` session → ReAct agent; controlled `open_pr` (e.g. `gh`) with HITL before push/PR. |
+
+**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer one channel first (Discord *or* Slack), dry-run PR creation, and deny-by-default until M9/M10 policy exists.
 
 ## Status legend
 

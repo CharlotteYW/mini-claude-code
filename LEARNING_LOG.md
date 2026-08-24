@@ -6,6 +6,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — Future dig parked: Slack/Discord → open PR (M18)
+
+- Idea: use Slack or Discord as the command surface; agent runs in a durable `thread_id` session; end state is opening a GitHub PR — same core graph, new *adapter* layer.
+- Why it fits: M5 sessions already answer “continuous chat without FastAPI”; M4 git tools stop before push — M18 would add a permissioned PR path (+ HITL).
+- Parked as optional **M18** in [docs/ROADMAP.md](docs/ROADMAP.md); not planned in detail until Tier-1–3 priorities land.
+
+---
+
 ## 2026-08-23 — DB inspect helper (Postgres + Neo4j)
 
 - Insight: After M5, durable sessions are not magic — LangGraph writes `checkpoints` / `checkpoint_blobs` / `checkpoint_writes` keyed by `thread_id`. Inspecting the DB closes the loop between `--thread-id` demos and storage.
