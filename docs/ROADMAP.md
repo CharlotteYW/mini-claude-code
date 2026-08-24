@@ -23,7 +23,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | [M1](milestones/M1-tool-calling-parity.md) | LLM provider abstraction & tool-calling parity | **Done.** Same `add` tool across providers via `bind_tools`; Ollama PASS; clouds SKIP without keys; notes on message/`tool_calls` compatibility. |
 | [M2](milestones/M2-react-stategraph.md) | Minimal ReAct StateGraph | **Done.** `call_model` ↔ `ToolNode` ReAct loop; `mcc-agent` CLI; MemorySaver optional (not durable). |
 | [M3](milestones/M3-filesystem-tools.md) | Filesystem tools | **Done.** read/write/edit/glob/grep with workspace path jail; same ReAct graph. |
-| M4 | Shell & git tools | Shell + git wrappers; still host subprocess (**temporary insecurity** until sandbox). |
+| [M4](milestones/M4-shell-git-tools.md) | Shell & git tools | **Planned.** `run_shell` + git helpers under workspace cwd; host subprocess until M11 sandbox. |
 | M5 | Postgres checkpointer & resume | Durable `thread_id` resume; MemorySaver vs Postgres. |
 | M6 | Streaming CLI | Token/tool-event streaming; frontend still deferred. |
 
