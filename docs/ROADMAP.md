@@ -24,7 +24,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | [M2](milestones/M2-react-stategraph.md) | Minimal ReAct StateGraph | **Done.** `call_model` ↔ `ToolNode` ReAct loop; `mcc-agent` CLI; MemorySaver optional (not durable). |
 | [M3](milestones/M3-filesystem-tools.md) | Filesystem tools | **Done.** read/write/edit/glob/grep with workspace path jail; same ReAct graph. |
 | [M4](milestones/M4-shell-git-tools.md) | Shell & git tools | **Done.** `run_shell` + git helpers (subprocess); cwd=workspace; host-insecure until M11. |
-| M5 | Postgres checkpointer & resume | Durable `thread_id` resume; MemorySaver vs Postgres. |
+| [M5](milestones/M5-postgres-checkpointer.md) | Postgres checkpointer & resume | **Planned.** Durable `thread_id` sessions via Postgres checkpointer; contrast MemorySaver. |
 | M6 | Streaming CLI | Token/tool-event streaming; frontend still deferred. |
 
 ## Tier 2 — Context, memory, safety
