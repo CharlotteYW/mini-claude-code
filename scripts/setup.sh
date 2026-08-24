@@ -65,5 +65,11 @@ else
   echo "    Then ensure Ollama is running: ollama serve  # if needed"
 fi
 
+echo "==> Ensuring LangGraph Postgres checkpoint tables (idempotent)"
+(
+  cd backend
+  uv run python -c "from mini_claude_code.agent import ensure_postgres_checkpoint_tables; ensure_postgres_checkpoint_tables()"
+) || echo "WARNING: checkpoint setup failed (is Compose Postgres up?). Retry after docker compose up." >&2
+
 echo "==> Setup complete. Next: ./scripts/smoke.sh  (agent: ./scripts/agent.sh)"
 

@@ -1,4 +1,4 @@
-"""CLI entrypoint for the M2 ReAct agent."""
+"""CLI entrypoint for the ReAct agent (M2+), with durable sessions (M5)."""
 
 from __future__ import annotations
 
@@ -8,8 +8,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langgraph.checkpoint.memory import MemorySaver
 
+from mini_claude_code.agent.checkpointer import (
+    CheckpointBackend,
+    open_checkpointer,
+)
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
@@ -43,23 +46,72 @@ def _format_message(message: object) -> str:
     return f"{type(message).__name__}: {message}"
 
 
+def _print_transcript(messages: list[object]) -> None:
+    print("=== transcript ===")
+    for message in messages:
+        print(_format_message(message))
+    print("=== done ===")
+
+
+def _run_once(graph, prompt: str, config: dict) -> int:
+    try:
+        result = graph.invoke(
+            {"messages": [HumanMessage(content=prompt)]},
+            config=config,
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: agent invoke failed: {exc}", file=sys.stderr)
+        return 1
+    _print_transcript(result["messages"])
+    return 0
+
+
+def _run_repl(graph, config: dict) -> int:
+    print("REPL mode — empty line or Ctrl-D to exit.")
+    while True:
+        try:
+            line = input("you> ").strip()
+        except EOFError:
+            print()
+            break
+        if not line:
+            break
+        code = _run_once(graph, line, config)
+        if code != 0:
+            return code
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run the mini-claude-code ReAct agent.")
+    parser = argparse.ArgumentParser(
+        description="Run the mini-claude-code ReAct agent."
+    )
     parser.add_argument(
         "prompt",
         nargs="?",
-        default="Use the add tool to compute 17 + 25. Do not compute it yourself.",
-        help="User prompt (default forces add tool).",
+        default=None,
+        help="User prompt (optional if --repl).",
     )
     parser.add_argument(
         "--thread-id",
         default=None,
-        help="Enable in-memory MemorySaver with this thread id (not durable — M5).",
+        help="Session id for checkpointer resume (required for durable/multi-turn).",
     )
     parser.add_argument(
         "--new-thread",
         action="store_true",
-        help="Like --thread-id with a random id (demo multi-turn checkpointer API).",
+        help="Allocate a random thread id (prints it).",
+    )
+    parser.add_argument(
+        "--checkpointer",
+        choices=["memory", "postgres"],
+        default=None,
+        help="Override CHECKPOINT_BACKEND (default from env: postgres).",
+    )
+    parser.add_argument(
+        "--repl",
+        action="store_true",
+        help="Interactive multi-turn loop (requires a thread id).",
     )
     args = parser.parse_args(argv)
 
@@ -68,45 +120,66 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
 
     thread_id = args.thread_id
-    checkpointer = None
-    if args.new_thread or thread_id:
-        checkpointer = MemorySaver()
-        thread_id = thread_id or str(uuid4())
+    if args.new_thread:
+        thread_id = str(uuid4())
+    if args.repl and not thread_id:
+        thread_id = str(uuid4())
+        print(f"Allocated thread_id={thread_id} for REPL")
 
-    print("mini-claude-code agent (FS + shell/git tools)")
-    print(f"  provider:  {settings.llm_provider}")
-    print(f"  model:     {settings.llm_model}")
-    print(f"  workspace: {resolve_workspace_root(settings)}")
-    print("  note:      run_shell is host subprocess (not sandboxed until M11)")
-    if thread_id:
-        print(f"  thread:   {thread_id} (MemorySaver — process-local only)")
-    print(f"  prompt:   {args.prompt}")
-    print()
-
-    try:
-        graph = build_agent_graph(settings=settings, checkpointer=checkpointer)
-    except ValueError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+    use_checkpoint = bool(thread_id)
+    if args.repl and not use_checkpoint:
+        print("ERROR: --repl requires a thread id", file=sys.stderr)
         return 1
+    if not args.repl and not args.prompt:
+        args.prompt = (
+            "Use write_file to create demo.txt with contents hello, then read_file it."
+        )
+
+    backend: CheckpointBackend | None = (
+        args.checkpointer  # type: ignore[assignment]
+        if args.checkpointer
+        else None
+    )
+
+    print("mini-claude-code agent (FS + shell/git + sessions)")
+    print(f"  provider:     {settings.llm_provider}")
+    print(f"  model:        {settings.llm_model}")
+    print(f"  workspace:    {resolve_workspace_root(settings)}")
+    if use_checkpoint:
+        kind = backend or settings.checkpoint_backend
+        print(f"  thread_id:    {thread_id}")
+        print(f"  checkpointer: {kind}")
+    else:
+        print("  session:      off (pass --thread-id for durable resume)")
+    if not args.repl:
+        print(f"  prompt:       {args.prompt}")
+    print()
 
     config: dict = {"recursion_limit": DEFAULT_RECURSION_LIMIT}
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
 
     try:
-        result = graph.invoke(
-            {"messages": [HumanMessage(content=args.prompt)]},
-            config=config,
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: agent invoke failed: {exc}", file=sys.stderr)
+        if use_checkpoint:
+            with open_checkpointer(
+                settings, backend=backend, setup=True
+            ) as checkpointer:
+                graph = build_agent_graph(
+                    settings=settings, checkpointer=checkpointer
+                )
+                if args.repl:
+                    return _run_repl(graph, config)
+                return _run_once(graph, args.prompt or "", config)
+        graph = build_agent_graph(settings=settings, checkpointer=None)
+        if args.repl:
+            return _run_repl(graph, config)
+        return _run_once(graph, args.prompt or "", config)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-
-    print("=== transcript ===")
-    for message in result["messages"]:
-        print(_format_message(message))
-    print("=== done ===")
-    return 0
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

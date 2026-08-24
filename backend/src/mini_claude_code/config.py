@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     # Host shell timeout (M4). Not a sandbox.
     shell_timeout_sec: int = Field(default=30, alias="SHELL_TIMEOUT_SEC")
 
+    # Session durability (M5): postgres (default) or memory
+    checkpoint_backend: str = Field(default="postgres", alias="CHECKPOINT_BACKEND")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

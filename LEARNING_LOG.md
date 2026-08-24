@@ -6,6 +6,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — M5: Postgres checkpointer & sessions
+
+- Insight: **Same graph API**, different durability — `MemorySaver` dies with the process; `PostgresSaver` + `thread_id` is a real session.
+- Insight: Hold the Postgres connection open for the whole invoke/REPL (`from_conn_string` is a context manager); `setup()` is idempotent bootstrap.
+- Commands: `./scripts/test.sh tests/unit/test_m5_checkpointer.py`; durable demo with `--thread-id` across two `agent.sh` processes.
+- Link: [docs/milestones/M5-postgres-checkpointer.md](docs/milestones/M5-postgres-checkpointer.md)
+
+---
+
 ## 2026-08-23 — M4: Shell & git tools
 
 - Insight: **VCS** = version control (git here). Prefer structured `git_*` tools for clear schemas; keep `run_shell` for the long tail — both still `subprocess`.

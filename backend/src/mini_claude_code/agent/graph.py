@@ -11,7 +11,7 @@ from typing import Any, Literal, Sequence
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
@@ -37,13 +37,12 @@ def build_agent_graph(
     settings: Settings | None = None,
     llm: BaseChatModel | None = None,
     tools: Sequence[BaseTool] | None = None,
-    checkpointer: MemorySaver | None = None,
+    checkpointer: BaseCheckpointSaver | None = None,
 ) -> CompiledStateGraph:
     """Compile call_model ↔ tools ReAct graph.
 
     Pass `llm` / `tools` to inject fakes in unit tests (no network).
-    Pass `checkpointer=MemorySaver()` for in-process multi-turn demos only —
-    durable Postgres checkpointing is M5.
+    Pass a checkpointer (MemorySaver or PostgresSaver) for multi-turn sessions.
     """
     settings = settings or get_settings()
     model = llm or create_chat_model(settings)

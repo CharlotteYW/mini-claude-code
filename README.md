@@ -63,6 +63,8 @@ cp .env.example .env   # or let setup create it
 ./scripts/smoke.sh --ping      # optional live invoke
 ./scripts/parity.sh            # M1: tool-calling parity
 ./scripts/agent.sh "Use write_file to create demo.txt with hello, then read it."
+./scripts/agent.sh --thread-id demo-1 "Remember the codeword ORANGE."
+./scripts/agent.sh --thread-id demo-1 "What codeword did I tell you?"
 ./scripts/test.sh              # default: unit tests
 ./scripts/test.sh -m integration
 ./scripts/test.sh tests/unit/test_m3_fs_tools.py -v

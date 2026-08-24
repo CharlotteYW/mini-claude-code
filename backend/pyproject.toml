@@ -12,6 +12,9 @@ dependencies = [
     "langchain-openai>=0.3.0",
     # Declared early so later milestones can import without reshuffling deps.
     "langgraph>=0.4.0",
+    "langgraph-checkpoint-postgres>=3.1.2",
+    "psycopg[binary]>=3.3.4",
+    "psycopg-pool>=3.3.1",
 ]
 
 [project.scripts]

@@ -2,26 +2,28 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M4 complete  
+**Last updated:** M5 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M4)
+## Current status (M5)
 
 | Piece | Status |
 |---|---|
 | ReAct StateGraph | M2 |
 | Filesystem tools + path jail | M3 |
-| Shell + git tools (host subprocess) | **M4 Done** |
-| Postgres checkpointer / sessions | Next: M5 |
+| Shell + git tools (host subprocess) | M4 |
+| Postgres checkpointer / sessions | **M5 Done** |
+| Streaming CLI | Next: M6 |
 | Docker sandbox for shell | M11 |
 
-Default tools: `build_default_tools(workspace)` = FS + `run_shell` + `git_*`.
+Default tools: `build_default_tools(workspace)` = FS + `run_shell` + `git_*`.  
+Sessions: `compile(checkpointer=...)` + `configurable.thread_id` (`CHECKPOINT_BACKEND=postgres|memory`).
 
-## ReAct core (M2–M4)
+## ReAct core (M2–M5)
 
 ```mermaid
 flowchart LR
@@ -107,7 +109,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 | Concern | Choice | Notes |
 |---|---|---|
 | Python | `uv` + `pyproject.toml` under `backend/` | `uv sync` via `setup.sh` |
-| Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | LangGraph checkpointer from M5 |
+| Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | `PostgresSaver` via `open_checkpointer` (M5); MemorySaver optional |
 | Vectors | `pgvector` extension enabled on boot | Unused until embedding search |
 | Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | Unused until M8 |
 | Sandbox | Docker SDK ephemeral containers | M11; host subprocess until then (labeled insecure) |
@@ -120,4 +122,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M2 Done** — [milestones/M2-react-stategraph.md](milestones/M2-react-stategraph.md)
 - **M3 Done** — [milestones/M3-filesystem-tools.md](milestones/M3-filesystem-tools.md)
 - **M4 Done** — [milestones/M4-shell-git-tools.md](milestones/M4-shell-git-tools.md)
+- **M5 Done** — [milestones/M5-postgres-checkpointer.md](milestones/M5-postgres-checkpointer.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

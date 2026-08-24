@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
@@ -61,22 +61,22 @@ Topology of nodes/edges **unchanged**; durability is compile-time `checkpointer=
 
 ### Unit
 
-- [ ] Graph compiled with a checkpointer interface (MemorySaver ok) resumes second turn in-process with fake LLM (messages accumulate)
-- [ ] Helper builds/returns Postgres checkpointer from `DATABASE_URL` (mock or skip if import wiring only)
+- [x] Graph compiled with a checkpointer interface (MemorySaver ok) resumes second turn in-process with fake LLM (messages accumulate)
+- [x] Helper builds/returns Postgres checkpointer from `DATABASE_URL` (mock or skip if import wiring only)
 
 ### Integration
 
-- [ ] Against Compose Postgres: two `invoke`s with same `thread_id` in separate compiled graphs/processes see prior Human/AI messages (skip if Postgres down)
-- [ ] Different `thread_id`s do not share history (skip if Postgres down)
+- [x] Against Compose Postgres: two `invoke`s with same `thread_id` in separate compiled graphs/processes see prior Human/AI messages (skip if Postgres down)
+- [x] Different `thread_id`s do not share history (skip if Postgres down)
 
 ## Tasks
 
-- [ ] Add checkpointer factory module (`get_checkpointer(settings)` → MemorySaver | Postgres)
-- [ ] Wire `build_agent_graph` / CLI: durable mode uses Postgres when available
-- [ ] CLI: emphasize `--thread-id`; add minimal `--repl` for multi-turn demo
-- [ ] `setup.sh` or docs: ensure checkpoint migrations/tables
-- [ ] Unit + integration tests
-- [ ] Results + LEARNING_LOG + architecture; commit + push
+- [x] Add checkpointer factory module (`get_checkpointer(settings)` → MemorySaver | Postgres)
+- [x] Wire `build_agent_graph` / CLI: durable mode uses Postgres when available
+- [x] CLI: emphasize `--thread-id`; add minimal `--repl` for multi-turn demo
+- [x] `setup.sh` or docs: ensure checkpoint migrations/tables
+- [x] Unit + integration tests
+- [x] Results + LEARNING_LOG + architecture; commit + push
 
 ## Demo / acceptance criteria
 
@@ -87,26 +87,80 @@ Topology of nodes/edges **unchanged**; durability is compile-time `checkpointer=
 
 ## Results
 
-*(Fill after implementation.)*
-
 ### What we did
 
+- Added `agent/checkpointer.py`: `open_checkpointer` context manager for `memory` | `postgres` (`CHECKPOINT_BACKEND`), plus `ensure_postgres_checkpoint_tables()` for bootstrap.
+- CLI: `--thread-id` / `--new-thread` open a checkpointer (default Postgres); `--checkpointer memory|postgres` override; `--repl` multi-turn loop.
+- `setup.sh` idempotently runs checkpoint table setup after Compose is healthy.
+- Unit + integration tests for MemorySaver resume and Postgres cross-connection resume / thread isolation.
+
 ### Commands & how to reproduce
+
+```bash
+# Unit (no Postgres required)
+./scripts/test.sh tests/unit/test_m5_checkpointer.py -v
+
+# Integration (Compose Postgres)
+./scripts/test.sh tests/integration/test_m5_checkpointer_live.py -v
+
+# Durable session demo (two processes, same thread_id)
+./scripts/agent.sh --thread-id demo-1 "Remember the codeword ORANGE."
+./scripts/agent.sh --thread-id demo-1 "What codeword did I tell you?"
+
+# Offline / process-local only
+./scripts/agent.sh --checkpointer memory --thread-id local-1 "hi"
+
+# REPL
+./scripts/agent.sh --repl --thread-id demo-repl
+```
 
 ### As-built graph
 
 ```mermaid
-%% fill after implementation
+flowchart LR
+  Start([START]) --> CallModel[call_model]
+  CallModel -->|tool_calls| Tools[ToolNode]
+  CallModel -->|else| EndNode([END])
+  Tools --> CallModel
 ```
 
-- Delta vs planned graph:
+```mermaid
+sequenceDiagram
+  participant CLI as agent_cli
+  participant Graph as compiled_graph
+  participant CP as Postgres_or_Memory
+  CLI->>Graph: invoke prompt thread_id=T
+  Graph->>CP: save checkpoint
+  Note over CLI: process may exit (Postgres only)
+  CLI->>Graph: invoke prompt2 thread_id=T
+  Graph->>CP: load checkpoint
+  Graph->>Graph: continue with prior messages
+```
+
+- Delta vs planned graph: topology unchanged. Session path matches plan; MemorySaver remains for unit tests / `--checkpointer memory`.
 
 ### Why this approach
 
+- Same `compile(checkpointer=...)` + `configurable.thread_id` API for both backends — durability is a storage concern, not a new graph shape.
+- Holding `PostgresSaver.from_conn_string` open for the whole invoke/REPL is required (context manager owns the connection).
+- Without a durable checkpointer: every `agent.sh` process is amnesiac; HITL/interrupt later has nowhere to pause.
+
 ### Deviations from plan
+
+- Factory is `open_checkpointer` (context manager) rather than a bare `get_checkpointer()` return — Postgres needs a live connection for the session lifetime.
+- One-shot invokes without `--thread-id` still run with `checkpointer=None` (no session), matching casual demos.
 
 ### Pitfalls & aha moments
 
+- `MemorySaver` and `PostgresSaver` look identical at the graph API; the only durable difference is process death.
+- `setup()` is idempotent but must run once against Compose before first durable invoke (now in `setup.sh`).
+
 ### Testing results
 
+- Unit: 3 passed (`test_m5_checkpointer.py`) — MemorySaver resume, backend resolve, memory open.
+- Integration: 2 passed (`test_m5_checkpointer_live.py`) against local Compose Postgres — cross-connection resume + thread isolation.
+
 ### Open questions / next dig
+
+- M6: streaming CLI / token events on top of the same checkpointer sessions.
+- Later: thread listing, TTL GC, tenancy (out of learning scope).
