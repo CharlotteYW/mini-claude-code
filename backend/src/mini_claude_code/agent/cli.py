@@ -14,7 +14,7 @@ from mini_claude_code.agent.checkpointer import (
     open_checkpointer,
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
-from mini_claude_code.agent.stream_cli import consume_agent_stream
+from mini_claude_code.agent.stream_render import consume_agent_stream
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
 

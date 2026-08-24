@@ -13,7 +13,7 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from langgraph.checkpoint.memory import MemorySaver
 
 from mini_claude_code.agent.graph import build_agent_graph
-from mini_claude_code.agent.stream_cli import consume_agent_stream
+from mini_claude_code.agent.stream_render import consume_agent_stream
 from mini_claude_code.tools import demo_tools
 
 pytestmark = pytest.mark.unit

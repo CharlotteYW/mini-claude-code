@@ -115,7 +115,7 @@ Topology of nodes/edges **unchanged**; streaming is runtime API + passing `confi
 ### What we did
 
 - `call_model(state, config)` passes `config` into `bound.invoke` so `stream_mode="messages"` emits tokens.
-- Added `agent/stream_cli.py` (`consume_agent_stream`) printing live AI tokens + `[tool:…]` / `[model→tools]` from updates.
+- Added `agent/stream_render.py` (`consume_agent_stream`) printing live AI tokens + `[tool:…]` / `[model→tools]` from updates. (Named `stream_render` so it is not mistaken for a second CLI entrypoint; only `cli.py` is the entry.)
 - CLI defaults to streaming; `--no-stream` restores invoke + full transcript.
 - Unit tests use a tiny `BaseChatModel` with `_stream`; integration covers live provider + Postgres resume.
 

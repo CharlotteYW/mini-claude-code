@@ -1,6 +1,9 @@
-"""Stream helpers for the ReAct agent CLI (M6).
+"""Render LangGraph stream events for the agent CLI (M6).
 
-`messages` = LLM tokens (only if call_model streams the model).
+Not a second entrypoint — `cli.py` is the only CLI. This module only turns
+`graph.stream(...)` chunks into stdout (tokens + tool/node milestones).
+
+`messages` = LLM tokens (only if call_model passes config into the model).
 `updates` = per-node milestones (tool lifecycle is visible here).
 """
 

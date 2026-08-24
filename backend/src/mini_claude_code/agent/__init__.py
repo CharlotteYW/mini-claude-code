@@ -10,7 +10,7 @@ from mini_claude_code.agent.graph import (
     build_agent_graph,
     route_after_model,
 )
-from mini_claude_code.agent.stream_cli import consume_agent_stream
+from mini_claude_code.agent.stream_render import consume_agent_stream
 
 __all__ = [
     "DEFAULT_RECURSION_LIMIT",

@@ -6,6 +6,13 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-24 — Rename stream helper to `stream_render`
+
+- Insight: `stream_cli` sounded like a second entrypoint; it only **renders** `graph.stream` events for `cli.py`.
+- Change: `agent/stream_cli.py` → `agent/stream_render.py`.
+
+---
+
 ## 2026-08-23 — M6: Streaming CLI
 
 - Insight: Streaming is **when** you see events, not a smarter agent — final state matches `invoke`.
