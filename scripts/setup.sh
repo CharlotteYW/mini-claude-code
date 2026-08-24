@@ -65,4 +65,5 @@ else
   echo "    Then ensure Ollama is running: ollama serve  # if needed"
 fi
 
-echo "==> Setup complete. Next: ./scripts/run.sh"
+echo "==> Setup complete. Next: ./scripts/smoke.sh  (agent: ./scripts/agent.sh)"
+

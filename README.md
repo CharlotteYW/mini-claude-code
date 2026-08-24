@@ -48,7 +48,11 @@ mini-claude-code/
 ├── docker-compose.yml
 └── scripts/
     ├── setup.sh
-    └── run.sh
+    ├── smoke.sh              # M0: LLM factory smoke (not the agent)
+    ├── agent.sh              # M2+: ReAct coding agent
+    ├── parity.sh
+    ├── test.sh
+    └── run.sh                # deprecated alias → smoke.sh
 ```
 
 ## Quick start
@@ -56,15 +60,15 @@ mini-claude-code/
 ```bash
 cp .env.example .env   # or let setup create it
 ./scripts/setup.sh
-./scripts/run.sh
-./scripts/parity.sh    # M1: tool-calling parity across configured providers
-./scripts/agent.sh "Use the add tool to compute 17 + 25."
-./scripts/test.sh                  # default: unit tests
-./scripts/test.sh -m integration   # needs Docker/Ollama/keys as applicable
+./scripts/smoke.sh             # construct LLM client
+./scripts/smoke.sh --ping      # optional live invoke
+./scripts/parity.sh            # M1: tool-calling parity
+./scripts/agent.sh "Use write_file to create demo.txt with hello, then read it."
+./scripts/test.sh              # default: unit tests
+./scripts/test.sh -m integration
 ./scripts/test.sh tests/unit/test_m3_fs_tools.py -v
-# optional live invoke (needs Ollama + model):
+# Large model pull (optional):
 # PULL_OLLAMA_MODEL=1 ./scripts/setup.sh
-# ./scripts/run.sh --ping
 ```
 
 Neo4j Browser: http://localhost:7474 (idle until memory milestones).

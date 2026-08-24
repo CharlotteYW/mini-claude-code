@@ -6,7 +6,7 @@ Done
 
 ## Goal
 
-Clean checkout can bring up infra stubs and a config-driven LLM factory skeleton (four providers; default Ollama + `gemma4:31b`) via `scripts/setup.sh` and a smoke `scripts/run.sh` — no coding agent loop yet.
+Clean checkout can bring up infra stubs and a config-driven LLM factory skeleton (four providers; default Ollama + `gemma4:31b`) via `scripts/setup.sh` and a smoke `scripts/smoke.sh` (historically `run.sh`) — no coding agent loop yet.
 
 ## Why this milestone (learning objectives)
 
@@ -40,7 +40,7 @@ Clean checkout can bring up infra stubs and a config-driven LLM factory skeleton
 ```mermaid
 flowchart LR
   subgraph host [Developer machine]
-    Scripts[setup.sh / run.sh]
+    Scripts[setup.sh / smoke.sh]
     Backend[backend uv project]
     Factory[llm/factory.py]
     Ollama[Ollama gemma4:31b]
@@ -67,7 +67,7 @@ flowchart LR
 - [x] Implement `llm/factory.py` stub: `LLM_PROVIDER` + `LLM_MODEL` → LangChain chat model constructors
 - [x] Add `.env.example` (defaults `ollama` / `gemma4:31b`; keys for anthropic, openai, openrouter)
 - [x] Implement idempotent `scripts/setup.sh` (venv/deps, compose up, guidance for `ollama pull`)
-- [x] Implement `scripts/run.sh` smoke (print resolved provider/model; optional connectivity check)
+- [x] Implement `scripts/smoke.sh` smoke (print resolved provider/model; optional connectivity check) — formerly `run.sh`
 - [x] Do **not** auto-pull `gemma4:31b` by default (20GB) — document optional flag
 - [x] Fill Results + LEARNING_LOG after implementation
 
@@ -77,7 +77,7 @@ After M0 implementation is approved and landed:
 
 1. `cp .env.example .env` (optional key edits)
 2. `./scripts/setup.sh` — creates/syncs Python env, starts Compose, exits 0 on repeat runs
-3. `./scripts/run.sh` — prints active provider/model; clear message if Ollama/API key missing
+3. `./scripts/smoke.sh` — prints active provider/model; clear message if Ollama/API key missing
 4. `docker compose ps` shows healthy Postgres and Neo4j
 
 ## Testing (planned)
@@ -105,7 +105,7 @@ Added as a **project-wide requirement after M1**; treat as open debt before M2 c
 - `backend/` uv project with LangChain provider packages + early `langgraph` dep; package `mini_claude_code` under `src/`.
 - Config via `pydantic-settings` (`LLM_PROVIDER` / `LLM_MODEL` + keys).
 - `create_chat_model()` for ollama / anthropic / openai / openrouter (OpenRouter = `ChatOpenAI` + gateway URL/headers).
-- Idempotent `scripts/setup.sh` and smoke `scripts/run.sh` (`mcc-smoke`, optional `--ping`).
+- Idempotent `scripts/setup.sh` and smoke `scripts/smoke.sh` (`mcc-smoke`, optional `--ping`).
 - Default: no automatic `ollama pull`; opt-in `PULL_OLLAMA_MODEL=1`.
 
 ### Commands & how to reproduce
@@ -113,8 +113,8 @@ Added as a **project-wide requirement after M1**; treat as open debt before M2 c
 ```bash
 cp .env.example .env          # setup also creates this if missing
 ./scripts/setup.sh            # compose up + uv sync; idempotent
-./scripts/run.sh              # construct ChatOllama for gemma4:31b
-./scripts/run.sh --ping       # optional live invoke (needs Ollama + model pulled)
+./scripts/smoke.sh              # construct ChatOllama for gemma4:31b
+./scripts/smoke.sh --ping       # optional live invoke (needs Ollama + model pulled)
 PULL_OLLAMA_MODEL=1 ./scripts/setup.sh   # optional ~20GB pull
 docker compose ps
 docker exec mcc-postgres psql -U mcc -d mini_claude_code -c '\dx'
@@ -136,7 +136,7 @@ construct: OK
 flowchart LR
   subgraph host [Developer machine]
     Setup[scripts/setup.sh]
-    Run[scripts/run.sh]
+    Run[scripts/smoke.sh]
     Smoke[mcc-smoke]
     Factory[create_chat_model]
     Ollama[Ollama host :11434]

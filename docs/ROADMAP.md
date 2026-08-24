@@ -14,7 +14,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 
 | ID | Title | Goal |
 |---|---|---|
-| [M0](milestones/M0-environment.md) | Environment & provider skeleton | **Done.** Docker Compose (Postgres+pgvector, Neo4j), `uv` backend, LLM factory for ollama / anthropic / openai / openrouter (default `ollama`+`gemma4:31b`), `setup.sh` / `run.sh`. |
+| [M0](milestones/M0-environment.md) | Environment & provider skeleton | **Done.** Docker Compose (Postgres+pgvector, Neo4j), `uv` backend, LLM factory for ollama / anthropic / openai / openrouter (default `ollama`+`gemma4:31b`), `setup.sh` / `smoke.sh`. |
 
 ## Tier 1 — Core loop & tools
 

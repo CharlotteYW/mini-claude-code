@@ -11,7 +11,7 @@ from mini_claude_code.llm import create_chat_model
 
 
 def _load_dotenv_from_repo_root() -> None:
-    """Prefer repo-root .env regardless of cwd (scripts/run.sh vs uv run)."""
+    """Prefer repo-root .env regardless of cwd (scripts/smoke.sh vs uv run)."""
     try:
         from dotenv import load_dotenv
     except ImportError:
