@@ -51,8 +51,7 @@ mini-claude-code/
     ├── smoke.sh              # M0: LLM factory smoke (not the agent)
     ├── agent.sh              # M2+: ReAct coding agent
     ├── parity.sh
-    ├── test.sh
-    └── run.sh                # deprecated alias → smoke.sh
+    └── test.sh
 ```
 
 ## Quick start
