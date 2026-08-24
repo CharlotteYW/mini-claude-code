@@ -2,28 +2,30 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M5 complete  
+**Last updated:** M6 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M5)
+## Current status (M6)
 
 | Piece | Status |
 |---|---|
 | ReAct StateGraph | M2 |
 | Filesystem tools + path jail | M3 |
 | Shell + git tools (host subprocess) | M4 |
-| Postgres checkpointer / sessions | **M5 Done** |
-| Streaming CLI | Next: M6 |
+| Postgres checkpointer / sessions | M5 |
+| Streaming CLI | **M6 Done** |
+| Context compaction | Next: M7 |
 | Docker sandbox for shell | M11 |
 
 Default tools: `build_default_tools(workspace)` = FS + `run_shell` + `git_*`.  
-Sessions: `compile(checkpointer=...)` + `configurable.thread_id` (`CHECKPOINT_BACKEND=postgres|memory`).
+Sessions: `compile(checkpointer=...)` + `configurable.thread_id` (`CHECKPOINT_BACKEND=postgres|memory`).  
+CLI: `graph.stream(stream_mode=["messages","updates","values"])` by default; `--no-stream` uses `invoke`.
 
-## ReAct core (M2–M5)
+## ReAct core (M2–M6)
 
 ```mermaid
 flowchart LR
@@ -123,4 +125,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M3 Done** — [milestones/M3-filesystem-tools.md](milestones/M3-filesystem-tools.md)
 - **M4 Done** — [milestones/M4-shell-git-tools.md](milestones/M4-shell-git-tools.md)
 - **M5 Done** — [milestones/M5-postgres-checkpointer.md](milestones/M5-postgres-checkpointer.md)
+- **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

@@ -29,7 +29,7 @@ def _load_repo_settings() -> Settings:
 
 
 class _EchoBound:
-    def invoke(self, messages: list[Any]) -> AIMessage:
+    def invoke(self, messages: list[Any], config: Any = None) -> AIMessage:
         last = messages[-1]
         content = getattr(last, "content", str(last))
         return AIMessage(content=f"ack:{content}")

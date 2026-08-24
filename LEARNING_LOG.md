@@ -6,6 +6,16 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-23 — M6: Streaming CLI
+
+- Insight: Streaming is **when** you see events, not a smarter agent — final state matches `invoke`.
+- Insight: Pass **`config` into `model.invoke(..., config)`** inside `call_model`; bare invoke / non-callback fakes will not feed `stream_mode="messages"`.
+- Insight: Tokens ≠ tool progress — use `updates` (or later `custom`) for tool lifecycle.
+- Commands: `./scripts/agent.sh "…"` vs `--no-stream`; `./scripts/test.sh tests/unit/test_m6_streaming.py`
+- Link: [docs/milestones/M6-streaming-cli.md](docs/milestones/M6-streaming-cli.md)
+
+---
+
 ## 2026-08-23 — Future dig parked: Slack/Discord → open PR (M18)
 
 - Idea: use Slack or Discord as the command surface; agent runs in a durable `thread_id` session; end state is opening a GitHub PR — same core graph, new *adapter* layer.

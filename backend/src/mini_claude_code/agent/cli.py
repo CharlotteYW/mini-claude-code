@@ -1,4 +1,4 @@
-"""CLI entrypoint for the ReAct agent (M2+), with durable sessions (M5)."""
+"""CLI entrypoint for the ReAct agent (M2+), sessions (M5), streaming (M6)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from mini_claude_code.agent.checkpointer import (
     open_checkpointer,
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
+from mini_claude_code.agent.stream_cli import consume_agent_stream
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
 
@@ -53,20 +54,23 @@ def _print_transcript(messages: list[object]) -> None:
     print("=== done ===")
 
 
-def _run_once(graph, prompt: str, config: dict) -> int:
+def _run_once(graph, prompt: str, config: dict, *, stream: bool) -> int:
     try:
+        if stream:
+            consume_agent_stream(graph, prompt, config)
+            return 0
         result = graph.invoke(
             {"messages": [HumanMessage(content=prompt)]},
             config=config,
         )
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: agent invoke failed: {exc}", file=sys.stderr)
+        print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
         return 1
     _print_transcript(result["messages"])
     return 0
 
 
-def _run_repl(graph, config: dict) -> int:
+def _run_repl(graph, config: dict, *, stream: bool) -> int:
     print("REPL mode — empty line or Ctrl-D to exit.")
     while True:
         try:
@@ -76,7 +80,7 @@ def _run_repl(graph, config: dict) -> int:
             break
         if not line:
             break
-        code = _run_once(graph, line, config)
+        code = _run_once(graph, line, config, stream=stream)
         if code != 0:
             return code
     return 0
@@ -113,6 +117,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Interactive multi-turn loop (requires a thread id).",
     )
+    parser.add_argument(
+        "--no-stream",
+        action="store_true",
+        help="Use invoke + full transcript (M5-style) instead of live streaming.",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -140,11 +149,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.checkpointer
         else None
     )
+    stream = not args.no_stream
 
-    print("mini-claude-code agent (FS + shell/git + sessions)")
+    print("mini-claude-code agent (FS + shell/git + sessions + stream)")
     print(f"  provider:     {settings.llm_provider}")
     print(f"  model:        {settings.llm_model}")
     print(f"  workspace:    {resolve_workspace_root(settings)}")
+    print(f"  streaming:    {'on' if stream else 'off (--no-stream)'}")
     if use_checkpoint:
         kind = backend or settings.checkpoint_backend
         print(f"  thread_id:    {thread_id}")
@@ -168,12 +179,14 @@ def main(argv: list[str] | None = None) -> int:
                     settings=settings, checkpointer=checkpointer
                 )
                 if args.repl:
-                    return _run_repl(graph, config)
-                return _run_once(graph, args.prompt or "", config)
+                    return _run_repl(graph, config, stream=stream)
+                return _run_once(
+                    graph, args.prompt or "", config, stream=stream
+                )
         graph = build_agent_graph(settings=settings, checkpointer=None)
         if args.repl:
-            return _run_repl(graph, config)
-        return _run_once(graph, args.prompt or "", config)
+            return _run_repl(graph, config, stream=stream)
+        return _run_once(graph, args.prompt or "", config, stream=stream)
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

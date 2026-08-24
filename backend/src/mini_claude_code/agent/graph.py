@@ -2,6 +2,10 @@
 
 Default tools: workspace FS (M3) + shell/git (M4). Pass `tools=` for tests.
 Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
+
+Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)` so
+`graph.stream(stream_mode=\"messages\")` receives LLM tokens via callbacks.
+Manual `model.stream()` loops are unnecessary for token UX and easy to get wrong.
 """
 
 from __future__ import annotations
@@ -10,6 +14,7 @@ from typing import Any, Literal, Sequence
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, MessagesState, StateGraph
@@ -56,8 +61,11 @@ def build_agent_graph(
     )
     bound = model.bind_tools(tool_list)
 
-    def call_model(state: MessagesState) -> dict[str, list[Any]]:
-        response = bound.invoke(state["messages"])
+    def call_model(
+        state: MessagesState, config: RunnableConfig
+    ) -> dict[str, list[Any]]:
+        # Passing config is what enables stream_mode="messages" token events.
+        response = bound.invoke(state["messages"], config)
         return {"messages": [response]}
 
     graph = StateGraph(MessagesState)

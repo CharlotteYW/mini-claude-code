@@ -79,7 +79,7 @@ def test_build_agent_graph_node_names() -> None:
 
 
 class _FakeBound:
-    def invoke(self, messages: list[Any]) -> AIMessage:
+    def invoke(self, messages: list[Any], config: Any = None) -> AIMessage:
         has_tool_result = any(isinstance(m, ToolMessage) for m in messages)
         if has_tool_result:
             return AIMessage(content="The sum of 17 and 25 is 42.")
