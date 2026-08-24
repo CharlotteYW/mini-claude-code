@@ -6,6 +6,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-24 — Future dig: pre-ship quality gate (M19) + tighten M18
+
+- Idea: Slack/Discord may drive work, but **no PR/push until format + all tests are green**; on failure the agent keeps fixing (bounded loop). Repo **owner** may push; otherwise open a PR.
+- Split: M18 = channel adapter → agent; **M19** = reusable ship gate (format/test/fix-until-green + pr vs push policy).
+- Parked in [docs/ROADMAP.md](docs/ROADMAP.md); depends on M9/M10 permissions/HITL in practice.
+
+---
+
 ## 2026-08-24 — Rename stream helper to `stream_render`
 
 - Insight: `stream_cli` sounded like a second entrypoint; it only **renders** `graph.stream` events for `cli.py`.

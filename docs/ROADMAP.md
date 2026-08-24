@@ -52,9 +52,12 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | ID | Title | Goal |
 |---|---|---|
 | M17 | Eval harness & cost/retry | Tiny evals; retries/backoff; token accounting; optional Anthropic prompt caching. |
-| M18 | Chat channel → agent → open PR | Slack and/or Discord bot as a thin adapter: channel message → `thread_id` session → ReAct agent; controlled `open_pr` (e.g. `gh`) with HITL before push/PR. |
+| M18 | Chat channel → agent → open PR | Slack and/or Discord bot as a thin adapter: channel message → `thread_id` session → ReAct agent; ship via M19 gate then open PR (or owner push). |
+| M19 | Pre-ship quality gate (format + test until green) | Before any PR or push: run formatter + full test suite; on failure, agent keeps editing/re-running until green (bounded retries). Owner may `git push` to the target branch; non-owner / default path opens a PR only. |
 
-**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer one channel first (Discord *or* Slack), dry-run PR creation, and deny-by-default until M9/M10 policy exists.
+**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer one channel first (Discord *or* Slack), dry-run PR creation, and deny-by-default until M9/M10 policy exists. Always call through **M19** so channel-triggered ships cannot skip CI-like checks.
+
+**M19 learning notes (when we get there):** this is an *agentic quality loop*, not “hope the human ran pytest.” Wire `./scripts/test.sh` (+ formatter, e.g. ruff/black once chosen) as tools or a single `ship_check` tool; treat red tests as recoverable errors in the ReAct loop. Cap iterations to avoid infinite spend. **Simplification:** local checks only first (no mandatory GitHub Actions wait); production would also require remote CI status. Owner-push is a policy switch (`SHIP_MODE=pr|push`) with HITL confirmation from M9/M10 — never silent force-push.
 
 ## Status legend
 
