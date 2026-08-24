@@ -14,6 +14,22 @@ Replace the CLI’s “wait then dump full transcript” UX with **LangGraph str
 - Streaming attaches to the **compiled graph runtime** (`graph.stream` / `astream`), same attachment point as checkpointer and (later) interrupt — another reason we did not invent a hand-rolled `while` loop in M2.
 - Critical pitfall: `stream_mode="messages"` only yields tokens if the **LLM call inside `call_model` actually streams**. A node that uses `model.invoke()` will still finish as one chunk.
 
+### Why bother — with vs without streaming
+
+Streaming does **not** make the agent smarter, give it new tools, or change ReAct correctness. Final state after a successful run should match `invoke`. What changes is **when** information reaches the human (and later: UI, Slack/Discord, HITL).
+
+| Concern | Without streaming (`invoke` only) | With streaming (`stream` + token LLM) |
+|---|---|---|
+| Latency feel | Long silent wait, then a wall of text | First tokens appear early; wait feels shorter even if wall-clock is similar |
+| Debuggability mid-run | Blind until the whole turn finishes | See which node/tool ran (`updates`) while still executing |
+| Failure UX | Crash/timeout after N seconds of silence — unclear where it stuck | Last visible event often shows “stuck in tools / waiting on model” |
+| HITL / later channels (M10, M18) | Harder to show “about to run shell” before the fact | Same event stream can drive CLI, web SSE, or Discord progress messages |
+| Learning LangGraph | Easy to think “agent = invoke black box” | Forces owning runtime events: tokens ≠ tool progress ≠ checkpoints |
+
+**Necessity for this learning repo:** not strictly required for a correct toy agent — M2–M5 already prove the loop and durable sessions. It **is** necessary if the goal is to understand how production coding agents *feel* and how UIs/bots stay responsive. Without M6 you can still build agents; you will systematically under-appreciate the graph runtime and over-build “print after done” CLIs that do not transfer to real products.
+
+**What we keep:** `--no-stream` remains so you can A/B the same prompt and prove the cognitive difference yourself.
+
 ## Concepts introduced
 
 - **`graph.stream` / `astream`:** push graph events while the run is in progress.
