@@ -6,6 +6,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-24 — Future digs: M20 ingestion pipeline + M21 Elasticsearch
+
+- Idea: after thin M8 memory, add **local production-ish** improvements (few users → Docker Compose on a laptop is fine).
+- **M20:** chunking/cleaning pipeline feeding Neo4j/pgvector (ingestion ≠ “Neo4j cuts text by itself”).
+- **M21:** add Elasticsearch for full-text/keyword search; teach ES vs graph vs vectors.
+- Not in current M8 scope — parked in [docs/ROADMAP.md](docs/ROADMAP.md).
+
+---
+
 ## 2026-08-24 — M7: Context compaction
 
 - Insight: Durable sessions (M5) without compaction are a footgun — context grows until the provider breaks or quality dies.

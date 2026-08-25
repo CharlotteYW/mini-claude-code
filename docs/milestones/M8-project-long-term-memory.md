@@ -149,6 +149,15 @@ Reply with preference (default if silent: **A**):
 - **A.** Neo4j + `AGENT.md` in code; vectors = documentation + “why pgvector exists” only this milestone  
 - **B.** Also ship a **minimal** pgvector remember/recall (one table, one embedding call)
 
+## Parked for later (not M8)
+
+Agreed direction (local-first, few users OK):
+
+- **M20** — production-ish **ingestion**: text chunking/cleaning/metadata, then write into Neo4j / pgvector (chunking is a *pipeline*, not a Neo4j built-in).
+- **M21** — add **Elasticsearch** to Compose for full-text/keyword search beside graph + vectors.
+
+See [docs/ROADMAP.md](../ROADMAP.md) Tier 4. M8 stays the thin teaching cut.
+
 ## Results
 
 *(Fill after implementation.)*
@@ -174,3 +183,5 @@ Reply with preference (default if silent: **A**):
 ### Testing results
 
 ### Open questions / next dig
+
+- M20 / M21: ingestion chunking + local Elasticsearch (parked on ROADMAP).
