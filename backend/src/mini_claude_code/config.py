@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     # Session durability (M5): postgres (default) or memory
     checkpoint_backend: str = Field(default="postgres", alias="CHECKPOINT_BACKEND")
 
+    # Context compaction (M7). threshold<=0 disables. Tokens ≈ chars/4.
+    context_compact_threshold: int = Field(
+        default=6000, alias="CONTEXT_COMPACT_THRESHOLD"
+    )
+    context_keep_recent: int = Field(default=12, alias="CONTEXT_KEEP_RECENT")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

@@ -5,7 +5,9 @@ Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
 
 Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)` so
 `graph.stream(stream_mode=\"messages\")` receives LLM tokens via callbacks.
-Manual `model.stream()` loops are unnecessary for token UX and easy to get wrong.
+
+Compaction (M7): before invoke, optionally summarize older messages when over
+CONTEXT_COMPACT_THRESHOLD (policy plane — not a new graph node).
 """
 
 from __future__ import annotations
@@ -13,14 +15,16 @@ from __future__ import annotations
 from typing import Any, Literal, Sequence
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, RemoveMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
+from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
 from mini_claude_code.tools import build_default_tools
@@ -60,12 +64,29 @@ def build_agent_graph(
         )
     )
     bound = model.bind_tools(tool_list)
+    summarizer = default_summarizer(model)
 
     def call_model(
         state: MessagesState, config: RunnableConfig
     ) -> dict[str, list[Any]]:
-        # Passing config is what enables stream_mode="messages" token events.
-        response = bound.invoke(state["messages"], config)
+        messages = list(state["messages"])
+        compacted, did_compact = maybe_compact_messages(
+            messages,
+            threshold_tokens=settings.context_compact_threshold,
+            keep_recent=settings.context_keep_recent,
+            summarizer=summarizer,
+        )
+        # Passing config enables stream_mode="messages" token events (M6).
+        response = bound.invoke(compacted, config)
+        if did_compact:
+            # Rewrite transcript in state (simplification vs dual-store history).
+            return {
+                "messages": [
+                    RemoveMessage(id=REMOVE_ALL_MESSAGES),
+                    *compacted,
+                    response,
+                ]
+            }
         return {"messages": [response]}
 
     graph = StateGraph(MessagesState)

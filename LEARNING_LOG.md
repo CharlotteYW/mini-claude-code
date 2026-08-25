@@ -6,6 +6,16 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-24 — M7: Context compaction
+
+- Insight: Durable sessions (M5) without compaction are a footgun — context grows until the provider breaks or quality dies.
+- Insight: Compaction ≠ long-term memory (M8): lossy compression of the *live transcript*, done in the policy plane before `call_model`.
+- Insight: `MessagesState` appends — rewriting history needs `RemoveMessage(REMOVE_ALL_MESSAGES)`.
+- Commands: `./scripts/test.sh tests/unit/test_m7_compaction.py`; set low `CONTEXT_COMPACT_THRESHOLD` to demo.
+- Link: [docs/milestones/M7-context-compaction.md](docs/milestones/M7-context-compaction.md)
+
+---
+
 ## 2026-08-24 — Future dig: pre-ship quality gate (M19) + tighten M18
 
 - Idea: Slack/Discord may drive work, but **no PR/push until format + all tests are green**; on failure the agent keeps fixing (bounded loop). Repo **owner** may push; otherwise open a PR.

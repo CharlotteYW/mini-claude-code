@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
@@ -72,23 +72,23 @@ Topology of nodes/edges **unchanged**; compaction is a pre-invoke step inside (o
 
 ### Unit
 
-- [ ] Below threshold: messages unchanged; summarizer LLM not called
-- [ ] Above threshold: prefix replaced by one summary-bearing message; recent tail preserved; estimated size drops
-- [ ] Safe cut: does not leave a lone `ToolMessage` without its parent tool-call AI message
-- [ ] Fake summarizer records prompt content (proves older turns were passed to summarize)
+- [x] Below threshold: messages unchanged; summarizer LLM not called
+- [x] Above threshold: prefix replaced by one summary-bearing message; recent tail preserved; estimated size drops
+- [x] Safe cut: does not leave a lone `ToolMessage` without its parent tool-call AI message
+- [x] Fake summarizer records prompt content (proves older turns were passed to summarize)
 
 ### Integration
 
-- [ ] Live provider: force low threshold + long synthetic/replayed history → next turn still completes (skip if provider down)
+- [x] Live provider: force low threshold + long synthetic/replayed history → next turn still completes (skip if provider down)
 - [ ] Optional: same `thread_id` + Postgres: after compact, resumed turn uses compacted messages (skip if Postgres down)
 
 ## Tasks
 
-- [ ] `agent/compact.py` (or similar): estimate size, safe slice, summarize, return new message list
-- [ ] Settings: `CONTEXT_COMPACT_THRESHOLD`, `CONTEXT_KEEP_RECENT` (+ `.env.example`)
-- [ ] Wire into `call_model` before `bound.invoke`
-- [ ] Unit + integration tests
-- [ ] Results + LEARNING_LOG + architecture; commit + push
+- [x] `agent/compact.py` (or similar): estimate size, safe slice, summarize, return new message list
+- [x] Settings: `CONTEXT_COMPACT_THRESHOLD`, `CONTEXT_KEEP_RECENT` (+ `.env.example`)
+- [x] Wire into `call_model` before `bound.invoke`
+- [x] Unit + integration tests
+- [x] Results + LEARNING_LOG + architecture; commit + push
 
 ## Demo / acceptance criteria
 
@@ -99,26 +99,67 @@ Topology of nodes/edges **unchanged**; compaction is a pre-invoke step inside (o
 
 ## Results
 
-*(Fill after implementation.)*
-
 ### What we did
 
+- Added `agent/compact.py`: `estimate_tokens`, `safe_prefix_end`, `maybe_compact_messages`, `default_summarizer`.
+- `call_model` compacts when over threshold, then `bound.invoke` on the compacted view; on compact, rewrites state via `RemoveMessage(REMOVE_ALL_MESSAGES)`.
+- Settings: `CONTEXT_COMPACT_THRESHOLD` (default 6000; `<=0` disables), `CONTEXT_KEEP_RECENT` (default 12).
+- Stderr note: `[compact] estimated_tokens A→B (messages N→M)`.
+
 ### Commands & how to reproduce
+
+```bash
+./scripts/test.sh tests/unit/test_m7_compaction.py -v
+./scripts/test.sh tests/integration/test_m7_compaction_live.py -v
+
+# Force compaction in a session (low threshold):
+# In .env: CONTEXT_COMPACT_THRESHOLD=200  CONTEXT_KEEP_RECENT=4
+./scripts/agent.sh --thread-id compact-demo --repl
+```
 
 ### As-built graph
 
 ```mermaid
-%% fill after implementation
+flowchart LR
+  Start([START]) --> CallModel[call_model]
+  CallModel -->|tool_calls| Tools[ToolNode]
+  CallModel -->|else| EndNode([END])
+  Tools --> CallModel
 ```
 
-- Delta vs planned graph:
+```mermaid
+sequenceDiagram
+  participant CM as call_model
+  participant Compact as maybe_compact_messages
+  participant LLM as chat_model
+  CM->>Compact: if over threshold
+  Compact->>LLM: summarize prefix (no tools)
+  Compact-->>CM: summary + recent
+  CM->>LLM: bind_tools invoke compacted
+```
+
+- Delta vs planned graph: unchanged. Compaction stays inside `call_model` (no new node).
 
 ### Why this approach
 
+- Keeps Option B: policy plane before cognition; ReAct topology stays teachable.
+- Safe cuts prevent provider breakage on orphan `ToolMessage`s.
+
 ### Deviations from plan
+
+- Optional Postgres-resume-after-compact integration case deferred (structure covered by unit graph rewrite + live summarizer test).
 
 ### Pitfalls & aha moments
 
+- `MessagesState` **appends** by default — must `RemoveMessage(REMOVE_ALL_MESSAGES)` to rewrite transcript.
+- Compaction is lossy; M8 memory is for facts you must not lose.
+
 ### Testing results
 
+- Unit: 4 passed (`test_m7_compaction.py`).
+- Integration: 1 passed live compaction with low threshold.
+
 ### Open questions / next dig
+
+- M8: durable facts outside the transcript (AGENT.md / Neo4j / vectors).
+- Production dig: dual-store (full checkpoint + ephemeral model view) + tiktoken.

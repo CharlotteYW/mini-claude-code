@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M6 complete  
+**Last updated:** M7 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M6)
+## Current status (M7)
 
 | Piece | Status |
 |---|---|
@@ -17,15 +17,17 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Filesystem tools + path jail | M3 |
 | Shell + git tools (host subprocess) | M4 |
 | Postgres checkpointer / sessions | M5 |
-| Streaming CLI | **M6 Done** |
-| Context compaction | Next: M7 |
+| Streaming CLI | M6 |
+| Context compaction | **M7 Done** |
+| Project + long-term memory | Next: M8 |
 | Docker sandbox for shell | M11 |
 
 Default tools: `build_default_tools(workspace)` = FS + `run_shell` + `git_*`.  
 Sessions: `compile(checkpointer=...)` + `configurable.thread_id` (`CHECKPOINT_BACKEND=postgres|memory`).  
-CLI: `graph.stream(stream_mode=["messages","updates","values"])` by default; `--no-stream` uses `invoke`.
+CLI: `graph.stream(stream_mode=["messages","updates","values"])` by default; `--no-stream` uses `invoke`.  
+Compaction: before `call_model` invoke when estimated tokens > `CONTEXT_COMPACT_THRESHOLD` (chars/4); keep `CONTEXT_KEEP_RECENT`.
 
-## ReAct core (M2–M6)
+## ReAct core (M2–M7)
 
 ```mermaid
 flowchart LR
@@ -126,4 +128,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M4 Done** — [milestones/M4-shell-git-tools.md](milestones/M4-shell-git-tools.md)
 - **M5 Done** — [milestones/M5-postgres-checkpointer.md](milestones/M5-postgres-checkpointer.md)
 - **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
+- **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

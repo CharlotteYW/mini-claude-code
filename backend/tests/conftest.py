@@ -26,6 +26,8 @@ def clean_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
         "WORKSPACE_ROOT",
         "SHELL_TIMEOUT_SEC",
         "CHECKPOINT_BACKEND",
+        "CONTEXT_COMPACT_THRESHOLD",
+        "CONTEXT_KEEP_RECENT",
     ):
         monkeypatch.delenv(key, raising=False)
 
