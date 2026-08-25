@@ -4,6 +4,44 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 **Order: newest first** (reverse chronological). Always prepend new entries below this note.
 
+**Q&A notes:** When a chat dig clarifies an agent/LLM concept (why a store exists, call chain, Fact vs Note, stream modes, etc.), prepend a short English bullet entry here so review insights are not lost. Milestone Results stay the implementation record; this log stays the “what I now understand” record.
+
+---
+
+## 2026-08-25 — M8 conceptual Q&A backfill (review chat)
+
+Four memory layers (do not conflate):
+
+| Layer | Store | How it enters the model | Retrieval |
+|---|---|---|---|
+| Session transcript | Postgres **checkpointer** (M5) | `messages` state | Whole thread (then M7 may compact) |
+| Project norms | File `workspace/AGENT.md` | **Auto** inject every `call_model` | Whole file |
+| Hard facts | Neo4j `:Fact` | Auto newest-N *or* tool `recall_facts` | Cypher `CONTAINS` (substring), **not** semantic |
+| Soft notes | Postgres `memory_notes` + **pgvector** | **Only** if model calls `recall_notes` | Embedding distance (semantic) |
+
+Call chains:
+
+- **Auto path:** `call_model` → compact → `inject_project_memory` (`project_memory.py`) → `recall_facts_block` (empty query = latest Facts) → `bound.invoke`.
+- **Tool path:** LLM `tool_calls` → `ToolNode` → `tools/memory_tools.py` (thin `@tool` wrap) → `memory/neo4j_facts.py` or `memory/pgvector_notes.py`.
+- `build_memory_tools` runs **once at graph build** (via `build_default_tools`), not every turn. Four tools: `remember_fact`, `recall_facts`, `remember_note`, `recall_notes`.
+- `@tool` ≈ `StructuredTool.from_function` for bind_tools/ToolNode; FS/git use StructuredTool style, memory uses `@tool` + settings closure — same BaseTool contract.
+
+Fact vs Note example: port `8080` / `pnpm` → Fact (must be exact); long “auth waits ~30s on Redis…” → Note (later ask “how long does login wait on cache?”). Mixing them fails either precision or recall-by-paraphrase.
+
+`remember_note` is not “Postgres faking search”: **Ollama embeds**, Postgres+pgvector **stores/ranks vectors**. Elasticsearch is for keyword/full-text at scale → parked as **M21**, not a replacement for embeddings.
+
+How to test: `./scripts/test.sh tests/unit/test_m8_memory.py`; `test_m8_pgvector.py`; integration `test_m8_memory_live.py` / `test_m8_pgvector_live.py`; inspect with `./scripts/db-inspect.sh neo4j|postgres`. Live Ollama embed needs `ollama pull nomic-embed-text` (else skip).
+
+Link: [docs/milestones/M8-project-long-term-memory.md](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-25 — Earlier digests backfill (M5–M7 chat)
+
+- **Compose “mini-claude-code”:** Docker Compose *project* name (= repo directory), not one container; real services are `mcc-postgres` + `mcc-neo4j`.
+- **Streaming modes:** `messages` = tokens; `updates` = node finished (tools visible here); `values` = full state snapshot. Pure chat barely needs `updates`; coding agents do. `stream_render.py` is a **renderer**, not a second CLI entry (`cli.py` is).
+- **Compaction:** when estimated tokens (`chars/4`) > `CONTEXT_COMPACT_THRESHOLD`, summarize older turns and keep `CONTEXT_KEEP_RECENT`; decision in `maybe_compact_messages` / wired from `call_model`. Lossy transcript compression ≠ long-term memory.
+
 ---
 
 ## 2026-08-24 — M8-B: minimal pgvector notes
