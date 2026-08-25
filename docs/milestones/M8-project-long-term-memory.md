@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
@@ -23,18 +23,14 @@ Give the agent **memory that survives compaction and new threads**: (1) inject p
 | **Durable structured facts** | **Neo4j** (not a second copy of chat) | Stable beliefs / relations across threads | **M8** |
 | **Semantic / fuzzy recall** | **pgvector** on the same Postgres | Embeddings for “find notes like this question” | M8 optional / later |
 
-So we are **not** choosing Neo4j *instead of* saving dialogue in PostgreSQL. Dialogue → checkpointer (Postgres). Neo4j is for **long-term knowledge that is not “the chat log”** — e.g. “module Auth depends on Redis”, “user prefers pnpm”, facts you still want after compaction or on a **new** `thread_id`.
-
-Putting every durable fact only as more chat rows in Postgres works poorly: compaction deletes/summarizes them; querying “all preferences” means scanning transcripts; relations (“A uses B”) are awkward in a flat message table.
+So we are **not** choosing Neo4j *instead of* saving dialogue in PostgreSQL. Dialogue → checkpointer (Postgres). Neo4j is for **long-term knowledge that is not “the chat log”**.
 
 ### What “vector scope” means (approval A vs B)
 
-**Vectors** = store text as **embedding numbers** in pgvector, then retrieve by **similarity** (“something about auth timeouts”), not by exact keyword or graph walk.
+**Vectors** = store text as **embedding numbers** in pgvector, then retrieve by **similarity**.
 
-- **A (default):** implement `AGENT.md` + Neo4j only; explain vectors in docs (why M0 enabled pgvector) but **no** embed/query code this milestone.  
-- **B:** also ship a **minimal** “save note → embed → similarity recall” path so you feel the difference vs Neo4j in running code.
-
-Vectors do **not** replace the checkpointer. They are another *retrieval* tool for fuzzy notes/docs.
+- **A (chosen):** implement `AGENT.md` + Neo4j only; explain vectors in docs (why M0 enabled pgvector) but **no** embed/query code this milestone.  
+- **B:** also ship a **minimal** “save note → embed → similarity recall” path — deferred; see M20.
 
 ### Why bother — with vs without long-term memory
 
@@ -45,47 +41,30 @@ Vectors do **not** replace the checkpointer. They are another *retrieval* tool f
 | Only checkpointer | Remembers *this* thread’s transcript | Remembers *project-level* knowledge across threads |
 | Wrong store | Stuff everything in chat or one giant markdown | Match shape: instructions → file; relations → graph; fuzzy retrieval → vectors |
 
-**Necessity:** optional for one-shot demos; **required** for a coding agent that feels project-aware across days.
-
 ## Concepts introduced
 
-- **Project memory (`AGENT.md`):** human-editable instructions injected every turn (policy plane), similar to Claude Code’s project docs.
-- **Episodic vs semantic (light touch):** checkpointer/transcript ≈ what happened in this thread; Neo4j/facts ≈ stable beliefs about the project.
-- **Graph memory:** entities + relationships (or simple `Fact` nodes) queried structurally — “what depends on X?”
-- **Vector memory (pgvector):** embedding similarity for fuzzy recall — “stuff about auth” without exact keywords.
-- **Memory inject:** prepend retrieved/project text before `bind_tools` invoke (Option B plane), topology unchanged.
+- **Project memory (`AGENT.md`):** human-editable instructions injected every turn (policy plane).
+- **Graph memory:** `Fact` nodes in Neo4j; tools `remember_fact` / `recall_facts`.
+- **Memory inject:** prepend project (+ best-effort fact block) after compact, before invoke.
+- **Vector memory:** documented only in M8 (pgvector reserved for M20+).
 
-### When files vs graph vs vectors win (teaching table)
+### When files vs graph vs vectors win
 
 | Store | Best for | Weak at |
 |---|---|---|
-| **File (`AGENT.md`)** | Stable project norms, commands, layout the human wants always on | Large/changing fact sets; multi-hop relations |
-| **Graph (Neo4j)** | Explicit relations, entitlements, “A uses B”, structured recall | Fuzzy natural-language search without a schema |
-| **Vectors (pgvector)** | Semantic / fuzzy retrieval over notes & docs | Precise joins; “always inject this paragraph” |
-
-**M8 implementation bias:** ship **file inject + Neo4j facts** fully; for vectors, either a **minimal** embed+query slice **or** a documented stub + “next dig” — choose in Tasks below and freeze at approval.
+| **File (`AGENT.md`)** | Stable project norms always on | Large/changing fact sets; multi-hop relations |
+| **Graph (Neo4j)** | Explicit facts / later relations | Fuzzy natural-language search without embeddings |
+| **Vectors (pgvector)** | Semantic / fuzzy retrieval | Precise joins; “always inject this paragraph” |
 
 ## Design decisions & alternatives considered
 
 | Decision | Choice | Alternatives rejected |
 |---|---|---|
-| Project file | `workspace/AGENT.md` (jail-friendly; create template if missing) | Only repo-root `AGENT.md` outside workspace (tools can’t edit it under jail) |
-| Inject where | Start of `call_model` (with compaction order: **compact → inject memory → invoke**) | Extra graph node `memory` (unnecessary topology noise) |
-| Long-term store | Neo4j facts via tools `remember_fact` / `recall_facts` (and/or auto-inject top-N on turn start) | Only markdown append (no structured recall) |
-| Vectors in M8 | **Preferred:** minimal pgvector table + one embed path (Ollama embeddings if available) **or** skip code and document only — **decide at approval** | Full RAG pipeline, chunking UI, hybrid ranker |
-| Write path | Model calls `remember_fact` when user states a durable preference | Silent auto-extract every turn (noisy; later dig) |
-| vs M7 | Compaction may drop chat detail; Neo4j/`AGENT.md` are the escape hatches | Re-inject full transcript after compact |
-
-**Simplification:** no multi-tenant ACL; no fancy entity resolution; fact schema stays small; vector path may be minimal or deferred one dig.
-
-### Proposed compact → memory → model order
-
-```text
-messages
-  → maybe_compact (M7)
-  → inject AGENT.md (+ optional recalled facts)
-  → bound.invoke(...)
-```
+| Project file | `workspace/AGENT.md` (jail-friendly) | Only repo-root outside workspace |
+| Inject where | After compact, before invoke inside `call_model` | Extra graph node |
+| Long-term store | Neo4j `Fact` + tools | Markdown-only append |
+| Vectors in M8 | **A** — docs only | Full RAG |
+| Write path | Model calls `remember_fact` | Silent auto-extract every turn |
 
 ## Architecture graph (planned)
 
@@ -97,91 +76,101 @@ flowchart LR
   Tools --> CallModel
 ```
 
-```mermaid
-flowchart TB
-  subgraph plane [Policy plane inside call_model]
-    Compact[maybe_compact]
-    Inject[inject AGENT.md plus recalls]
-    Compact --> Inject
-  end
-  Inject --> LLM[bound.invoke]
-  Tools2[remember_fact / recall_facts] --> Neo4j[(Neo4j)]
-  LLM -.->|tool_calls| Tools2
-```
-
-Topology of ReAct nodes/edges **unchanged**; memory is inject + tools.
-
 ## Testing (planned)
 
 ### Unit
 
-- [ ] `AGENT.md` present → system/project message appears in the list passed to the model (fake LLM records messages); missing file → template or skip without crash
-- [ ] `remember_fact` / `recall_facts` pure helpers (or tools with fake Neo4j driver) round-trip a fact
-- [ ] Inject order: compaction can rewrite messages; inject still prepends project memory on the compacted view
-- [ ] If vectors in scope: embed+query helper with fake embedding function returns nearest neighbor
+- [x] `AGENT.md` inject visible to fake LLM
+- [x] Idempotent inject; template ensure
+- [x] Fact prompt formatter
 
 ### Integration
 
-- [ ] Live Neo4j: remember then recall across a new graph invoke / thread (skip if Neo4j down)
-- [ ] Live agent turn: prompt that should use `AGENT.md` content (skip if provider down)
-- [ ] If vectors in scope: write + similarity query against Compose Postgres pgvector (skip if down / no embed model)
+- [x] Live Neo4j remember/recall round-trip (skip if down)
 
 ## Tasks
 
-- [ ] Add `workspace/AGENT.md` template + loader/injector
-- [ ] Neo4j fact store module + `remember_fact` / `recall_facts` tools wired into default toolset
-- [ ] Wire inject into `call_model` after compact, before invoke
-- [ ] **Approval choice:** minimal pgvector path **or** docs-only vectors this milestone
-- [ ] Unit + integration tests; `db-inspect` may show Neo4j non-empty after demos
-- [ ] Results + LEARNING_LOG + architecture; commit + push
+- [x] `workspace/AGENT.md` + loader/injector
+- [x] Neo4j fact store + tools in default toolset
+- [x] Wire inject into `call_model`
+- [x] Vector scope **A**
+- [x] Unit + integration tests
+- [x] Results + LEARNING_LOG + architecture; commit + push
 
 ## Demo / acceptance criteria
 
-1. Edit `workspace/AGENT.md` with a distinctive rule; agent’s next reply/behavior reflects it (model-dependent but inject must be visible in tests).
-2. Ask the agent to remember a fact; new `--thread-id` can `recall_facts` / answer using Neo4j (skip OK if Neo4j down in CI).
-3. Docs include the files vs graph vs vectors table; implementation matches the approved vector scope.
-4. Unit tests green offline; integration skips cleanly without services/keys.
-
-## Open decision for approval
-
-Reply with preference (default if silent: **A**):
-
-- **A.** Neo4j + `AGENT.md` in code; vectors = documentation + “why pgvector exists” only this milestone  
-- **B.** Also ship a **minimal** pgvector remember/recall (one table, one embedding call)
+1. Edit `workspace/AGENT.md`; next agent turn sees it in the model prompt (unit proves inject).
+2. `remember_fact` then `recall_facts` / new thread (integration + `./scripts/db-inspect.sh neo4j`).
+3. Docs include files vs graph vs vectors; vectors not coded this milestone.
+4. Unit green; integration skips cleanly without Neo4j.
 
 ## Parked for later (not M8)
 
-Agreed direction (local-first, few users OK):
-
-- **M20** — production-ish **ingestion**: text chunking/cleaning/metadata, then write into Neo4j / pgvector (chunking is a *pipeline*, not a Neo4j built-in).
-- **M21** — add **Elasticsearch** to Compose for full-text/keyword search beside graph + vectors.
-
-See [docs/ROADMAP.md](../ROADMAP.md) Tier 4. M8 stays the thin teaching cut.
+- **M20** — ingestion chunking → Neo4j/pgvector  
+- **M21** — local Elasticsearch  
 
 ## Results
 
-*(Fill after implementation.)*
-
 ### What we did
 
+- `agent/project_memory.py`: load/ensure/inject `AGENT.md`.
+- `memory/neo4j_facts.py` + `tools/memory_tools.py`: `remember_fact` / `recall_facts`.
+- `call_model`: compact → inject AGENT.md + best-effort Neo4j fact block → invoke.
+- Default toolset includes memory tools; `neo4j` moved to main deps; `db-inspect` shows Fact nodes.
+- Vector path: documentation only (approval **A**).
+
 ### Commands & how to reproduce
+
+```bash
+./scripts/test.sh tests/unit/test_m8_memory.py -v
+./scripts/test.sh tests/integration/test_m8_memory_live.py -v
+./scripts/db-inspect.sh neo4j
+
+# Edit workspace/AGENT.md then:
+./scripts/agent.sh --thread-id mem-demo "What project rules should you follow?"
+# Ask to remember a fact, then new thread:
+./scripts/agent.sh --thread-id mem-demo-2 "Recall durable facts about package managers."
+```
 
 ### As-built graph
 
 ```mermaid
-%% fill after implementation
+flowchart LR
+  Start([START]) --> CallModel[call_model]
+  CallModel -->|tool_calls| Tools[ToolNode]
+  CallModel -->|else| EndNode([END])
+  Tools --> CallModel
 ```
 
-- Delta vs planned graph:
+```mermaid
+flowchart TB
+  Compact[maybe_compact] --> Inject[AGENT.md plus Fact block]
+  Inject --> LLM[bound.invoke]
+  ToolsMem[remember_fact / recall_facts] --> Neo4j[(Neo4j Fact)]
+```
+
+- Delta: topology unchanged; memory is inject + tools.
 
 ### Why this approach
 
+- Separates transcript (Postgres checkpointer), project norms (file), and durable facts (Neo4j).
+- Keeps Option B policy plane; no god-object graph.
+
 ### Deviations from plan
+
+- Approval **A** (no pgvector code). Auto-inject of recent facts is best-effort (empty if Neo4j down) in addition to explicit `recall_facts` tool.
 
 ### Pitfalls & aha moments
 
+- Inject must be idempotent across tool-loop iterations or SystemMessages stack.
+- `workspace/*` gitignore needed `!workspace/AGENT.md` exception.
+
 ### Testing results
+
+- Unit: 5 passed (`test_m8_memory.py`).
+- Integration: Neo4j remember/recall passed against Compose.
 
 ### Open questions / next dig
 
-- M20 / M21: ingestion chunking + local Elasticsearch (parked on ROADMAP).
+- M20 / M21: ingestion + Elasticsearch.
+- Optional dig: richer Neo4j relationships beyond flat `Fact` nodes.

@@ -140,7 +140,7 @@ def inspect_neo4j(settings: Settings) -> int:
         print("ERROR: neo4j driver not installed (run ./scripts/setup.sh)", file=sys.stderr)
         return 1
 
-    print("=== Neo4j (graph memory — unused until M8+) ===")
+    print("=== Neo4j (graph memory / Fact nodes — M8) ===")
     print(f"  uri: {settings.neo4j_uri}")
     try:
         driver = neo4j.GraphDatabase.driver(
@@ -167,7 +167,16 @@ def inspect_neo4j(settings: Settings) -> int:
                     for record in session.run("MATCH (n) RETURN n LIMIT 5"):
                         print(f"    {record['n']}")
                 else:
-                    print("  (empty — expected until memory milestones write data)")
+                    print("  (empty — no Fact nodes yet; try remember_fact via the agent)")
+                facts = session.run(
+                    "MATCH (f:Fact) RETURN f.text AS text, f.kind AS kind "
+                    "ORDER BY f.created_at DESC LIMIT 5"
+                )
+                rows = list(facts)
+                if rows:
+                    print("  recent Fact nodes:")
+                    for r in rows:
+                        print(f"    [{r['kind']}] {r['text']}")
         finally:
             driver.close()
     except Exception as exc:  # noqa: BLE001

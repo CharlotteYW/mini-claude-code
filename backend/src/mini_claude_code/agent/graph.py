@@ -1,13 +1,10 @@
 """Minimal ReAct agent as a LangGraph StateGraph (M2+).
 
-Default tools: workspace FS (M3) + shell/git (M4). Pass `tools=` for tests.
+Default tools: workspace FS (M3) + shell/git (M4) + Neo4j memory (M8).
 Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
 
-Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)` so
-`graph.stream(stream_mode=\"messages\")` receives LLM tokens via callbacks.
-
-Compaction (M7): before invoke, optionally summarize older messages when over
-CONTEXT_COMPACT_THRESHOLD (policy plane — not a new graph node).
+Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)`.
+Compaction (M7) then project/fact inject (M8) before invoke (policy plane).
 """
 
 from __future__ import annotations
@@ -15,7 +12,7 @@ from __future__ import annotations
 from typing import Any, Literal, Sequence
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, RemoveMessage
+from langchain_core.messages import AIMessage, RemoveMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -25,8 +22,10 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
+from mini_claude_code.agent.project_memory import inject_project_memory
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
+from mini_claude_code.memory.neo4j_facts import recall_facts_block
 from mini_claude_code.tools import build_default_tools
 
 # Safe default for a toy ReAct loop (model → tools → model → …).
@@ -39,6 +38,26 @@ def route_after_model(state: MessagesState) -> Literal["tools", "__end__"]:
     if isinstance(last, AIMessage) and last.tool_calls:
         return "tools"
     return END
+
+
+def _inject_memory_view(
+    messages: list[Any],
+    *,
+    workspace_root,
+    settings: Settings,
+) -> list[Any]:
+    """compact → AGENT.md → optional Neo4j fact block (prompt view only)."""
+    view = inject_project_memory(list(messages), workspace_root, ensure=True)
+    facts_block = recall_facts_block(limit=8, settings=settings)
+    if not facts_block:
+        return view
+    marker = "[durable facts from Neo4j]"
+    # Avoid stacking duplicate fact blocks across tool-loop iterations.
+    if any(
+        isinstance(m, SystemMessage) and marker in str(m.content) for m in view[:3]
+    ):
+        return view
+    return [SystemMessage(content=facts_block), *view]
 
 
 def build_agent_graph(
@@ -55,12 +74,14 @@ def build_agent_graph(
     """
     settings = settings or get_settings()
     model = llm or create_chat_model(settings)
+    workspace = resolve_workspace_root(settings)
     tool_list: list[BaseTool] = (
         list(tools)
         if tools is not None
         else build_default_tools(
-            resolve_workspace_root(settings),
+            workspace,
             shell_timeout_sec=settings.shell_timeout_sec,
+            settings=settings,
         )
     )
     bound = model.bind_tools(tool_list)
@@ -76,10 +97,13 @@ def build_agent_graph(
             keep_recent=settings.context_keep_recent,
             summarizer=summarizer,
         )
-        # Passing config enables stream_mode="messages" token events (M6).
-        response = bound.invoke(compacted, config)
+        # Prompt view: inject project + facts without necessarily rewriting state
+        # unless compaction already rewrote the transcript.
+        prompt_messages = _inject_memory_view(
+            compacted, workspace_root=workspace, settings=settings
+        )
+        response = bound.invoke(prompt_messages, config)
         if did_compact:
-            # Rewrite transcript in state (simplification vs dual-store history).
             return {
                 "messages": [
                     RemoveMessage(id=REMOVE_ALL_MESSAGES),

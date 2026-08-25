@@ -6,6 +6,16 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-24 — M8: Project + long-term memory
+
+- Insight: Checkpointer (Postgres) = **this thread’s chat**; `AGENT.md` = always-on project norms; Neo4j = **durable facts** across threads — not a second chat log.
+- Insight: compact → inject → invoke keeps Option B; tools `remember_fact` / `recall_facts` write/read Neo4j.
+- Vectors: docs-only this milestone (A); richer ingestion/ES = M20/M21.
+- Commands: `./scripts/test.sh tests/unit/test_m8_memory.py`; `./scripts/db-inspect.sh neo4j`
+- Link: [docs/milestones/M8-project-long-term-memory.md](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
 ## 2026-08-24 — Future digs: M20 ingestion pipeline + M21 Elasticsearch
 
 - Idea: after thin M8 memory, add **local production-ish** improvements (few users → Docker Compose on a laptop is fine).

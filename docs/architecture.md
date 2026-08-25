@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M7 complete  
+**Last updated:** M8 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M7)
+## Current status (M8)
 
 | Piece | Status |
 |---|---|
@@ -18,16 +18,17 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Shell + git tools (host subprocess) | M4 |
 | Postgres checkpointer / sessions | M5 |
 | Streaming CLI | M6 |
-| Context compaction | **M7 Done** |
-| Project + long-term memory | Next: M8 |
+| Context compaction | M7 |
+| Project + long-term memory | **M8 Done** |
+| Permissions & Plan Mode | Next: M9 |
 | Docker sandbox for shell | M11 |
 
-Default tools: `build_default_tools(workspace)` = FS + `run_shell` + `git_*`.  
-Sessions: `compile(checkpointer=...)` + `configurable.thread_id` (`CHECKPOINT_BACKEND=postgres|memory`).  
-CLI: `graph.stream(stream_mode=["messages","updates","values"])` by default; `--no-stream` uses `invoke`.  
-Compaction: before `call_model` invoke when estimated tokens > `CONTEXT_COMPACT_THRESHOLD` (chars/4); keep `CONTEXT_KEEP_RECENT`.
+Default tools: FS + shell/git + `remember_fact` / `recall_facts` (Neo4j).  
+Sessions: Postgres checkpointer + `thread_id`.  
+Compaction then **AGENT.md** (+ optional Fact inject) before model invoke.  
+pgvector: provisioned since M0; semantic path deferred (M20). ES later (M21).
 
-## ReAct core (M2–M7)
+## ReAct core (M2–M8)
 
 ```mermaid
 flowchart LR
@@ -114,8 +115,8 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 |---|---|---|
 | Python | `uv` + `pyproject.toml` under `backend/` | `uv sync` via `setup.sh` |
 | Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | `PostgresSaver` via `open_checkpointer` (M5); MemorySaver optional |
-| Vectors | `pgvector` extension enabled on boot | Unused until embedding search |
-| Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | Unused until M8 |
+| Vectors | `pgvector` extension enabled on boot | Semantic path deferred (M20); not used in M8 |
+| Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8: `Fact` nodes via `remember_fact` / `recall_facts` |
 | Sandbox | Docker SDK ephemeral containers | M11; host subprocess until then (labeled insecure) |
 | Frontend | Deferred | Until streaming/trace visualization helps learning |
 
@@ -129,4 +130,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M5 Done** — [milestones/M5-postgres-checkpointer.md](milestones/M5-postgres-checkpointer.md)
 - **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
 - **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
+- **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

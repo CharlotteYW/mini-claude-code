@@ -26,6 +26,7 @@ frontend/dist/
 .coverage
 htmlcov/
 
-# Agent workspace scratch (M3+); keep the README only
+# Agent workspace scratch (M3+); keep README + AGENT.md template
 workspace/*
 !workspace/README.md
+!workspace/AGENT.md
