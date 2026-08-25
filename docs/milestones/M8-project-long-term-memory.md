@@ -14,6 +14,28 @@ Give the agent **memory that survives compaction and new threads**: (1) inject p
 - Claude Code–style agents always load **project guidance** (CLAUDE.md / AGENT.md) into context — that is *project* memory, not chat history.
 - M0 already runs Neo4j + pgvector idle; M8 is when **provision meets use**, and when you learn *which store fits which shape of memory*.
 
+### Important: Postgres already stores the conversation
+
+| Layer | Where (in this repo) | What it stores | Milestone |
+|---|---|---|---|
+| **Session transcript** | Postgres via LangGraph **checkpointer** | Full/compacted `messages` for a `thread_id` | **M5** (already done) |
+| **Project instructions** | File `workspace/AGENT.md` | Human-edited norms always injected | **M8** |
+| **Durable structured facts** | **Neo4j** (not a second copy of chat) | Stable beliefs / relations across threads | **M8** |
+| **Semantic / fuzzy recall** | **pgvector** on the same Postgres | Embeddings for “find notes like this question” | M8 optional / later |
+
+So we are **not** choosing Neo4j *instead of* saving dialogue in PostgreSQL. Dialogue → checkpointer (Postgres). Neo4j is for **long-term knowledge that is not “the chat log”** — e.g. “module Auth depends on Redis”, “user prefers pnpm”, facts you still want after compaction or on a **new** `thread_id`.
+
+Putting every durable fact only as more chat rows in Postgres works poorly: compaction deletes/summarizes them; querying “all preferences” means scanning transcripts; relations (“A uses B”) are awkward in a flat message table.
+
+### What “vector scope” means (approval A vs B)
+
+**Vectors** = store text as **embedding numbers** in pgvector, then retrieve by **similarity** (“something about auth timeouts”), not by exact keyword or graph walk.
+
+- **A (default):** implement `AGENT.md` + Neo4j only; explain vectors in docs (why M0 enabled pgvector) but **no** embed/query code this milestone.  
+- **B:** also ship a **minimal** “save note → embed → similarity recall” path so you feel the difference vs Neo4j in running code.
+
+Vectors do **not** replace the checkpointer. They are another *retrieval* tool for fuzzy notes/docs.
+
 ### Why bother — with vs without long-term memory
 
 | Concern | Without M8 | With M8 |
