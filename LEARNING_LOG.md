@@ -6,11 +6,19 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-24 — M8-B: minimal pgvector notes
+
+- Insight: **Fact (Neo4j)** = crisp truths; **Note (pgvector)** = fuzzy prose recall via embeddings — different tools on purpose.
+- Commands: `ollama pull nomic-embed-text`; `./scripts/test.sh tests/integration/test_m8_pgvector_live.py`
+- Link: [docs/milestones/M8-project-long-term-memory.md](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
 ## 2026-08-24 — M8: Project + long-term memory
 
 - Insight: Checkpointer (Postgres) = **this thread’s chat**; `AGENT.md` = always-on project norms; Neo4j = **durable facts** across threads — not a second chat log.
 - Insight: compact → inject → invoke keeps Option B; tools `remember_fact` / `recall_facts` write/read Neo4j.
-- Vectors: docs-only this milestone (A); richer ingestion/ES = M20/M21.
+- Vectors: initially docs-only (A); **B follow-on** adds `remember_note` / `recall_notes`.
 - Commands: `./scripts/test.sh tests/unit/test_m8_memory.py`; `./scripts/db-inspect.sh neo4j`
 - Link: [docs/milestones/M8-project-long-term-memory.md](docs/milestones/M8-project-long-term-memory.md)
 

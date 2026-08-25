@@ -71,6 +71,22 @@ def inspect_postgres(
                     """
                     SELECT EXISTS (
                       SELECT 1 FROM information_schema.tables
+                      WHERE table_schema = 'public' AND table_name = 'memory_notes'
+                    )
+                    """
+                )
+                if cur.fetchone()[0]:
+                    cur.execute("SELECT count(*) FROM memory_notes")
+                    print(f"    memory_notes: {cur.fetchone()[0]} rows (pgvector M8-B)")
+                else:
+                    print(
+                        "    memory_notes: (missing — created on first remember_note)"
+                    )
+
+                cur.execute(
+                    """
+                    SELECT EXISTS (
+                      SELECT 1 FROM information_schema.tables
                       WHERE table_schema = 'public' AND table_name = 'checkpoints'
                     )
                     """

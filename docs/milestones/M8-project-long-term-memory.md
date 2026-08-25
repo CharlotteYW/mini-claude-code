@@ -29,8 +29,9 @@ So we are **not** choosing Neo4j *instead of* saving dialogue in PostgreSQL. Dia
 
 **Vectors** = store text as **embedding numbers** in pgvector, then retrieve by **similarity**.
 
-- **A (chosen):** implement `AGENT.md` + Neo4j only; explain vectors in docs (why M0 enabled pgvector) but **no** embed/query code this milestone.  
-- **B:** also ship a **minimal** “save note → embed → similarity recall” path — deferred; see M20.
+- **A.** Neo4j + `AGENT.md` only (initial land)  
+- **B. (implemented as follow-on)** Also ship a **minimal** pgvector remember/recall (one table, one embedding call)
+
 
 ### Why bother — with vs without long-term memory
 
@@ -117,14 +118,17 @@ flowchart LR
 - `memory/neo4j_facts.py` + `tools/memory_tools.py`: `remember_fact` / `recall_facts`.
 - `call_model`: compact → inject AGENT.md + best-effort Neo4j fact block → invoke.
 - Default toolset includes memory tools; `neo4j` moved to main deps; `db-inspect` shows Fact nodes.
-- Vector path: documentation only (approval **A**).
+- Vector path: **B** — `memory/pgvector_notes.py` + tools `remember_note` / `recall_notes` (Ollama embeddings; `ollama pull nomic-embed-text`).
 
 ### Commands & how to reproduce
 
 ```bash
 ./scripts/test.sh tests/unit/test_m8_memory.py -v
 ./scripts/test.sh tests/integration/test_m8_memory_live.py -v
+./scripts/test.sh tests/integration/test_m8_pgvector_live.py -v
+# Optional: ollama pull nomic-embed-text
 ./scripts/db-inspect.sh neo4j
+./scripts/db-inspect.sh postgres
 
 # Edit workspace/AGENT.md then:
 ./scripts/agent.sh --thread-id mem-demo "What project rules should you follow?"
@@ -158,7 +162,8 @@ flowchart TB
 
 ### Deviations from plan
 
-- Approval **A** (no pgvector code). Auto-inject of recent facts is best-effort (empty if Neo4j down) in addition to explicit `recall_facts` tool.
+- Approval followed by **B**: minimal pgvector notes path added.
+- Auto-inject of recent Neo4j facts is best-effort (empty if Neo4j down) in addition to explicit `recall_facts` tool.
 
 ### Pitfalls & aha moments
 
@@ -167,8 +172,8 @@ flowchart TB
 
 ### Testing results
 
-- Unit: 5 passed (`test_m8_memory.py`).
-- Integration: Neo4j remember/recall passed against Compose.
+- Unit: `test_m8_memory.py` + `test_m8_pgvector.py`.
+- Integration: Neo4j round-trip; pgvector SQL round-trip with fake embedder; live Ollama embed test skips until `ollama pull nomic-embed-text`.
 
 ### Open questions / next dig
 

@@ -26,7 +26,7 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 Default tools: FS + shell/git + `remember_fact` / `recall_facts` (Neo4j).  
 Sessions: Postgres checkpointer + `thread_id`.  
 Compaction then **AGENT.md** (+ optional Fact inject) before model invoke.  
-pgvector: provisioned since M0; semantic path deferred (M20). ES later (M21).
+pgvector: **M8-B** `memory_notes` + Ollama embeddings (`remember_note` / `recall_notes`). ES later (M21).
 
 ## ReAct core (M2–M8)
 
@@ -115,7 +115,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 |---|---|---|
 | Python | `uv` + `pyproject.toml` under `backend/` | `uv sync` via `setup.sh` |
 | Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | `PostgresSaver` via `open_checkpointer` (M5); MemorySaver optional |
-| Vectors | `pgvector` extension enabled on boot | Semantic path deferred (M20); not used in M8 |
+| Vectors | `pgvector` + `memory_notes` | M8-B: Ollama embed (`EMBEDDING_MODEL`, default `nomic-embed-text`) |
 | Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8: `Fact` nodes via `remember_fact` / `recall_facts` |
 | Sandbox | Docker SDK ephemeral containers | M11; host subprocess until then (labeled insecure) |
 | Frontend | Deferred | Until streaming/trace visualization helps learning |

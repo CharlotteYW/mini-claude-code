@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     )
     context_keep_recent: int = Field(default=12, alias="CONTEXT_KEEP_RECENT")
 
+    # Minimal semantic notes (M8-B). Requires an Ollama embedding model pulled locally.
+    embedding_model: str = Field(
+        default="nomic-embed-text", alias="EMBEDDING_MODEL"
+    )
+    embedding_dimensions: int = Field(default=768, alias="EMBEDDING_DIMENSIONS")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""
