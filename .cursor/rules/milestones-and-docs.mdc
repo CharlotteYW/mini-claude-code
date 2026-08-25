@@ -12,8 +12,10 @@ alwaysApply: true
 3. After implementation:
    - In **chat**: highlight review-worthy code (citations), explain what changed and why.
    - In **docs**: fill Results (including Testing results), append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
+   - **Concept Q&A:** prepend/update English Q→A in `LEARNING_LOG.md` for doubts raised in the review chat (and core “why / without it” for that milestone). See `.cursor/rules/learning-log-qa.mdc`.
    - Land **unit + integration tests** for code added in this milestone (see `docs/notes/testing.md`).
 4. Commit + push, then do not mark Done until the close-out checklist passes.
+5. **Before the next milestone Plan:** point the user at the prior milestone’s Learning Log Q&A; wait for them to be ready, then write the new Plan.
 
 ## Required sections in every milestone file
 
@@ -45,10 +47,10 @@ alwaysApply: true
 - Unit tests green; integration tests present (skip OK without creds/services)
 - Chat review handover: highlighted code + what/why explained
 - Results complete (commands + why + graphs + testing results)
-- LEARNING_LOG.md entry added
+- LEARNING_LOG.md entry added (**including Concept Q&A** from review chat — see `learning-log-qa.mdc`)
 - architecture.md updated if needed
 - Changes committed (English message) and pushed to GitHub
-- Stop and wait for next approval
+- Stop and wait for next approval (user studies Learning Log before the next Plan)
 
 ## Simplifications
 

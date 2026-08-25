@@ -2,45 +2,143 @@
 
 Dated entries after each completed milestone. Keep entries short; full detail lives in `docs/milestones/`.
 
-**Order: newest first** (reverse chronological). Always prepend new entries below this note.
+**Order: newest first** (reverse chronological). Always prepend new dated entries below the process note / Q&A index.
 
-**Q&A notes:** When a chat dig clarifies an agent/LLM concept (why a store exists, call chain, Fact vs Note, stream modes, etc.), prepend a short English bullet entry here so review insights are not lost. Milestone Results stay the implementation record; this log stays the “what I now understand” record.
+## Process (standing rule)
 
----
-
-## 2026-08-25 — M8 conceptual Q&A backfill (review chat)
-
-Four memory layers (do not conflate):
-
-| Layer | Store | How it enters the model | Retrieval |
-|---|---|---|---|
-| Session transcript | Postgres **checkpointer** (M5) | `messages` state | Whole thread (then M7 may compact) |
-| Project norms | File `workspace/AGENT.md` | **Auto** inject every `call_model` | Whole file |
-| Hard facts | Neo4j `:Fact` | Auto newest-N *or* tool `recall_facts` | Cypher `CONTAINS` (substring), **not** semantic |
-| Soft notes | Postgres `memory_notes` + **pgvector** | **Only** if model calls `recall_notes` | Embedding distance (semantic) |
-
-Call chains:
-
-- **Auto path:** `call_model` → compact → `inject_project_memory` (`project_memory.py`) → `recall_facts_block` (empty query = latest Facts) → `bound.invoke`.
-- **Tool path:** LLM `tool_calls` → `ToolNode` → `tools/memory_tools.py` (thin `@tool` wrap) → `memory/neo4j_facts.py` or `memory/pgvector_notes.py`.
-- `build_memory_tools` runs **once at graph build** (via `build_default_tools`), not every turn. Four tools: `remember_fact`, `recall_facts`, `remember_note`, `recall_notes`.
-- `@tool` ≈ `StructuredTool.from_function` for bind_tools/ToolNode; FS/git use StructuredTool style, memory uses `@tool` + settings closure — same BaseTool contract.
-
-Fact vs Note example: port `8080` / `pnpm` → Fact (must be exact); long “auth waits ~30s on Redis…” → Note (later ask “how long does login wait on cache?”). Mixing them fails either precision or recall-by-paraphrase.
-
-`remember_note` is not “Postgres faking search”: **Ollama embeds**, Postgres+pgvector **stores/ranks vectors**. Elasticsearch is for keyword/full-text at scale → parked as **M21**, not a replacement for embeddings.
-
-How to test: `./scripts/test.sh tests/unit/test_m8_memory.py`; `test_m8_pgvector.py`; integration `test_m8_memory_live.py` / `test_m8_pgvector_live.py`; inspect with `./scripts/db-inspect.sh neo4j|postgres`. Live Ollama embed needs `ollama pull nomic-embed-text` (else skip).
-
-Link: [docs/milestones/M8-project-long-term-memory.md](docs/milestones/M8-project-long-term-memory.md)
+1. After a milestone ships and you finish chat review/Q&A → concepts go here (English).
+2. Before the next milestone Plan → re-read that milestone’s section in the **Concept Q&A index**; ask remaining questions; then approve the next Plan.
+3. Mentor/agent must update this log for review Q&A **without being asked** (Cursor rule: `.cursor/rules/learning-log-qa.mdc`).
+4. Milestone **Results** = what we built; this file = **what you understand** (including doubts you had and the answers).
 
 ---
 
-## 2026-08-25 — Earlier digests backfill (M5–M7 chat)
+## Concept Q&A index (M0–M8 study guide)
 
-- **Compose “mini-claude-code”:** Docker Compose *project* name (= repo directory), not one container; real services are `mcc-postgres` + `mcc-neo4j`.
-- **Streaming modes:** `messages` = tokens; `updates` = node finished (tools visible here); `values` = full state snapshot. Pure chat barely needs `updates`; coding agents do. `stream_render.py` is a **renderer**, not a second CLI entry (`cli.py` is).
-- **Compaction:** when estimated tokens (`chars/4`) > `CONTEXT_COMPACT_THRESHOLD`, summarize older turns and keep `CONTEXT_KEEP_RECENT`; decision in `maybe_compact_messages` / wired from `call_model`. Lossy transcript compression ≠ long-term memory.
+Study this before starting M9. Links point at full milestone docs. Q→A below are paraphrases of questions you actually asked in chat.
+
+### M0 — Environment & provider skeleton
+
+- **Q: Provider vs model vs protocol? Why OpenRouter + OpenAI + Anthropic + Ollama?**  
+  A: Config picks a **provider** *and* a **model id**. OpenRouter is still OpenAI-compatible wire format (`ChatOpenAI` + gateway `base_url`), not a fourth protocol. Anthropic is the odd Messages API out. Naming OpenRouter as its own provider documents the gateway pattern.
+- **Q: Why start Neo4j / pgvector before we use them?**  
+  A: **Provision vs use** — ops ready early so later milestones don’t reinvent Compose mid-learning.
+- **Q: Can every architecture option support sub-agents later?**  
+  A: Yes in principle; Option B (small ReAct core + policy plane) makes subgraphs/HITL attach cleanly without a god-object graph. We chose Option B to learn more of the LangGraph/LangChain surface.
+- **Q: Do Results / graphs / LEARNING_LOG belong in the plan?**  
+  A: Yes — every milestone Plan has Results + Testing; graphs freeze after approval; Learning Log records insights + Concept Q&A.
+- Link: [M0](docs/milestones/M0-environment.md)
+
+### M1 — Tool-calling parity
+
+- **Q: With multiple providers/models, how do we keep tool-call and chat formats compatible?**  
+  A: One LangChain tool + messages (`HumanMessage` / `AIMessage` / `ToolMessage`); **adapters** map wire formats. We do **not** maintain four schemas in agent code.
+- **Q: Is `parity.py` the compatibility layer? What’s the call chain?**  
+  A: No — `parity.py` is a **probe**. Real path: agent messages → `bind_tools` / chat model → provider adapter → wire API. M2 consumes the normalized message layer; it does not replace it.
+- **Q: Why mandatory unit + integration tests every milestone?**  
+  A: Tests are part of the learning archive — Plan lists cases; Done requires them; later you can re-learn behavior by reading tests.
+- Link: [M1](docs/milestones/M1-tool-calling-parity.md), [notes](docs/notes/tool-calling-parity.md)
+
+### M2 — Minimal ReAct StateGraph
+
+- **Q: Is the graph “just END or tools”? Does LangGraph hide the complexity?**  
+  A: Topology is intentionally tiny (`call_model` ↔ `tools`). Value is **runtime hooks** (checkpointer / interrupt / stream / subgraph), not “tools magic.” Capability grows via the **tool list**, not new nodes.
+- **Q: Is there a hidden while-loop? Where does the `add` tool live?**  
+  A: No hand-rolled loop — conditional edges: answer → END, else → tools → back to model. Demo `add` is registered with the tools list at graph build.
+- **Q: Do we need FastAPI / a running server to chat? Is uv / venv required?**  
+  A: CLI via `./scripts/agent.sh` → `uv run` into the project env — no FastAPI for continuous chat. Durable sessions later = `thread_id` + checkpointer (M5), not “start an HTTP server.”
+- **Q: One-shot CLI vs continuous session like Claude Code?**  
+  A: Same core: multi-turn = reload state by `thread_id`. HTTP/IDE are **adapters** around the graph, not a rewrite.
+- **Q: MCP in this project?**  
+  A: Planned later (roadmap Tier-3); not required for M2 ReAct.
+- Link: [M2](docs/milestones/M2-react-stategraph.md)
+
+### M3 — Filesystem tools
+
+- **Q: Will we add read/write/edit? What is glob?**  
+  A: Yes — path-jailed FS tools. `glob` = find files by pattern (name/path), complementary to content search (`grep`).
+- **Q: Where is `resolve_in_workspace` called?**  
+  A: Every FS tool path goes through the jail helper before touching disk (read/write/edit/glob/grep) — prevents escaping the workspace root.
+- **Q: How do I run unit tests without fighting the env?**  
+  A: `./scripts/test.sh …` (uv-managed). Don’t `python tests/...` from a random interpreter.
+- **Q: What are `cli.py`, `factory.py`, `parity.py`, `config.py`, `smoke.py` for?**  
+  A: `config` = settings; `factory` = build `BaseChatModel` (e.g. `ChatOpenAI` subclass); `cli` = agent entry; `smoke` / `parity` = probes (`mcc-smoke`, `mcc-tools-parity` via pyproject scripts); not “the agent loop.”
+- Link: [M3](docs/milestones/M3-filesystem-tools.md)
+
+### M4 — Shell & git
+
+- **Q: What is VCS? Why shell *and* git tools? subprocess?**  
+  A: VCS = version control (git here). Structured `git_*` for clear schemas; `run_shell` for the long tail — both still host `subprocess`. Alternatives (libgit2, etc.) skip the real CLI surface coding agents use.
+- **Q: Are git tools `list[BaseTool]`? Why no `git push`?**  
+  A: Yes — schemas the LLM can call. No push by design until a permissioned ship path (later M18/M19).
+- **Q: cwd a sandbox?**  
+  A: **No.** `cwd=workspace` ≠ isolation; denylist is a teaching brake; real sandbox is M11.
+- Link: [M4](docs/milestones/M4-shell-git-tools.md)
+
+### M5 — Postgres checkpointer & sessions
+
+- **Q: Continuous chat without FastAPI — is “read DB each turn” enough?**  
+  A: Yes — durable `thread_id` + checkpointer restores `messages`; CLI can stay process-per-turn.
+- **Q: MemorySaver vs Postgres?**  
+  A: Same graph API; MemorySaver dies with the process; Postgres survives restarts.
+- **Q: Where is Postgres? I only see one Docker thing named mini-claude-code?**  
+  A: `docker-compose.yml`. Compose **project** name (= repo folder) ≠ one app container. Services: `mcc-postgres`, `mcc-neo4j`. `docker compose up -d` starts both DBs.
+- **Q: Why `db-inspect`?**  
+  A: See LangGraph checkpoint tables / `thread_id`s (and later Neo4j) so resume isn’t a black box.
+- Link: [M5](docs/milestones/M5-postgres-checkpointer.md)
+
+### M6 — Streaming CLI
+
+- **Q: Why streaming? What if we skip it?**  
+  A: Same final state as `invoke` — streaming changes **when** you see tokens/events (UX, debug, later HITL/channels), not model intelligence.
+- **Q: Is `stream_cli` / `stream_render` a second entrypoint?**  
+  A: No — entry remains `cli.py` / `mcc-agent`. Helper only **renders** `graph.stream` events (renamed to `stream_render` to avoid confusion).
+- **Q: `messages` vs `updates` vs `values`? Why subscribe to all three?**  
+  A: Tokens; per-node milestones (tool runs show up here); full state snapshots. Pure chat barely needs `updates`; coding agents do — without `updates`, the tool phase looks hung after tokens finish.
+- **Q: Does `values` keep all 10 turns?**  
+  A: Each `values` event is a **full state snapshot** at that point (growing history under checkpointer), not “only the latest user line.”
+- **Q: Why pass `config` into `model.invoke`?**  
+  A: Required for LangGraph `stream_mode="messages"` token callbacks.
+- Link: [M6](docs/milestones/M6-streaming-cli.md)
+
+### M7 — Context compaction
+
+- **Q: Compact = compress the chat when too long?**  
+  A: Yes — when estimated size (`chars/4`) > `CONTEXT_COMPACT_THRESHOLD`, summarize older turns and keep `CONTEXT_KEEP_RECENT` verbatim. Gate in `maybe_compact_messages`; wired from `call_model`.
+- **Q: Where is the threshold in code / config?**  
+  A: Settings / `.env` `CONTEXT_COMPACT_THRESHOLD`; rewrite uses `RemoveMessage(REMOVE_ALL_MESSAGES)` because `MessagesState` appends by default.
+- **Q: Compact vs long-term memory?**  
+  A: Compact = lossy **transcript** shrink; M8 stores facts/notes/project norms **outside** chat.
+- Link: [M7](docs/milestones/M7-context-compaction.md)
+
+### M8 — Project + long-term memory
+
+- **Q: Why not only store the conversation in Postgres? Why Neo4j / vectors?**  
+  A: Checkpointer already stores the **thread transcript**. Neo4j / pgvector / `AGENT.md` are **not** a second chat log — they survive compaction and new `thread_id`s.
+- **Q: Four layers — what are they for?**  
+  A: Transcript (checkpointer) | `AGENT.md` (auto file inject) | Fact/Neo4j (substring or latest-N) | Note/pgvector (semantic). Different failure modes if mixed.
+- **Q: Fact vs Note — why not mix? Example?**  
+  A: Hard exact truths (port `8080`, `pnpm`) → Fact; long paraphrase-friendly prose (“auth waits ~30s on Redis…”) → Note. Wrong store fails precision or recall-by-rewording.
+- **Q: `inject_project_memory` — defined/called where?**  
+  A: Defined in `agent/project_memory.py`; called from `graph._inject_memory_view` after compact, before `bound.invoke`.
+- **Q: `recall_facts_block` — Cypher? Exact or semantic?**  
+  A: Official Neo4j driver + **Cypher**. Match = case-insensitive **`CONTAINS`** (substring), **not** semantic. Auto-inject uses empty query = newest N Facts.
+- **Q: `remember_note` — where / API? Is Postgres “faking” search? Why not Elasticsearch?**  
+  A: Table `memory_notes`; **Ollama embeds** + **psycopg/SQL** + pgvector distance. Real vectors, not fake keyword search. ES = keyword/full-text at scale → parked **M21**, complementary not a replacement for embeddings.
+- **Q: When is `remember_note` used? When is `build_memory_tools` called?**  
+  A: Note tools only when the model calls them (user asks to store/recall prose). `build_memory_tools` runs **once at graph build** via `build_default_tools` — four tools. `@tool` ≈ `StructuredTool` for ToolNode; thin wrap over `memory/`.
+- **Q: How to test?**  
+  A: `./scripts/test.sh tests/unit/test_m8_*.py`; integration `test_m8_memory_live` / `test_m8_pgvector_live`; `./scripts/db-inspect.sh`; optional `ollama pull nomic-embed-text`.
+- Later: M20 ingestion/chunking; M21 local Elasticsearch; M18/M19 channel → PR + quality gate.
+- Link: [M8](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-25 — Process: auto Learning Log Q&A (rule landed)
+
+- Standing rule in `.cursor/rules/learning-log-qa.mdc` (also milestones + collaboration rules): after review, and on conceptual digs, update this log without waiting for “please write it.”
+- Cadence: finish milestone review → study this index → then next Plan.
+- This index backfills M0–M8 Q→A from prior review chats.
 
 ---
 

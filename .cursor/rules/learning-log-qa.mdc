@@ -1,0 +1,35 @@
+---
+description: LEARNING_LOG Q&A ritual after each milestone review
+alwaysApply: true
+---
+
+# Learning log & concept Q&A
+
+## Purpose
+
+`LEARNING_LOG.md` is the user’s **study index**: what was built, which agent/LLM concepts matter, and **Q→A for doubts that came up in chat**. Milestone Results = implementation record; Learning Log = “what I understand now.”
+
+## When to write (do this without being asked)
+
+1. **After milestone implementation + chat review**, before treating the milestone as closed for learning:
+   - Prepend an English **Concept Q&A** block for that milestone (or extend the existing M-index section) covering questions the user actually asked *and* the key “why / without it / alternatives” the review covered.
+2. **Before starting the next milestone Plan**:
+   - Remind the user (1–2 sentences) that `LEARNING_LOG.md` holds the prior milestone’s Q&A index; offer to clarify gaps before planning.
+3. **During any dig** that clarifies a sticky concept (even mid-milestone):
+   - Prepend a short dated Q&A bullet the same turn or at the next natural pause — do **not** wait for “write it to the log.”
+
+## What to capture
+
+- Agent/LLM-specific: why a component exists, degradation without it, alternatives, how call chains work.
+- Concrete Q→A the user asked (paraphrase clearly in English).
+- Pointers to milestone docs / key symbols — not full transcripts.
+
+Skip: generic SE trivia the user already knows; raw chat dumps; secrets.
+
+## Format
+
+Newest first. Prefer a durable **per-milestone Q&A index** near the top for study (extend that index when closing a milestone), plus short dated entries for one-off digs. Capture the user’s real doubts as **Q→A** (English paraphrase), not only high-level insights. All prose in the log: **English**.
+
+## User cadence (remind them)
+
+After Done close-out: stop coding the next milestone until they have skimmed the prior milestone’s Q&A in `LEARNING_LOG.md`. When they say they are ready / ask for the next Plan, draft it.
