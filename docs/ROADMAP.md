@@ -32,7 +32,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | ID | Title | Goal |
 |---|---|---|
 | M7 | [Context compaction](milestones/M7-context-compaction.md) | **Done.** Auto-summarize past a size threshold; keep recent tail; same ReAct topology. |
-| M8 | Project + long-term memory | `AGENT.md`-style inject; Postgres and/or Neo4j facts; when files vs graph vs vectors win. |
+| M8 | [Project + long-term memory](milestones/M8-project-long-term-memory.md) | **Planned.** `AGENT.md` inject + Neo4j facts; teach files vs graph vs vectors (vector scope: approval A/B). |
 | M9 | Permissions & Plan Mode | Per-tool auto/ask/deny + read-only Plan Mode. |
 | M10 | Human-in-the-loop (`interrupt`) | LangGraph interrupt for ask-mode tools; policy vs runtime pause. |
 | M11 | Docker sandbox | Shell/code in ephemeral containers; host subprocess deny-by-default. |
