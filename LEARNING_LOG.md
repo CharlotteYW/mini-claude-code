@@ -13,9 +13,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M9 study guide)
+## Concept Q&A index (M0–M10 study guide)
 
-Study this before starting M10. Links point at full milestone docs. Q→A below are paraphrases of questions you actually asked in chat.
+Study this before starting M11. Links point at full milestone docs. Q→A below are paraphrases of questions you actually asked in chat.
+
+### M10 — Human-in-the-loop (`interrupt`)
+
+- **Q: What changed vs M9 ask?**  
+  A: Policy table unchanged. Ask no longer relies on production `ask_callback` / stdin inside the wrap. Ask calls LangGraph `interrupt(payload)`; CLI uses `Command(resume=True/False)` after y/n. Needs a checkpointer + `thread_id` (CLI auto-allocates if missing when not in Plan Mode).
+- **Q: Why not `interrupt_before=["tools"]`?**  
+  A: That pauses *every* tool entry (including reads). Dynamic `interrupt()` inside the wrap pauses only when policy says `ask`.
+- **Q: Does topology change?**  
+  A: No — still `call_model` ↔ `tools`. HITL is in the policy wrap + CLI resume loop (`agent/hitl.py`).
+- **Q: Streaming + HITL?**  
+  A: **Simplification:** HITL path uses `invoke`; Plan Mode can still token-stream. Combining stream + Command is a later polish.
+- Link: [M10](docs/milestones/M10-human-in-the-loop-interrupt.md)
 
 ### M9 — Permissions & Plan Mode
 
@@ -145,6 +157,15 @@ Study this before starting M10. Links point at full milestone docs. Q→A below 
   A: `./scripts/test.sh tests/unit/test_m8_*.py`; integration `test_m8_memory_live` / `test_m8_pgvector_live`; `./scripts/db-inspect.sh`; optional `ollama pull nomic-embed-text`.
 - Later: M20 ingestion/chunking; M21 local Elasticsearch; M18/M19 channel → PR + quality gate.
 - Link: [M8](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-25 — M10: Human-in-the-loop (`interrupt`)
+
+- Insight: Ask → `interrupt` + checkpointer; resume → `Command(resume=bool)`. Policy plane from M9 unchanged.
+- Insight: CLI HITL uses `invoke_with_hitl`; Plan Mode can still stream.
+- Commands: `./scripts/test.sh tests/unit/test_m10_hitl.py`; `./scripts/agent.sh --checkpointer memory --no-stream "…"`
+- Link: [docs/milestones/M10-human-in-the-loop-interrupt.md](docs/milestones/M10-human-in-the-loop-interrupt.md)
 
 ---
 

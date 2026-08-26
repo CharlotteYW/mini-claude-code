@@ -1,4 +1,4 @@
-"""CLI entrypoint for the ReAct agent (M2+), sessions (M5), streaming (M6), Plan Mode (M9)."""
+"""CLI entrypoint for the ReAct agent (M2+ … M10 HITL interrupt)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from mini_claude_code.agent.checkpointer import (
     open_checkpointer,
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
-from mini_claude_code.agent.permissions import make_cli_ask_callback
+from mini_claude_code.agent.hitl import invoke_with_hitl
 from mini_claude_code.agent.stream_render import consume_agent_stream
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
@@ -55,23 +55,44 @@ def _print_transcript(messages: list[object]) -> None:
     print("=== done ===")
 
 
-def _run_once(graph, prompt: str, config: dict, *, stream: bool) -> int:
-    try:
-        if stream:
+def _run_once(
+    graph,
+    prompt: str,
+    config: dict,
+    *,
+    stream: bool,
+    plan_mode: bool,
+) -> int:
+    # Plan Mode has no ask interrupts — token streaming is fine.
+    # Otherwise HITL uses invoke + Command(resume) (M10 teaching path).
+    if stream and plan_mode:
+        try:
             consume_agent_stream(graph, prompt, config)
             return 0
-        result = graph.invoke(
-            {"messages": [HumanMessage(content=prompt)]},
-            config=config,
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
+            return 1
+
+    if stream and not plan_mode:
+        print(
+            "Note: HITL ask uses invoke + interrupt (not token stream). "
+            "Use --plan for stream-only read sessions.",
+            file=sys.stderr,
         )
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
-        return 1
-    _print_transcript(result["messages"])
+
+    result, code = invoke_with_hitl(graph, prompt, config)
+    if code != 0:
+        return code
+    if result and "messages" in result:
+        _print_transcript(result["messages"])
+    else:
+        print("=== done ===")
     return 0
 
 
-def _run_repl(graph, config: dict, *, stream: bool) -> int:
+def _run_repl(
+    graph, config: dict, *, stream: bool, plan_mode: bool
+) -> int:
     print("REPL mode — empty line or Ctrl-D to exit.")
     while True:
         try:
@@ -81,7 +102,9 @@ def _run_repl(graph, config: dict, *, stream: bool) -> int:
             break
         if not line:
             break
-        code = _run_once(graph, line, config, stream=stream)
+        code = _run_once(
+            graph, line, config, stream=stream, plan_mode=plan_mode
+        )
         if code != 0:
             return code
     return 0
@@ -100,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--thread-id",
         default=None,
-        help="Session id for checkpointer resume (required for durable/multi-turn).",
+        help="Session id for checkpointer resume (required for durable/multi-turn/HITL).",
     )
     parser.add_argument(
         "--new-thread",
@@ -121,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--no-stream",
         action="store_true",
-        help="Use invoke + full transcript (M5-style) instead of live streaming.",
+        help="Use invoke + full transcript instead of live streaming (Plan Mode).",
     )
     parser.add_argument(
         "--plan",
@@ -134,12 +157,22 @@ def main(argv: list[str] | None = None) -> int:
     get_settings.cache_clear()
     settings = get_settings()
 
+    plan_mode = bool(args.plan or settings.agent_plan_mode)
+
     thread_id = args.thread_id
     if args.new_thread:
         thread_id = str(uuid4())
     if args.repl and not thread_id:
         thread_id = str(uuid4())
         print(f"Allocated thread_id={thread_id} for REPL")
+
+    # Ask/HITL needs a checkpointer. Auto-allocate a thread when not in Plan Mode.
+    if not plan_mode and not thread_id:
+        thread_id = str(uuid4())
+        print(
+            f"HITL ask requires a session; allocated thread_id={thread_id}",
+            file=sys.stderr,
+        )
 
     use_checkpoint = bool(thread_id)
     if args.repl and not use_checkpoint:
@@ -156,13 +189,8 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     stream = not args.no_stream
-    plan_mode = bool(args.plan or settings.agent_plan_mode)
-    # Ask via stdin only on a TTY; non-interactive ask → deny (M9 simplification).
-    ask_callback = (
-        None if plan_mode or not sys.stdin.isatty() else make_cli_ask_callback()
-    )
 
-    print("mini-claude-code agent (FS + shell/git + sessions + stream + permissions)")
+    print("mini-claude-code agent (FS + shell/git + sessions + stream + HITL)")
     print(f"  provider:     {settings.llm_provider}")
     print(f"  model:        {settings.llm_model}")
     print(f"  workspace:    {resolve_workspace_root(settings)}")
@@ -171,15 +199,19 @@ def main(argv: list[str] | None = None) -> int:
         f"  plan_mode:    {'on (mutating tools denied)' if plan_mode else 'off'}"
     )
     print(
-        "  ask_prompt:   "
-        + ("TTY y/n" if ask_callback else "off (non-TTY, plan mode, or no ask)")
+        "  hitl:         "
+        + (
+            "off (plan mode)"
+            if plan_mode
+            else "interrupt + Command(resume) on ask tools"
+        )
     )
     if use_checkpoint:
         kind = backend or settings.checkpoint_backend
         print(f"  thread_id:    {thread_id}")
         print(f"  checkpointer: {kind}")
     else:
-        print("  session:      off (pass --thread-id for durable resume)")
+        print("  session:      off")
     if not args.repl:
         print(f"  prompt:       {args.prompt}")
     print()
@@ -193,7 +225,8 @@ def main(argv: list[str] | None = None) -> int:
             settings=settings,
             checkpointer=checkpointer,
             plan_mode=plan_mode,
-            ask_callback=ask_callback,
+            # Production path: interrupt inside wrap (no stdin ask_callback).
+            ask_callback=None,
         )
 
     try:
@@ -203,14 +236,28 @@ def main(argv: list[str] | None = None) -> int:
             ) as checkpointer:
                 graph = _build(checkpointer)
                 if args.repl:
-                    return _run_repl(graph, config, stream=stream)
+                    return _run_repl(
+                        graph, config, stream=stream, plan_mode=plan_mode
+                    )
                 return _run_once(
-                    graph, args.prompt or "", config, stream=stream
+                    graph,
+                    args.prompt or "",
+                    config,
+                    stream=stream,
+                    plan_mode=plan_mode,
                 )
         graph = _build(None)
         if args.repl:
-            return _run_repl(graph, config, stream=stream)
-        return _run_once(graph, args.prompt or "", config, stream=stream)
+            return _run_repl(
+                graph, config, stream=stream, plan_mode=plan_mode
+            )
+        return _run_once(
+            graph,
+            args.prompt or "",
+            config,
+            stream=stream,
+            plan_mode=plan_mode,
+        )
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

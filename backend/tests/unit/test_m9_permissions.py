@@ -80,7 +80,7 @@ def test_ask_approve_runs_tool(tmp_path: Path) -> None:
     assert (tmp_path / "ok.txt").read_text() == "yes"
 
 
-def test_ask_reject_and_none_callback_deny(tmp_path: Path) -> None:
+def test_ask_reject_denies(tmp_path: Path) -> None:
     def write_file(path: str, content: str) -> str:
         (tmp_path / path).write_text(content)
         return "wrote"
@@ -94,11 +94,6 @@ def test_ask_reject_and_none_callback_deny(tmp_path: Path) -> None:
     out = rejected.invoke({"path": "a.txt", "content": "x"})
     assert "PERMISSION_DENIED" in str(out)
     assert not (tmp_path / "a.txt").exists()
-
-    no_cb = apply_permissions([raw], plan_mode=False, ask_callback=None)[0]
-    out2 = no_cb.invoke({"path": "b.txt", "content": "x"})
-    assert "PERMISSION_DENIED" in str(out2)
-    assert "no interactive" in str(out2).lower() or "non-interactive" in str(out2).lower()
 
 
 def test_cli_ask_callback_yes_no() -> None:

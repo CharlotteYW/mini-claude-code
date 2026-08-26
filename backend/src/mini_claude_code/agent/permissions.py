@@ -1,8 +1,9 @@
-"""Tool permissions & Plan Mode (M9) — policy plane, not new graph nodes.
+"""Tool permissions & Plan Mode (M9) + HITL interrupt on ask (M10).
 
 auto / ask / deny are decided *before* the tool body runs. Plan Mode overrides
-mutating tools to deny. Ask without LangGraph interrupt uses an optional CLI
-callback (M9 simplification); durable pause/resume is M10.
+mutating tools to deny. Ask uses LangGraph ``interrupt()`` so the graph pauses
+with a checkpointer; resume via ``Command(resume=bool)``. Optional
+``ask_callback`` remains only for unit tests that bypass interrupt.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal
 
 from langchain_core.tools import BaseTool, StructuredTool
+from langgraph.types import interrupt
 
 PermissionMode = Literal["auto", "ask", "deny"]
 
@@ -87,13 +89,26 @@ def denial_message(
     )
 
 
+def approval_interrupt_payload(tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
+    """Payload shown to the human when ask pauses the graph (M10)."""
+    return {
+        "type": "tool_approval",
+        "tool": tool_name,
+        "args": args,
+    }
+
+
 def apply_permissions(
     tools: Sequence[BaseTool],
     *,
     plan_mode: bool = False,
     ask_callback: AskCallback | None = None,
 ) -> list[BaseTool]:
-    """Wrap each tool so ToolNode hits the policy plane before the real body."""
+    """Wrap each tool so ToolNode hits the policy plane before the real body.
+
+    On ``ask``: call ``interrupt(payload)`` unless ``ask_callback`` is set
+    (test-only bypass that skips durable HITL).
+    """
     return [
         _wrap_one(t, plan_mode=plan_mode, ask_callback=ask_callback) for t in tools
     ]
@@ -112,20 +127,20 @@ def _wrap_one(
     def _guarded(**kwargs: Any) -> Any:
         # ToolNode may pass a single dict payload; normalize.
         args = _normalize_args(kwargs)
+        args_dict = args if isinstance(args, dict) else {}
         mode = resolve_permission(name, plan_mode=plan_mode)
         if mode == "auto":
             return tool.invoke(args)
         if mode == "deny":
             return denial_message(name, mode, plan_mode=plan_mode)
-        # ask
-        if ask_callback is None:
-            return denial_message(
-                name,
-                mode,
-                plan_mode=plan_mode,
-                reason="ask required but no interactive approver (non-TTY or tests)",
+        # ask — durable pause (M10) or test callback (M9 leftover for unit tests)
+        if ask_callback is not None:
+            approved = bool(ask_callback(name, args_dict))
+        else:
+            # Requires a compiled graph with a checkpointer; resume via Command.
+            approved = bool(
+                interrupt(approval_interrupt_payload(name, args_dict))
             )
-        approved = bool(ask_callback(name, args if isinstance(args, dict) else {}))
         if not approved:
             return denial_message(
                 name,
@@ -162,7 +177,10 @@ def make_cli_ask_callback(
     input_fn: Callable[[str], str] | None = None,
     output_fn: Callable[[str], None] | None = None,
 ) -> AskCallback:
-    """Blocking y/n ask for TTY CLI. M10 will replace this with interrupt()."""
+    """Deprecated for production CLI — prefer interrupt + Command (M10).
+
+    Kept for unit tests that need a synchronous approve without a checkpointer.
+    """
 
     def _input(prompt: str) -> str:
         if input_fn is not None:

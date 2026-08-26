@@ -6,6 +6,7 @@ Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
 Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)`.
 Compaction (M7) then project/fact inject (M8) before invoke (policy plane).
 Permissions / Plan Mode (M9) wrap tools before ToolNode — not new graph nodes.
+Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
 """
 
 from __future__ import annotations
