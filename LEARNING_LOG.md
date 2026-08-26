@@ -148,6 +148,18 @@ Study this before starting M10. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-25 — Dig: where permissions live + what the file does
+
+- **Q: Is Plan Mode “wrapping permissions.py”?**  
+  A: Almost inverted. `permissions.py` is the **policy module**. At graph build, `apply_permissions(...)` wraps **each tool**. Plan Mode is only a **flag** (`plan_mode=True` / `--plan`) passed into `resolve_permission` so mutators become `deny`. Same wrap path in normal mode (`ask`/`auto`); Plan Mode changes the *decision*, not a second wrapper type.
+- **Q: Why under `agent/` not `tools/` or `policy/`?**  
+  A: It is **runtime policy for this agent**, wired from `graph.py` / `cli.py`, not a FS/shell tool implementation. Option B “policy plane” still sits next to other agent runtime (`compact`, `project_memory`, checkpointer). A top-level `policy/` package would also be fine later if the folder grows; teaching shortcut = keep it beside the graph for now.
+- **Q: What does `permissions.py` mainly do?**  
+  A: (1) Classify tools read-safe vs mutating; (2) `resolve_permission` → `auto`/`ask`/`deny`; (3) `apply_permissions` wrap so ToolNode hits policy before the real body; (4) `make_cli_ask_callback` for TTY y/n (M9 simplification until M10 interrupt).
+- Link: [M9](docs/milestones/M9-permissions-plan-mode.md), `agent/permissions.py`
+
+---
+
 ## 2026-08-25 — M9: Permissions & Plan Mode
 
 - Insight: Policy wraps tools before `ToolNode`; graph topology unchanged.
