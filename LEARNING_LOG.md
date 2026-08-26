@@ -172,6 +172,16 @@ Study this before starting M12. Links point at full milestone docs.
 
 ---
 
+## 2026-08-26 — Dig: Claude Code / Codex sandbox vs our M11 Docker
+
+- **Q: Do Claude Code / Codex also run in a sandbox? Is production just `docker run` like us?**  
+  A: **Spectrum, not one pattern.** Local IDE agents (Claude Code, Cursor, Codex CLI on your machine) usually emphasize **permissions/HITL + host execution** (and sometimes **OS-level** sandbox: Seatbelt/seccomp/landlock) — not “every shell is `docker run --rm`.” **Cloud** coding agents (Codex cloud, hosted computer-use) typically get a **dedicated remote sandbox** (container or full VM / microVM) that lives for the session, with tooling preinstalled and controlled egress — closer to “isolated machine” than our per-command Docker.  
+  **Our M11** teaches the isolation *idea* with the simplest durable primitive on a laptop: ephemeral Docker + workspace mount + `--network none`. Gaps vs production: long-lived sandbox vs per-command; OS sandbox / microVM vs Docker-on-Desktop; egress allowlists, non-root, seccomp, no docker.sock, audit; we still run `git_*` on host; local products still rely heavily on **ask/deny (our M9/M10)** even when a sandbox exists.  
+  So: industry ≠ “always Docker process”; industry = **policy + (optional) OS/container/VM isolation**, with cloud agents stronger on isolation and local agents stronger on UX permissions.
+- Link: [M11](docs/milestones/M11-docker-sandbox.md)
+
+---
+
 ## 2026-08-26 — M11: Docker sandbox for shell
 
 - Insight: `run_shell` → ephemeral Docker by default; host backend opt-in; graph unchanged.
