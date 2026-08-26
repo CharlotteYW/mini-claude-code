@@ -160,6 +160,16 @@ Study this before starting M11. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-25 — Dig: AskCallback always None in prod? How resume works
+
+- **Q: Is `AskCallback` always `None` in production? Only for tests?**  
+  A: **Yes for our CLI production path.** `cli.py` builds the graph with `ask_callback=None`. Unit tests may pass a lambda to bypass `interrupt` without a checkpointer. If someone called `build_agent_graph(ask_callback=...)` in a custom script, that would be a deliberate override — not the shipping CLI.
+- **Q: How does `invoke_with_hitl` wrap `graph.invoke`, and how does resume work?**  
+  A: It is a **while loop outside the graph**, not a graph node. (1) `payload = {messages: [...]}` → `graph.invoke(payload, config)`. (2) If result/`get_state` has `__interrupt__`, CLI `prompt_approval` → y/n. (3) `payload = Command(resume=bool)` → `graph.invoke(payload, config)` again. **LangGraph** stores the paused task in the **checkpointer** and, on `Command(resume=…)`, re-enters the interrupted tool wrap so `interrupt()` returns the bool. Our code: `agent/hitl.py` (`invoke_with_hitl`), CLI calls it from `_run_once`; pause site: `permissions._wrap_one` → `interrupt(...)`.
+- Link: `hitl.py`, `cli.py`, `permissions.py`
+
+---
+
 ## 2026-08-25 — Dig: HITL call chain (invoke_with_hitl vs interrupt vs ask_callback)
 
 - **Q: How does `invoke_with_hitl` “apply into” the graph? Is ask_callback the first y/n and interrupt the second?**  
