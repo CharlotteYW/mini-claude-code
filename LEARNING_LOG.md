@@ -148,6 +148,14 @@ Study this before starting M10. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-25 — Dig: TTY vs ask_callback
+
+- **Q: What is TTY? What is ask_callback?**  
+  A: **TTY** = interactive terminal (you type at a prompt). `sys.stdin.isatty()` is True in a normal terminal session, False when stdin is a pipe/CI/script. **ask_callback** = a function `(tool_name, args) → bool` the permission wrap calls when mode is `ask`: True = run tool, False = deny. M9’s `make_cli_ask_callback` prints y/N and reads stdin — only useful on a TTY. Non-TTY → we pass `ask_callback=None` so ask becomes deny (no hung wait for input that will never come). M10 will replace this callback with LangGraph `interrupt` (durable pause, not stdin).
+- Link: `agent/cli.py`, `agent/permissions.py`
+
+---
+
 ## 2026-08-25 — Dig: who calls apply_permissions / make_cli_ask_callback
 
 - **Q: Where are `apply_permissions` and `make_cli_ask_callback` called?**  
