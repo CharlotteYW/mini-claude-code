@@ -148,6 +148,14 @@ Study this before starting M10. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-25 — Dig: who calls apply_permissions / make_cli_ask_callback
+
+- **Q: Where are `apply_permissions` and `make_cli_ask_callback` called?**  
+  A: `apply_permissions` → `build_agent_graph` in `agent/graph.py` (when `apply_tool_permissions=True`, default). Also unit tests. `make_cli_ask_callback` → `agent/cli.py` `main()` only when not Plan Mode and stdin is a TTY; that callback is passed into `build_agent_graph(..., ask_callback=...)`. Non-TTY / `--plan` → `ask_callback=None` → ask becomes deny inside the wrap.
+- Link: `agent/graph.py`, `agent/cli.py`, `agent/permissions.py`
+
+---
+
 ## 2026-08-25 — Dig: where permissions live + what the file does
 
 - **Q: Is Plan Mode “wrapping permissions.py”?**  
