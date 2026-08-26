@@ -160,6 +160,17 @@ Study this before starting M11. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-26 — Dig: where invoke_with_hitl is called; why not middleware
+
+- **Q: Where is `invoke_with_hitl` called?**  
+  A: Only from `agent/cli.py` → `_run_once` (and thus REPL via `_run_repl`). Tests also call it directly (`test_m10_hitl*.py`). It is **not** imported by `graph.py` / `permissions.py`.
+- **Q: Why not LangGraph middleware?**  
+  A: Teaching/Option B choice: keep a **tiny ReAct graph** and put policy (`permissions` wrap) + HITL outer loop (`hitl.py`) where you can see them. Middleware can centralize pre/post tool hooks, but it hides the same ideas behind framework glue and was not required for M9/M10 learning goals. Later (hooks M15) we may revisit middleware-style lifecycle — still as an explicit dig, not magic.
+- Call chain (CLI): `main` → `_build`/`build_agent_graph` (wrap tools) → `_run_once` → `invoke_with_hitl` → loop `graph.invoke` / `Command(resume)` → nodes → permission wrap → `interrupt`.
+- Link: `cli.py`, `hitl.py`, `permissions.py`, `graph.py`
+
+---
+
 ## 2026-08-25 — Dig: AskCallback always None in prod? How resume works
 
 - **Q: Is `AskCallback` always `None` in production? Only for tests?**  
