@@ -1,4 +1,4 @@
-"""CLI entrypoint for the ReAct agent (M2+), sessions (M5), streaming (M6)."""
+"""CLI entrypoint for the ReAct agent (M2+), sessions (M5), streaming (M6), Plan Mode (M9)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from mini_claude_code.agent.checkpointer import (
     open_checkpointer,
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
+from mini_claude_code.agent.permissions import make_cli_ask_callback
 from mini_claude_code.agent.stream_render import consume_agent_stream
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
@@ -122,6 +123,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Use invoke + full transcript (M5-style) instead of live streaming.",
     )
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help="Plan Mode: deny mutating tools (read-only policy). Also AGENT_PLAN_MODE=1.",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -150,12 +156,24 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     stream = not args.no_stream
+    plan_mode = bool(args.plan or settings.agent_plan_mode)
+    # Ask via stdin only on a TTY; non-interactive ask → deny (M9 simplification).
+    ask_callback = (
+        None if plan_mode or not sys.stdin.isatty() else make_cli_ask_callback()
+    )
 
-    print("mini-claude-code agent (FS + shell/git + sessions + stream)")
+    print("mini-claude-code agent (FS + shell/git + sessions + stream + permissions)")
     print(f"  provider:     {settings.llm_provider}")
     print(f"  model:        {settings.llm_model}")
     print(f"  workspace:    {resolve_workspace_root(settings)}")
     print(f"  streaming:    {'on' if stream else 'off (--no-stream)'}")
+    print(
+        f"  plan_mode:    {'on (mutating tools denied)' if plan_mode else 'off'}"
+    )
+    print(
+        "  ask_prompt:   "
+        + ("TTY y/n" if ask_callback else "off (non-TTY, plan mode, or no ask)")
+    )
     if use_checkpoint:
         kind = backend or settings.checkpoint_backend
         print(f"  thread_id:    {thread_id}")
@@ -170,20 +188,26 @@ def main(argv: list[str] | None = None) -> int:
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
 
+    def _build(checkpointer=None):
+        return build_agent_graph(
+            settings=settings,
+            checkpointer=checkpointer,
+            plan_mode=plan_mode,
+            ask_callback=ask_callback,
+        )
+
     try:
         if use_checkpoint:
             with open_checkpointer(
                 settings, backend=backend, setup=True
             ) as checkpointer:
-                graph = build_agent_graph(
-                    settings=settings, checkpointer=checkpointer
-                )
+                graph = _build(checkpointer)
                 if args.repl:
                     return _run_repl(graph, config, stream=stream)
                 return _run_once(
                     graph, args.prompt or "", config, stream=stream
                 )
-        graph = build_agent_graph(settings=settings, checkpointer=None)
+        graph = _build(None)
         if args.repl:
             return _run_repl(graph, config, stream=stream)
         return _run_once(graph, args.prompt or "", config, stream=stream)

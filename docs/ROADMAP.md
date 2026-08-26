@@ -33,7 +33,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 |---|---|---|
 | M7 | [Context compaction](milestones/M7-context-compaction.md) | **Done.** Auto-summarize past a size threshold; keep recent tail; same ReAct topology. |
 | M8 | [Project + long-term memory](milestones/M8-project-long-term-memory.md) | **Done.** `AGENT.md` + Neo4j facts + minimal pgvector notes (`remember_note` / `recall_notes`); M20/M21 parked. |
-| M9 | Permissions & Plan Mode | Per-tool auto/ask/deny + read-only Plan Mode. |
+| M9 | [Permissions & Plan Mode](milestones/M9-permissions-plan-mode.md) | **Done.** Per-tool auto/ask/deny + Plan Mode; ask via CLI stdin (interrupt = M10). |
 | M10 | Human-in-the-loop (`interrupt`) | LangGraph interrupt for ask-mode tools; policy vs runtime pause. |
 | M11 | Docker sandbox | Shell/code in ephemeral containers; host subprocess deny-by-default. |
 

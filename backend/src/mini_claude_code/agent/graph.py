@@ -5,6 +5,7 @@ Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
 
 Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)`.
 Compaction (M7) then project/fact inject (M8) before invoke (policy plane).
+Permissions / Plan Mode (M9) wrap tools before ToolNode — not new graph nodes.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
+from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
@@ -66,15 +68,23 @@ def build_agent_graph(
     llm: BaseChatModel | None = None,
     tools: Sequence[BaseTool] | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
+    plan_mode: bool | None = None,
+    ask_callback: AskCallback | None = None,
+    apply_tool_permissions: bool = True,
 ) -> CompiledStateGraph:
     """Compile call_model ↔ tools ReAct graph.
 
     Pass `llm` / `tools` to inject fakes in unit tests (no network).
     Pass a checkpointer (MemorySaver or PostgresSaver) for multi-turn sessions.
+    `plan_mode` defaults to Settings.agent_plan_mode. Set
+    `apply_tool_permissions=False` only for low-level tests that need bare tools.
     """
     settings = settings or get_settings()
     model = llm or create_chat_model(settings)
     workspace = resolve_workspace_root(settings)
+    effective_plan = (
+        settings.agent_plan_mode if plan_mode is None else plan_mode
+    )
     tool_list: list[BaseTool] = (
         list(tools)
         if tools is not None
@@ -84,6 +94,12 @@ def build_agent_graph(
             settings=settings,
         )
     )
+    if apply_tool_permissions:
+        tool_list = apply_permissions(
+            tool_list,
+            plan_mode=effective_plan,
+            ask_callback=ask_callback,
+        )
     bound = model.bind_tools(tool_list)
     summarizer = default_summarizer(model)
 

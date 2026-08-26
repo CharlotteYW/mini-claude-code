@@ -13,9 +13,23 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M8 study guide)
+## Concept Q&A index (M0–M9 study guide)
 
-Study this before starting M9. Links point at full milestone docs. Q→A below are paraphrases of questions you actually asked in chat.
+Study this before starting M10. Links point at full milestone docs. Q→A below are paraphrases of questions you actually asked in chat.
+
+### M9 — Permissions & Plan Mode
+
+- **Q: Why a policy plane instead of new Approve graph nodes?**  
+  A: Keep ReAct as cognition (`call_model` ↔ `tools`). Permissions decide *before* the tool body; deny returns a synthetic message so the loop continues. Topology stays teachable; M10/HITL and channels share one decision function.
+- **Q: auto / ask / deny — defaults?**  
+  A: Read-safe (`read_file`, `glob_files`, `grep_files`, git read, `recall_*`) → `auto`. Mutators (`write_file`, `edit_file`, `run_shell`, `git_commit`, `remember_*`) → `ask`. Plan Mode forces mutators → `deny`.
+- **Q: What is Plan Mode?**  
+  A: `--plan` / `AGENT_PLAN_MODE` — read-only session via policy override, not prompt hope. Model may still *attempt* writes; execution is denied.
+- **Q: Why is ask only CLI stdin in M9?**  
+  A: Teaches the **decision** without durable pause. Non-TTY → deny. M10 replaces ask with LangGraph `interrupt` + checkpointer resume (survives process death / remote adapters).
+- **Q: Why skip path ACL / “always allow this command”?**  
+  A: Those are **product rules on top of** the policy plane (more tables/UX/persistence). They blur into M10 session grants and M11 sandbox; shipping them now hides the Option B lesson. See dated dig entry below.
+- Link: [M9](docs/milestones/M9-permissions-plan-mode.md)
 
 ### M0 — Environment & provider skeleton
 
@@ -131,6 +145,23 @@ Study this before starting M9. Links point at full milestone docs. Q→A below a
   A: `./scripts/test.sh tests/unit/test_m8_*.py`; integration `test_m8_memory_live` / `test_m8_pgvector_live`; `./scripts/db-inspect.sh`; optional `ollama pull nomic-embed-text`.
 - Later: M20 ingestion/chunking; M21 local Elasticsearch; M18/M19 channel → PR + quality gate.
 - Link: [M8](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-25 — M9: Permissions & Plan Mode
+
+- Insight: Policy wraps tools before `ToolNode`; graph topology unchanged.
+- Insight: Plan Mode = mutators `deny`; ask via TTY is a simplification until M10 `interrupt`.
+- Commands: `./scripts/test.sh tests/unit/test_m9_permissions.py`; `./scripts/agent.sh --plan "…"`
+- Link: [docs/milestones/M9-permissions-plan-mode.md](docs/milestones/M9-permissions-plan-mode.md)
+
+---
+
+## 2026-08-25 — Dig: why M9 skips path ACL / “always allow”
+
+- **Q: Why not ship path ACL or “always allow this command” in M9?**  
+  A: M9’s learning target is the **policy plane** (`auto`/`ask`/`deny` + Plan Mode) sitting *outside* the ReAct loop. Path ACL (“`write_file` only under `src/`”) and sticky grants (“always allow this shell”) are **product rules on top of that plane** — more tables, UX, and persistence — without teaching a new LangGraph idea. They also blur into M10 (session grants need durable resume) and M11 (sandbox is stronger than path strings). Do them later once the decision function + HITL pause exist; otherwise the milestone becomes a mini permission product and hides the Option B lesson.
+- Link: [M9](docs/milestones/M9-permissions-plan-mode.md)
 
 ---
 

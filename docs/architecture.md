@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M8 complete  
+**Last updated:** M9 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M8)
+## Current status (M9)
 
 | Piece | Status |
 |---|---|
@@ -19,16 +19,18 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Postgres checkpointer / sessions | M5 |
 | Streaming CLI | M6 |
 | Context compaction | M7 |
-| Project + long-term memory | **M8 Done** |
-| Permissions & Plan Mode | Next: M9 |
+| Project + long-term memory | M8 |
+| Permissions & Plan Mode | **M9 Done** |
+| HITL interrupt | Next: M10 |
 | Docker sandbox for shell | M11 |
 
-Default tools: FS + shell/git + `remember_fact` / `recall_facts` (Neo4j).  
+Default tools: FS + shell/git + Neo4j/pgvector memory, wrapped by **permissions** (`auto`/`ask`/`deny`; `--plan` / `AGENT_PLAN_MODE`).  
 Sessions: Postgres checkpointer + `thread_id`.  
 Compaction then **AGENT.md** (+ optional Fact inject) before model invoke.  
-pgvector: **M8-B** `memory_notes` + Ollama embeddings (`remember_note` / `recall_notes`). ES later (M21).
+Ask via CLI stdin is an M9 simplification; durable pause = M10.  
+pgvector notes remain from M8-B; ES later (M21).
 
-## ReAct core (M2–M8)
+## ReAct core (M2–M9)
 
 ```mermaid
 flowchart LR
@@ -38,7 +40,7 @@ flowchart LR
   Tools --> CallModel
 ```
 
-**Security note:** `run_shell` sets cwd to the workspace but is **not** a sandbox.
+**Security note:** `run_shell` sets cwd to the workspace but is **not** a sandbox. M9 can **ask/deny** it; M11 isolates execution.
 
 ## Message & tool compatibility (M1)
 

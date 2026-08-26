@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     )
     embedding_dimensions: int = Field(default=768, alias="EMBEDDING_DIMENSIONS")
 
+    # Plan Mode (M9): read-only policy override for mutating tools.
+    agent_plan_mode: bool = Field(default=False, alias="AGENT_PLAN_MODE")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""
