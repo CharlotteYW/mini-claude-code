@@ -172,6 +172,16 @@ Study this before starting M12. Links point at full milestone docs.
 
 ---
 
+## 2026-08-26 — Dig: why HITL+git is not enough; where `--rm` lives
+
+- **Q: Why aren’t git tools + HITL enough? When do we need Docker for shell?**  
+  A: HITL answers “did a human approve?” — not “can this process hurt the host if approved or tricked.” `git_*` is a narrow VCS surface; `run_shell` is a **general command interpreter** (`shell=True`). Examples needing isolation even after approve: `curl … | bash`, `pip install` / native builds touching `$HOME`, reading `~/.ssh` or cloud creds via absolute paths, fork bombs / fill-disk, typos like `rm -rf /` (denylist is bypassable). Docker limits blast radius to the container + mounted workspace. Local Claude Code–class products often still lean on HITL; Docker/VM is defense-in-depth or cloud-default.
+- **Q: Do we `rm` the container after each run? Where is the “callback”?**  
+  A: **No Python callback.** Default path is `docker run --rm ...` — Docker itself deletes the container when the command exits. See `build_docker_run_argv` in `sandbox_docker.py` (`"--rm"` in argv). Per-command ephemeral sandbox (M11 simplification), not a long-lived sidecar.
+- Link: [M11](docs/milestones/M11-docker-sandbox.md), `tools/sandbox_docker.py`
+
+---
+
 ## 2026-08-26 — Dig: Claude Code / Codex sandbox vs our M11 Docker
 
 - **Q: Do Claude Code / Codex also run in a sandbox? Is production just `docker run` like us?**  
