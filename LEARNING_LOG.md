@@ -160,6 +160,14 @@ Study this before starting M11. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-26 — Dig: where `__interrupt__` comes from
+
+- **Q: Who produces `__interrupt__`, and how does `result_interrupt_values` see it?**  
+  A: **LangGraph**, not our code. When the tool wrap calls `interrupt(payload)`, the runtime pauses, checkpoints, and the **`graph.invoke(...)` return dict** includes key `__interrupt__` — a sequence of `Interrupt` objects (`value` = our payload, plus an id). We never assign `result["__interrupt__"]` ourselves. `result_interrupt_values(result)` only reads that key and unwraps `.value`. Fallback: `pending_interrupt_values(graph, config)` reads `graph.get_state(config).interrupts` (same Pause info on the checkpoint). If there was no interrupt, both are empty.
+- Link: `hitl.py` (`result_interrupt_values`, `pending_interrupt_values`); pause site `permissions.py` → `interrupt(...)`.
+
+---
+
 ## 2026-08-26 — Dig: where invoke_with_hitl is called; why not middleware
 
 - **Q: Where is `invoke_with_hitl` called?**  
