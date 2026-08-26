@@ -8,6 +8,7 @@ Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)`.
 Compaction (M7) then project/fact inject (M8) before invoke (policy plane).
 Permissions / Plan Mode (M9) wrap tools before ToolNode — not new graph nodes.
 Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
+Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messages.
 """
 
 from __future__ import annotations
@@ -94,6 +95,8 @@ def build_agent_graph(
             workspace,
             shell_timeout_sec=settings.shell_timeout_sec,
             settings=settings,
+            llm=model,
+            plan_mode=effective_plan,
         )
     )
     if apply_tool_permissions:

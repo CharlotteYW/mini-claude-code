@@ -29,6 +29,8 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "recall_notes",
         # Demo / tests
         "add",
+        # M12: delegation is orchestration; child tools are still permissioned.
+        "run_subagent",
     }
 )
 

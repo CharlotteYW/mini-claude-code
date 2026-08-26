@@ -26,7 +26,10 @@ frontend/dist/
 .coverage
 htmlcov/
 
-# Agent workspace scratch (M3+); keep README + AGENT.md template
+# Agent workspace scratch (M3+); keep README + AGENT.md + example subagents
 workspace/*
 !workspace/README.md
 !workspace/AGENT.md
+!workspace/subagents/
+!workspace/subagents/*.yaml
+!workspace/subagents/*.yml

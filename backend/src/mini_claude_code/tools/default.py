@@ -1,11 +1,13 @@
-"""Assemble the default agent tool list (FS + shell + git + memory)."""
+"""Assemble the default agent tool list (FS + shell + git + memory + subagents)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
+from mini_claude_code.agent.subagents import build_subagent_tools
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.tools.fs import build_coding_tools
 from mini_claude_code.tools.git_tools import build_git_tools
@@ -18,8 +20,10 @@ def build_default_tools(
     *,
     shell_timeout_sec: int = 30,
     settings: Settings | None = None,
+    llm: BaseChatModel | None = None,
+    plan_mode: bool = False,
 ) -> list[BaseTool]:
-    """Full default toolset: M3 FS + M4/M11 shell + git + M8 memory."""
+    """Full default toolset including M12 ``run_subagent``."""
     root = workspace_root.expanduser().resolve()
     settings = settings or get_settings()
     return [
@@ -33,4 +37,10 @@ def build_default_tools(
         ),
         *build_git_tools(root),
         *build_memory_tools(settings),
+        *build_subagent_tools(
+            root,
+            settings=settings,
+            llm=llm,
+            plan_mode=plan_mode,
+        ),
     ]

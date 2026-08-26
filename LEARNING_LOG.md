@@ -13,9 +13,19 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M11 study guide)
+## Concept Q&A index (M0–M12 study guide)
 
-Study this before starting M12. Links point at full milestone docs.
+Study this before starting M13.
+
+### M12 — Sub-agents
+
+- **Q: What is a sub-agent here?**  
+  A: A **child ReAct graph** invoked from the parent tool `run_subagent`. Fresh messages + YAML tool allowlist; returns a text summary. Same model as parent.
+- **Q: Does the child see the parent chat?**  
+  A: **No** — only the `task` string (+ child system brief). That is the isolation lesson.
+- **Q: Why a tool, not new parent nodes?**  
+  A: Option B — keep parent topology `call_model` ↔ `tools`; grow capability via tools.
+- Link: [M12](docs/milestones/M12-sub-agents.md)
 
 ### M11 — Docker sandbox
 
@@ -169,6 +179,14 @@ Study this before starting M12. Links point at full milestone docs.
   A: `./scripts/test.sh tests/unit/test_m8_*.py`; integration `test_m8_memory_live` / `test_m8_pgvector_live`; `./scripts/db-inspect.sh`; optional `ollama pull nomic-embed-text`.
 - Later: M20 ingestion/chunking; M21 local Elasticsearch; M18/M19 channel → PR + quality gate.
 - Link: [M8](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-26 — M12: Sub-agents
+
+- Insight: `run_subagent` → nested graph, isolated messages, YAML allowlist; parent topology unchanged.
+- Commands: `./scripts/test.sh tests/unit/test_m12_subagents.py`
+- Link: [docs/milestones/M12-sub-agents.md](docs/milestones/M12-sub-agents.md)
 
 ---
 
