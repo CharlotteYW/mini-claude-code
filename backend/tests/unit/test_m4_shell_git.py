@@ -47,22 +47,25 @@ def test_command_is_denied_patterns() -> None:
 
 
 def test_run_shell_echo_and_cwd(workspace: Path) -> None:
-    tools = {t.name: t for t in build_shell_tools(workspace)}
+    tools = {t.name: t for t in build_shell_tools(workspace, backend="host")}
     out = tools["run_shell"].invoke({"command": "echo hello-m4 && pwd"})
     assert "exit_code=0" in out
     assert "hello-m4" in out
+    assert "sandbox=host" in out
     assert str(workspace.resolve()) in out
 
 
 def test_run_shell_denies_sudo(workspace: Path) -> None:
-    tools = {t.name: t for t in build_shell_tools(workspace)}
+    tools = {t.name: t for t in build_shell_tools(workspace, backend="host")}
     out = tools["run_shell"].invoke({"command": "sudo echo nope"})
     assert out.startswith("ERROR:")
     assert "denied" in out
 
 
 def test_run_shell_timeout(workspace: Path) -> None:
-    tools = {t.name: t for t in build_shell_tools(workspace, timeout_sec=1)}
+    tools = {
+        t.name: t for t in build_shell_tools(workspace, timeout_sec=1, backend="host")
+    }
     out = tools["run_shell"].invoke({"command": "sleep 5"})
     assert "timed out" in out
 

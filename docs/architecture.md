@@ -2,34 +2,33 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M10 complete  
+**Last updated:** M11 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M10)
+## Current status (M11)
 
 | Piece | Status |
 |---|---|
 | ReAct StateGraph | M2 |
 | Filesystem tools + path jail | M3 |
-| Shell + git tools (host subprocess) | M4 |
+| Shell + git tools | M4 |
 | Postgres checkpointer / sessions | M5 |
 | Streaming CLI | M6 |
 | Context compaction | M7 |
 | Project + long-term memory | M8 |
 | Permissions & Plan Mode | M9 |
-| HITL interrupt | **M10 Done** |
-| Docker sandbox for shell | Next: M11 |
+| HITL interrupt | M10 |
+| Docker sandbox for shell | **M11 Done** |
+| Sub-agents | Next: M12 |
 
-Default tools wrapped by permissions (`auto`/`ask`/`deny`; `--plan`).  
-**Ask** → LangGraph `interrupt` + `Command(resume=bool)` (needs checkpointer / `thread_id`).  
-Sessions: Postgres checkpointer + `thread_id`.  
-Compaction then **AGENT.md** (+ optional Fact inject) before model invoke.
+`run_shell` defaults to **Docker** (`SHELL_BACKEND=docker`); host subprocess is opt-in.  
+`git_*` remain host cwd=workspace. M9/M10 still gate before execution.
 
-## ReAct core (M2–M10)
+## ReAct core (M2–M11)
 
 ```mermaid
 flowchart LR
@@ -39,7 +38,8 @@ flowchart LR
   Tools --> CallModel
 ```
 
-**Security note:** `run_shell` sets cwd to the workspace but is **not** a sandbox. M9/M10 can **ask/deny** (interrupt on ask); M11 isolates execution.
+**Security note:** `run_shell` defaults to an ephemeral Docker container (M11). Host backend (`SHELL_BACKEND=host`) is still not a sandbox. M9/M10 ask/deny apply before execution.
+
 
 ## Message & tool compatibility (M1)
 

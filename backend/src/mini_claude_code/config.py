@@ -60,8 +60,17 @@ class Settings(BaseSettings):
     # Agent filesystem jail (M3). Empty → <repo>/workspace
     workspace_root: str = Field(default="", alias="WORKSPACE_ROOT")
 
-    # Host shell timeout (M4). Not a sandbox.
+    # Host shell timeout (M4). Isolation is SHELL_BACKEND=docker (M11).
     shell_timeout_sec: int = Field(default=30, alias="SHELL_TIMEOUT_SEC")
+    shell_backend: Literal["host", "docker"] = Field(
+        default="docker", alias="SHELL_BACKEND"
+    )
+    shell_docker_image: str = Field(
+        default="python:3.12-slim", alias="SHELL_DOCKER_IMAGE"
+    )
+    shell_docker_network: str = Field(
+        default="none", alias="SHELL_DOCKER_NETWORK"
+    )
 
     # Session durability (M5): postgres (default) or memory
     checkpoint_backend: str = Field(default="postgres", alias="CHECKPOINT_BACKEND")

@@ -1,9 +1,9 @@
-"""Host subprocess shell tool (M4).
+"""Shell tool with host or Docker execution backend (M4 + M11).
 
-IMPORTANT (learning): fixing cwd to WORKSPACE_ROOT is NOT a sandbox. A command
-can still read/write paths outside the workspace (e.g. `cat /etc/passwd`).
-The denylist below is a thin teaching brake — production needs containers
-(M11), allowlists, and/or OS-level isolation.
+IMPORTANT (learning):
+- Host mode: fixing cwd to WORKSPACE_ROOT is NOT a sandbox.
+- Docker mode (M11): ephemeral ``docker run --rm`` with workspace bind-mounted.
+The denylist is a thin teaching brake — not the main control in Docker mode.
 """
 
 from __future__ import annotations
@@ -11,10 +11,15 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
+from typing import Literal
 
 from langchain_core.tools import BaseTool, StructuredTool
 
+from mini_claude_code.tools.sandbox_docker import run_in_docker
+
 MAX_OUTPUT_CHARS = 20_000
+
+ShellBackend = Literal["host", "docker"]
 
 # Best-effort string checks only — trivial to bypass. Do not treat as security.
 _DENIED_PATTERNS: list[re.Pattern[str]] = [
@@ -36,55 +41,83 @@ def command_is_denied(command: str) -> str | None:
     return None
 
 
+def _run_on_host(workspace_root: Path, command: str, *, timeout_sec: int) -> str:
+    root = workspace_root.expanduser().resolve()
+    try:
+        completed = subprocess.run(
+            command,
+            shell=True,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+        )
+    except subprocess.TimeoutExpired:
+        return f"ERROR: timed out after {timeout_sec}s"
+    except OSError as exc:
+        return f"ERROR: {exc}"
+
+    chunks = [
+        f"exit_code={completed.returncode}",
+        f"sandbox=host",
+        f"cwd={root}",
+    ]
+    if completed.stdout:
+        chunks.append("stdout:\n" + completed.stdout)
+    if completed.stderr:
+        chunks.append("stderr:\n" + completed.stderr)
+    text = "\n".join(chunks)
+    if len(text) > MAX_OUTPUT_CHARS:
+        return text[:MAX_OUTPUT_CHARS] + f"\n... truncated after {MAX_OUTPUT_CHARS} chars"
+    return text
+
+
 def build_shell_tools(
-    workspace_root: Path, *, timeout_sec: int = 30
+    workspace_root: Path,
+    *,
+    timeout_sec: int = 30,
+    backend: ShellBackend = "docker",
+    docker_image: str = "python:3.12-slim",
+    docker_network: str = "none",
 ) -> list[BaseTool]:
+    """Build ``run_shell``. Default backend is Docker (M11); use ``host`` for tests."""
     root = workspace_root.expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
     timeout = max(1, timeout_sec)
+    be: ShellBackend = backend if backend in ("host", "docker") else "docker"
 
     def run_shell(command: str) -> str:
-        """Run a shell command with cwd=workspace. Host subprocess — not sandboxed."""
+        """Run a shell command in the configured sandbox backend."""
         if not command or not command.strip():
             return "ERROR: command must be non-empty"
         denied = command_is_denied(command)
         if denied:
             return f"ERROR: {denied}"
-        try:
-            completed = subprocess.run(
-                command,
-                shell=True,
-                cwd=root,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-        except subprocess.TimeoutExpired:
-            return f"ERROR: timed out after {timeout}s"
-        except OSError as exc:
-            return f"ERROR: {exc}"
+        if be == "host":
+            return _run_on_host(root, command, timeout_sec=timeout)
+        return run_in_docker(
+            root,
+            command,
+            image=docker_image,
+            network=docker_network,
+            timeout_sec=timeout,
+        )
 
-        chunks = [
-            f"exit_code={completed.returncode}",
-            f"cwd={root}",
-        ]
-        if completed.stdout:
-            chunks.append("stdout:\n" + completed.stdout)
-        if completed.stderr:
-            chunks.append("stderr:\n" + completed.stderr)
-        text = "\n".join(chunks)
-        if len(text) > MAX_OUTPUT_CHARS:
-            return text[:MAX_OUTPUT_CHARS] + f"\n... truncated after {MAX_OUTPUT_CHARS} chars"
-        return text
+    desc = (
+        "Run a shell command. "
+        + (
+            "Executes in an ephemeral Docker container with the workspace mounted "
+            f"at /workspace (network={docker_network}). "
+            if be == "docker"
+            else "HOST subprocess with cwd=workspace — NOT a security sandbox. "
+        )
+        + "Prefer dedicated git_* tools for git."
+    )
 
     return [
         StructuredTool.from_function(
             run_shell,
             name="run_shell",
-            description=(
-                "Run a shell command with working directory fixed to the workspace. "
-                "NOT a security sandbox — prefer dedicated git_* tools for git. "
-                "Use for tests, formatters, and simple commands."
-            ),
+            description=desc,
         )
     ]

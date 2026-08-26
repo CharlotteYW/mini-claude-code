@@ -1,7 +1,8 @@
 """Minimal ReAct agent as a LangGraph StateGraph (M2+).
 
 Default tools: workspace FS (M3) + shell/git (M4) + Neo4j memory (M8).
-Topology stays call_model ↔ tools. Shell is host subprocess until M11 sandbox.
+Topology stays call_model ↔ tools. Shell defaults to Docker sandbox (M11);
+host subprocess remains an opt-in backend.
 
 Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)`.
 Compaction (M7) then project/fact inject (M8) before invoke (policy plane).

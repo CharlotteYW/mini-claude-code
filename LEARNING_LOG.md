@@ -13,9 +13,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M10 study guide)
+## Concept Q&A index (M0–M11 study guide)
 
-Study this before starting M11. Links point at full milestone docs. Q→A below are paraphrases of questions you actually asked in chat.
+Study this before starting M12. Links point at full milestone docs.
+
+### M11 — Docker sandbox
+
+- **Q: Is cwd=workspace a sandbox?**  
+  A: **No** (M4). M11 runs `run_shell` in `docker run --rm` with only the workspace mounted at `/workspace`.
+- **Q: Do permissions go away?**  
+  A: No — M9/M10 still gate; sandbox is *where* an allowed command runs.
+- **Q: Why not put `git_*` in Docker too?**  
+  A: Structured git is intentional host VCS on the project tree; blast radius is shell/arbitrary commands.
+- **Q: Default network none?**  
+  A: Teaching default blocks egress; real agents often need allowlisted network later.
+- Link: [M11](docs/milestones/M11-docker-sandbox.md)
 
 ### M10 — Human-in-the-loop (`interrupt`)
 
@@ -157,6 +169,14 @@ Study this before starting M11. Links point at full milestone docs. Q→A below 
   A: `./scripts/test.sh tests/unit/test_m8_*.py`; integration `test_m8_memory_live` / `test_m8_pgvector_live`; `./scripts/db-inspect.sh`; optional `ollama pull nomic-embed-text`.
 - Later: M20 ingestion/chunking; M21 local Elasticsearch; M18/M19 channel → PR + quality gate.
 - Link: [M8](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-26 — M11: Docker sandbox for shell
+
+- Insight: `run_shell` → ephemeral Docker by default; host backend opt-in; graph unchanged.
+- Commands: `./scripts/test.sh tests/unit/test_m11_sandbox.py`; integration needs Docker daemon.
+- Link: [docs/milestones/M11-docker-sandbox.md](docs/milestones/M11-docker-sandbox.md)
 
 ---
 

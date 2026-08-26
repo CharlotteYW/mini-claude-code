@@ -19,12 +19,18 @@ def build_default_tools(
     shell_timeout_sec: int = 30,
     settings: Settings | None = None,
 ) -> list[BaseTool]:
-    """Full default toolset: M3 FS + M4 shell/git + M8 Neo4j facts."""
+    """Full default toolset: M3 FS + M4/M11 shell + git + M8 memory."""
     root = workspace_root.expanduser().resolve()
     settings = settings or get_settings()
     return [
         *build_coding_tools(root),
-        *build_shell_tools(root, timeout_sec=shell_timeout_sec),
+        *build_shell_tools(
+            root,
+            timeout_sec=shell_timeout_sec,
+            backend=settings.shell_backend,  # type: ignore[arg-type]
+            docker_image=settings.shell_docker_image,
+            docker_network=settings.shell_docker_network,
+        ),
         *build_git_tools(root),
         *build_memory_tools(settings),
     ]
