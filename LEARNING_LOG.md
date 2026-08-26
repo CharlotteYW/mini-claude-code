@@ -160,6 +160,18 @@ Study this before starting M11. Links point at full milestone docs. Q→A below 
 
 ---
 
+## 2026-08-25 — Dig: HITL call chain (invoke_with_hitl vs interrupt vs ask_callback)
+
+- **Q: How does `invoke_with_hitl` “apply into” the graph? Is ask_callback the first y/n and interrupt the second?**  
+  A: **No.** They are not two steps of one approval.  
+  - **`ask_callback`:** optional **test-only bypass**. If set, wrap never calls `interrupt` (sync True/False). Production CLI passes `ask_callback=None`.  
+  - **Production ask:** wrap always hits `interrupt(payload)` → graph **pauses** (needs checkpointer). `invoke_with_hitl` is **outside** the graph: loop `graph.invoke` → see `__interrupt__` → print y/n → `graph.invoke(Command(resume=bool))`.  
+  - **On resume:** LangGraph **re-enters the same wrap**, runs the **same** `interrupt(...)` line again; this time `interrupt()` **returns** the resume bool (does not pause again). Then tool body runs or deny. Your y/n is **not** `ask_callback` — it is CLI `prompt_approval` → `Command(resume=…)`.
+- Call chain: `cli._run_once` → `invoke_with_hitl` → `graph.invoke` → `call_model` → `ToolNode` → permission wrap → `interrupt` → back to CLI → `Command(resume)` → wrap continues.
+- Link: `agent/hitl.py`, `agent/permissions.py`, `agent/cli.py`
+
+---
+
 ## 2026-08-25 — M10: Human-in-the-loop (`interrupt`)
 
 - Insight: Ask → `interrupt` + checkpointer; resume → `Command(resume=bool)`. Policy plane from M9 unchanged.
