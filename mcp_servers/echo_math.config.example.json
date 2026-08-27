@@ -1,0 +1,7 @@
+{
+  "echo_math": {
+    "transport": "stdio",
+    "command": "python",
+    "args": ["REPLACE_WITH_ABS_PATH_TO_echo_math.py"]
+  }
+}

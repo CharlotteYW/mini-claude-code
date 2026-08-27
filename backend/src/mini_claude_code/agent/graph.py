@@ -10,6 +10,7 @@ Permissions / Plan Mode (M9) wrap tools before ToolNode — not new graph nodes.
 Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
 Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messages.
 Skills (M13): catalog inject + ``load_skill`` progressive disclosure.
+MCP (M14): optional adapter tools merged into the same ToolNode (opt-in config).
 """
 
 from __future__ import annotations

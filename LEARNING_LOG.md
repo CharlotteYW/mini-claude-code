@@ -13,9 +13,32 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M13 study guide)
+## 2026-08-27 — M14: MCP client
 
-Study this before starting M14.
+- Shipped: `tools/mcp_loader.py` + in-repo `mcp_servers/echo_math.py`; opt-in `MCP_USE_DEMO` / `MCP_CONFIG` / `MCP_CONFIG_PATH`.
+- Insight: MCP expands the **tool list** via adapter — same ReAct topology as skills/subagents layering, different mechanism (protocol tools vs prompt inject vs nested graph).
+- Pitfall: adapter tools are async-only → sync wrap for ToolNode; content blocks flattened to strings.
+- See Concept Q&A index (M14) below; full Results: [M14](docs/milestones/M14-mcp-client.md).
+
+---
+
+## Concept Q&A index (M0–M14 study guide)
+
+Study this before starting M15.
+
+### M14 — MCP client
+
+- **Q: MCP vs skills vs sub-agents?**  
+  A: **Skills** = playbook text injected into *this* agent's context. **Sub-agent** = nested child graph (`run_subagent`). **MCP** = *callable tools* discovered from an external server via protocol + adapter — still one ToolNode hop, not a nested agent.
+- **Q: Why an adapter?**  
+  A: MCP wire format ≠ LangChain `BaseTool`. `langchain-mcp-adapters` (`MultiServerMCPClient.get_tools`) converts schemas so `bind_tools` / `ToolNode` work unchanged. Topology stays Option B.
+- **Q: Do we run a local MCP server?**  
+  A: Yes for teaching — in-repo stdio `echo_math` (`echo` / `add`). Agent is the **client**. Opt-in: `MCP_USE_DEMO=1` or `MCP_CONFIG` / `MCP_CONFIG_PATH`. Empty config = no MCP.
+- **Q: Why a sync wrap around MCP tools?**  
+  A: Adapter tools are often **coroutine-only**. Our sync `graph.invoke` / ToolNode / permission wrap call `invoke`. M14 wraps with `asyncio.run(ainvoke)` (**simplification**; full-async agent is the real fix).
+- **Q: Stateless sessions?**  
+  A: Default `get_tools()` path often starts a **new stdio session per tool call**. Fine for echo/add; use explicit `client.session(...)` when the server must keep state (later dig).
+- Link: [M14](docs/milestones/M14-mcp-client.md)
 
 ### M13 — Skills (progressive disclosure)
 

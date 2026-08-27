@@ -27,8 +27,9 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "git_log",
         "recall_facts",
         "recall_notes",
-        # Demo / tests
+        # Demo / tests (M1) + M14 in-repo MCP echo_math demos
         "add",
+        "echo",
         # M12: delegation is orchestration; child tools are still permissioned.
         "run_subagent",
         # M13: loading playbook text into context.

@@ -1,4 +1,4 @@
-"""Assemble the default agent tool list (FS + shell + git + memory + subagents)."""
+"""Assemble the default agent tool list (FS + shell + git + memory + subagents + MCP)."""
 
 from __future__ import annotations
 
@@ -7,11 +7,14 @@ from pathlib import Path
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from mini_claude_code.agent.skills import build_skill_tools
-from mini_claude_code.agent.subagents import build_subagent_tools
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.tools.fs import build_coding_tools
 from mini_claude_code.tools.git_tools import build_git_tools
+from mini_claude_code.tools.mcp_loader import (
+    load_mcp_tools_sync,
+    merge_tools_reject_collisions,
+    resolve_mcp_connections,
+)
 from mini_claude_code.tools.memory_tools import build_memory_tools
 from mini_claude_code.tools.shell import build_shell_tools
 
@@ -24,10 +27,18 @@ def build_default_tools(
     llm: BaseChatModel | None = None,
     plan_mode: bool = False,
 ) -> list[BaseTool]:
-    """Full default toolset including M12 subagents and M13 skills."""
+    """Full default toolset including M12–M14 (subagents, skills, optional MCP).
+
+    Agent imports are lazy so ``import mini_claude_code.tools`` does not cycle
+    through ``agent.graph`` → ``tools`` while the tools package is still loading.
+    """
+    # Lazy: agent.skills / subagents pull agent.__init__ → graph → tools.
+    from mini_claude_code.agent.skills import build_skill_tools
+    from mini_claude_code.agent.subagents import build_subagent_tools
+
     root = workspace_root.expanduser().resolve()
     settings = settings or get_settings()
-    return [
+    builtin: list[BaseTool] = [
         *build_coding_tools(root),
         *build_shell_tools(
             root,
@@ -46,3 +57,8 @@ def build_default_tools(
         ),
         *build_skill_tools(root),
     ]
+    connections = resolve_mcp_connections(settings)
+    if not connections:
+        return builtin
+    mcp_tools = load_mcp_tools_sync(connections, settings=settings)
+    return merge_tools_reject_collisions(builtin, mcp_tools)

@@ -90,6 +90,12 @@ class Settings(BaseSettings):
     # Plan Mode (M9): read-only policy override for mutating tools.
     agent_plan_mode: bool = Field(default=False, alias="AGENT_PLAN_MODE")
 
+    # MCP client (M14). Empty config + demo off → no MCP tools.
+    # Priority: MCP_CONFIG_PATH > MCP_CONFIG (JSON) > MCP_USE_DEMO.
+    mcp_config: str = Field(default="", alias="MCP_CONFIG")
+    mcp_config_path: str = Field(default="", alias="MCP_CONFIG_PATH")
+    mcp_use_demo: bool = Field(default=False, alias="MCP_USE_DEMO")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

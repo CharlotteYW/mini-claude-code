@@ -43,7 +43,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 |---|---|---|
 | M12 | [Sub-agents](milestones/M12-sub-agents.md) | **Done.** YAML child agents; isolated context; `run_subagent`; same model. |
 | M13 | [Skills (progressive disclosure)](milestones/M13-skills-progressive-disclosure.md) | **Done.** Catalog always on; `load_skill` loads full body; vs M12 subagents. |
-| M14 | MCP client | Discover/merge MCP tools; dissect adapter → LangGraph tools. |
+| M14 | [MCP client](milestones/M14-mcp-client.md) | **Done.** Adapter merges stdio MCP tools into ToolNode; in-repo echo_math demo; opt-in config. |
 | M15 | Hooks | PreToolUse / PostToolUse / Stop-style lifecycle hooks. |
 | M16 | Plugins & slash commands | Declarative plugin packs + `/command` templates. |
 

@@ -2,24 +2,25 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M13 complete  
+**Last updated:** M14 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M13)
+## Current status (M14)
 
 | Piece | Status |
 |---|---|
 | Core ReAct + tools + sessions + stream | M2–M6 |
 | Compact + memory + permissions + HITL + sandbox | M7–M11 |
 | Sub-agents | M12 |
-| Skills (progressive disclosure) | **M13 Done** |
-| MCP client | Next: M14 |
+| Skills (progressive disclosure) | M13 |
+| MCP client | **M14 Done** |
+| Hooks | Next: M15 |
 
-Skills: catalog inject every turn; `load_skill` loads full SKILL.md body. Sub-agents remain nested graphs via `run_subagent`.
+MCP: opt-in stdio servers via `langchain-mcp-adapters`; tools merge into the same ToolNode. Skills remain prompt inject; sub-agents remain nested graphs.
 
 ## ReAct core (M2–M11)
 
@@ -125,4 +126,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
 - **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
 - **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
+- **M9–M14 Done** — permissions, HITL, sandbox, sub-agents, skills, MCP — see [ROADMAP.md](ROADMAP.md)
 - Full list: [ROADMAP.md](ROADMAP.md)
