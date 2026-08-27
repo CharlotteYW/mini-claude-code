@@ -96,6 +96,10 @@ class Settings(BaseSettings):
     mcp_config_path: str = Field(default="", alias="MCP_CONFIG_PATH")
     mcp_use_demo: bool = Field(default=False, alias="MCP_USE_DEMO")
 
+    # Lifecycle hooks (M15). Priority: HOOKS_CONFIG_PATH > workspace/hooks.yaml > HOOKS_USE_DEMO.
+    hooks_config_path: str = Field(default="", alias="HOOKS_CONFIG_PATH")
+    hooks_use_demo: bool = Field(default=False, alias="HOOKS_USE_DEMO")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

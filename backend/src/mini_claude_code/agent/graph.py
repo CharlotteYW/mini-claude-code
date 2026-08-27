@@ -11,6 +11,7 @@ Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
 Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messages.
 Skills (M13): catalog inject + ``load_skill`` progressive disclosure.
 MCP (M14): optional adapter tools merged into the same ToolNode (opt-in config).
+Hooks (M15): Pre/Post around tools; Stop when the turn ends without tool_calls.
 """
 
 from __future__ import annotations
@@ -28,6 +29,12 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
+from mini_claude_code.agent.hooks import (
+    HookRegistry,
+    apply_hooks,
+    resolve_hook_registry,
+    run_stop_hooks,
+)
 from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
 from mini_claude_code.agent.skills import inject_skills_view
@@ -78,6 +85,8 @@ def build_agent_graph(
     plan_mode: bool | None = None,
     ask_callback: AskCallback | None = None,
     apply_tool_permissions: bool = True,
+    hook_registry: HookRegistry | None = None,
+    apply_tool_hooks: bool = True,
 ) -> CompiledStateGraph:
     """Compile call_model ↔ tools ReAct graph.
 
@@ -85,6 +94,9 @@ def build_agent_graph(
     Pass a checkpointer (MemorySaver or PostgresSaver) for multi-turn sessions.
     `plan_mode` defaults to Settings.agent_plan_mode. Set
     `apply_tool_permissions=False` only for low-level tests that need bare tools.
+
+    Tool wrap order: **permissions first (inner), hooks outer** so runtime is
+    Pre → permissions/HITL → body → Post.
     """
     settings = settings or get_settings()
     model = llm or create_chat_model(settings)
@@ -109,6 +121,13 @@ def build_agent_graph(
             plan_mode=effective_plan,
             ask_callback=ask_callback,
         )
+    registry = (
+        hook_registry
+        if hook_registry is not None
+        else resolve_hook_registry(settings, workspace_root=workspace)
+    )
+    if apply_tool_hooks:
+        tool_list = apply_hooks(tool_list, registry)
     bound = model.bind_tools(tool_list)
     summarizer = default_summarizer(model)
 
@@ -128,6 +147,15 @@ def build_agent_graph(
             compacted, workspace_root=workspace, settings=settings
         )
         response = bound.invoke(prompt_messages, config)
+        # Stop hooks: turn ended without further tool_calls (best-effort).
+        if (
+            apply_tool_hooks
+            and isinstance(response, AIMessage)
+            and not response.tool_calls
+        ):
+            content = response.content
+            text = content if isinstance(content, str) else str(content)
+            run_stop_hooks(registry, content=text)
         if did_compact:
             return {
                 "messages": [

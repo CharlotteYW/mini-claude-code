@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-27 — M15: Lifecycle hooks
+
+- Shipped: `agent/hooks.py` + `hook_demos.py`; Pre → permissions → body → Post; Stop on final AIMessage.
+- Insight: Hooks are **pluggable lifecycle**; permissions are the **default policy table**; HITL is **durable human pause** — three different levers, one ToolNode.
+- See Concept Q&A index (M15) below; Results: [M15](docs/milestones/M15-lifecycle-hooks.md).
+
+---
+
 ## 2026-08-27 — Dig: why not full-async agent, or skip adapter with plain demo tools?
 
 - **Q: Why not just go async like production? Or keep an MCP server but wire simple local `@tool` demos?**  
@@ -30,9 +38,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M14 study guide)
+## Concept Q&A index (M0–M15 study guide)
 
-Study this before starting M15.
+Study this before starting M16.
+
+### M15 — Lifecycle hooks
+
+- **Q: Hooks vs permissions vs HITL?**  
+  A: **Permissions** = fixed auto/ask/deny table (M9). **HITL** = ask pauses with `interrupt` + resume (M10). **Hooks** = pluggable Pre/Post/Stop callbacks (audit, redact, custom deny) without new graph nodes.
+- **Q: Why outer wrap?**  
+  A: `apply_permissions` first (inner), then `apply_hooks` (outer) so runtime order is Pre → permissions/HITL → body → Post.
+- **Q: What is Stop here?**  
+  A: Best-effort when `call_model` returns an AIMessage **without** tool_calls — not OS process exit. Fires again each REPL turn that ends that way.
+- **Q: Empty config?**  
+  A: No `HOOKS_CONFIG_PATH`, no `workspace/hooks.yaml`, `HOOKS_USE_DEMO=0` → empty registry → behavior unchanged from M14.
+- Link: [M15](docs/milestones/M15-lifecycle-hooks.md)
 
 ### M14 — MCP client
 

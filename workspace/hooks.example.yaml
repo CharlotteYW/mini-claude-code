@@ -1,0 +1,14 @@
+# Example lifecycle hooks (M15). Copy to workspace/hooks.yaml to enable,
+# or set HOOKS_USE_DEMO=1 for the same built-in handler set without a file.
+#
+# Handler ids are teaching demos in mini_claude_code.agent.hook_demos.
+
+pre_tool_use:
+  - block_dangerous_shell
+
+post_tool_use:
+  - redact_secret_pattern
+  - append_audit_marker
+
+stop:
+  - log_stop
