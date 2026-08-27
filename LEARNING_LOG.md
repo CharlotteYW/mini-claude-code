@@ -190,6 +190,14 @@ Study this before starting M14.
 
 ---
 
+## 2026-08-26 — Dig: confirm — explicit tool is our teaching choice
+
+- **Q: So we explicitly `load_skill` via a tool; industry often uses internal markers/API/hybrids to inject into the prompt; and our tool is for teaching?**  
+  A: **Yes.** Same progressive-disclosure idea (catalog always, body on demand). Mechanism differs: we expose activation as a normal tool_call for visibility/tests; many products hide selection+inject inside the prompt pipeline (markers, internal load API, matcher, or hybrid). Teaching > matching any one vendor’s private wiring.
+- Link: M13 digs above
+
+---
+
 ## 2026-08-26 — Dig: if not a tool call, who decides which skill to inject?
 
 - **Q: Without a tool call, how does the agent know to inject a skill?**  
