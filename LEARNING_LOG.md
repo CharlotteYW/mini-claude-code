@@ -190,6 +190,14 @@ Study this before starting M14.
 
 ---
 
+## 2026-08-26 — Dig: if not a tool call, who decides which skill to inject?
+
+- **Q: Without a tool call, how does the agent know to inject a skill?**  
+  A: **Inject is done by the host; “which skill” still needs a signal.** The catalog (name+description) is always in the prompt so the model *knows options*. Choosing the body is separate: (1) **explicit tool** (our `load_skill`) — clearest; (2) **model emits a structured cue** the harness parses (e.g. internal “use skill X”, not shown as a normal tool); (3) **non-LLM matcher** on the user message vs skill descriptions (keywords/embeddings) — host injects without the model choosing; (4) **hybrid**. There is no free lunch: something must select. Industry often hides (2)/(3) inside the prompt pipeline so you don’t see a `load_skill` tool_call; we expose (1) for learning.
+- Link: M13, `agent/skills.py`
+
+---
+
 ## 2026-08-26 — Dig: what “prompt pipeline inject” means
 
 - **Q: What does prompt pipeline inject mean?**  
