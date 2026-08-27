@@ -45,7 +45,7 @@ Study this before starting M15.
 - **Q: Why a sync wrap around MCP tools?**  
   A: Adapter tools are often **coroutine-only**. Our sync `graph.invoke` / ToolNode / permission wrap call `invoke`. M14 wraps with `asyncio.run(ainvoke)` (**simplification**; full-async agent is the real fix).
 - **Q: Why not full-async now, or plain local demo tools instead of the adapter?**  
-  A: Full-async is the better long-term shape — deferred so M14 stays about MCP merge, not rewriting CLI/HITL. Plain `@tool` demos (with an unused MCP server) skip the protocol/adapter lesson; the demo tools must be *served over MCP* and discovered via the client.
+  A: Full-async is the better long-term shape — deferred so M14 stays about MCP merge, not rewriting CLI/HITL. Parked as **[M22](docs/ROADMAP.md)** (Tier 4 optional). Plain `@tool` demos (with an unused MCP server) skip the protocol/adapter lesson; the demo tools must be *served over MCP* and discovered via the client.
 - **Q: Stateless sessions?**  
   A: Default `get_tools()` path often starts a **new stdio session per tool call**. Fine for echo/add; use explicit `client.session(...)` when the server must keep state (later dig).
 - Link: [M14](docs/milestones/M14-mcp-client.md)
