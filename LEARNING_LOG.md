@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-27 — Dig: why not full-async agent, or skip adapter with plain demo tools?
+
+- **Q: Why not just go async like production? Or keep an MCP server but wire simple local `@tool` demos?**  
+  A: **Two different shortcuts — both miss (or defer) the M14 lesson.** (1) **Full-async agent** *is* the cleaner production shape (adapter tools are coroutine-native; sync wrap is our bridge). We *can* do it; M14 deferred the rewrite of CLI / HITL / permission wrap / `graph.invoke` to keep the milestone about MCP merge, not “make the whole runtime async.” (2) **Plain local `@tool` + a decorative MCP server** teaches almost nothing about MCP: the model never goes through MCP schema discovery or the adapter. Demo `echo`/`add` live *on the MCP server*; the agent must speak the protocol (via adapter) or you are only demoing LangChain tools again (M1). Hand-written thin tools that call the MCP SDK yourself = rolling your own adapter.
+- Link: M14, `tools/mcp_loader.py` (`wrap_mcp_tool_for_sync`)
+
+---
+
 ## 2026-08-27 — M14: MCP client
 
 - Shipped: `tools/mcp_loader.py` + in-repo `mcp_servers/echo_math.py`; opt-in `MCP_USE_DEMO` / `MCP_CONFIG` / `MCP_CONFIG_PATH`.
@@ -36,6 +44,8 @@ Study this before starting M15.
   A: Yes for teaching — in-repo stdio `echo_math` (`echo` / `add`). Agent is the **client**. Opt-in: `MCP_USE_DEMO=1` or `MCP_CONFIG` / `MCP_CONFIG_PATH`. Empty config = no MCP.
 - **Q: Why a sync wrap around MCP tools?**  
   A: Adapter tools are often **coroutine-only**. Our sync `graph.invoke` / ToolNode / permission wrap call `invoke`. M14 wraps with `asyncio.run(ainvoke)` (**simplification**; full-async agent is the real fix).
+- **Q: Why not full-async now, or plain local demo tools instead of the adapter?**  
+  A: Full-async is the better long-term shape — deferred so M14 stays about MCP merge, not rewriting CLI/HITL. Plain `@tool` demos (with an unused MCP server) skip the protocol/adapter lesson; the demo tools must be *served over MCP* and discovered via the client.
 - **Q: Stateless sessions?**  
   A: Default `get_tools()` path often starts a **new stdio session per tool call**. Fine for echo/add; use explicit `client.session(...)` when the server must keep state (later dig).
 - Link: [M14](docs/milestones/M14-mcp-client.md)
