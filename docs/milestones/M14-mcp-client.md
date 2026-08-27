@@ -165,4 +165,6 @@ Adapter keeps Option B: grow capability via tools, not new graph nodes. In-repo 
 
 ### Open questions / next dig
 
-- M15 Hooks; MCP resources/prompts; HTTP transport; stateful `client.session(...)`; async agent end-to-end.
+- M15 Hooks.
+- MCP resources/prompts; HTTP transport; stateful `client.session(...)`.
+- **Parked improvement → [M22](../ROADMAP.md) (Tier 4):** async agent runtime end-to-end — drop `wrap_mcp_tool_for_sync` as the default path (CLI / HITL / permissions on `ainvoke`).

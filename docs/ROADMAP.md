@@ -56,6 +56,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M19 | Pre-ship quality gate (format + test until green) | Before any PR or push: run formatter + full test suite; on failure, agent keeps editing/re-running until green (bounded retries). Owner may `git push` to the target branch; non-owner / default path opens a PR only. |
 | M20 | Doc ingestion + production-ish memory pipeline | Chunking, cleaning, and metadata for project docs/notes; write into Neo4j and/or pgvector with clearer schemas. Local-first “production improvements” (still Compose on a laptop — few users). |
 | M21 | Elasticsearch (local Compose) | Add ES (or OpenSearch) to Compose for full-text / keyword search tools beside Neo4j (relations) and pgvector (semantic). Teach when ES wins vs graph vs vectors. |
+| M22 | Async agent runtime (drop MCP sync wrap) | End-to-end async invoke/stream path so MCP adapter tools run natively without `asyncio.run` sync wrap; align CLI / HITL resume / permission wrap with `ainvoke`. |
 
 **M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer one channel first (Discord *or* Slack), dry-run PR creation, and deny-by-default until M9/M10 policy exists. Always call through **M19** so channel-triggered ships cannot skip CI-like checks.
 
@@ -64,6 +65,8 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 **M20 learning notes (when we get there):** “Neo4j does chunking” is a common mix-up — **chunking/cleaning is an ingestion pipeline**; Neo4j *stores* the resulting entities/chunks/edges. Pipeline should be store-agnostic enough to also feed pgvector (and later ES). Keep runnable on Docker Desktop; no cloud-only deps. Still a learning repo: label what real multi-tenant prod would still need (ACL, job queue, evals).
 
 **M21 learning notes (when we get there):** ES complements, does not replace, Neo4j or pgvector — keyword/full-text at scale vs relations vs semantic similarity. Add as another Compose service (local). Agent gets search tools; document the three-way choice. Optional: hybrid later (ES filter + vector re-rank) as a dig after M20/M21.
+
+**M22 learning notes (when we get there):** M14 kept a **sync** ReAct/CLI path and wrapped MCP tools with `asyncio.run(ainvoke)` so ToolNode/permissions keep working. Production-shaped runtimes usually stay async end-to-end (`ainvoke` / `astream`, async tool execution, HITL resume without nested event loops). Goal: remove `wrap_mcp_tool_for_sync` as the default path; keep sync only as a thin compatibility shim if needed. Pair with optional digs: stateful `client.session(...)`, MCP HTTP transport. Do **not** replace MCP with plain local `@tool` demos — that drops the protocol lesson.
 
 ## Status legend
 
