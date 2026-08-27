@@ -190,6 +190,14 @@ Study this before starting M14.
 
 ---
 
+## 2026-08-26 — Dig: are Claude/Codex skills also tools?
+
+- **Q: In Claude Code / Codex, is a skill also a tool like our `load_skill`?**  
+  A: **Usually no (not as a user-visible tool).** Industry “skills” are mostly **progressive-disclosure instruction packs** (name+description always cheap; full `SKILL.md` body injected into context when relevant). Activation is often **runtime/prompt plumbing** (model picks from the catalog → host loads the file) — you may not see a `load_skill` tool_call in the transcript. Our M13 uses an explicit **`load_skill` StructuredTool** so the activation is visible and testable (teaching choice). Same *idea* (L0 catalog / L1 body); different *mechanism* (tool vs silent inject). Still distinct from subagents (nested agent loop).
+- Link: [M13](docs/milestones/M13-skills-progressive-disclosure.md), `agent/skills.py`
+
+---
+
 ## 2026-08-26 — M13: Skills progressive disclosure
 
 - Insight: Catalog L0 always; `load_skill` L1 body; not a nested agent.
