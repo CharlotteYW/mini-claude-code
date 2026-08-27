@@ -190,6 +190,14 @@ Study this before starting M14.
 
 ---
 
+## 2026-08-26 — Dig: how we load skills vs industry inject
+
+- **Q: We load via a tool — how does industry load? Straight into the system prompt?**  
+  A: **We:** model calls `load_skill` → body returns as **ToolMessage** (and we may re-inject scanned bodies into the prompt view as SystemMessages). **Industry (typical):** host keeps a **catalog** in the always-on prompt; when a skill is selected (model intent and/or matcher), the runtime **reads `SKILL.md` and appends/injects that text into the context** for upcoming model calls — often as extra **system / developer / user-context blocks**, not necessarily as a tool result. So yes: closer to “add into the prompt assembly” than “tool round-trip,” though products differ on exact message role. Same progressive-disclosure goal.
+- Link: `agent/skills.py`, M13
+
+---
+
 ## 2026-08-26 — Dig: are Claude/Codex skills also tools?
 
 - **Q: In Claude Code / Codex, is a skill also a tool like our `load_skill`?**  
