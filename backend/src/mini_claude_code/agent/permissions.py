@@ -31,6 +31,8 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "add",
         # M12: delegation is orchestration; child tools are still permissioned.
         "run_subagent",
+        # M13: loading playbook text into context.
+        "load_skill",
     }
 )
 

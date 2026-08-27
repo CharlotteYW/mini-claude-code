@@ -7,6 +7,7 @@ from pathlib import Path
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
+from mini_claude_code.agent.skills import build_skill_tools
 from mini_claude_code.agent.subagents import build_subagent_tools
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.tools.fs import build_coding_tools
@@ -23,7 +24,7 @@ def build_default_tools(
     llm: BaseChatModel | None = None,
     plan_mode: bool = False,
 ) -> list[BaseTool]:
-    """Full default toolset including M12 ``run_subagent``."""
+    """Full default toolset including M12 subagents and M13 skills."""
     root = workspace_root.expanduser().resolve()
     settings = settings or get_settings()
     return [
@@ -43,4 +44,5 @@ def build_default_tools(
             llm=llm,
             plan_mode=plan_mode,
         ),
+        *build_skill_tools(root),
     ]

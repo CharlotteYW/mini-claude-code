@@ -9,6 +9,7 @@ Compaction (M7) then project/fact inject (M8) before invoke (policy plane).
 Permissions / Plan Mode (M9) wrap tools before ToolNode — not new graph nodes.
 Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
 Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messages.
+Skills (M13): catalog inject + ``load_skill`` progressive disclosure.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from langgraph.prebuilt import ToolNode
 from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
 from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
+from mini_claude_code.agent.skills import inject_skills_view
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
 from mini_claude_code.memory.neo4j_facts import recall_facts_block
@@ -51,15 +53,16 @@ def _inject_memory_view(
     workspace_root,
     settings: Settings,
 ) -> list[Any]:
-    """compact → AGENT.md → optional Neo4j fact block (prompt view only)."""
+    """compact → AGENT.md → skills catalog/loaded → optional Neo4j facts."""
     view = inject_project_memory(list(messages), workspace_root, ensure=True)
+    view = inject_skills_view(view, workspace_root)
     facts_block = recall_facts_block(limit=8, settings=settings)
     if not facts_block:
         return view
     marker = "[durable facts from Neo4j]"
     # Avoid stacking duplicate fact blocks across tool-loop iterations.
     if any(
-        isinstance(m, SystemMessage) and marker in str(m.content) for m in view[:3]
+        isinstance(m, SystemMessage) and marker in str(m.content) for m in view[:5]
     ):
         return view
     return [SystemMessage(content=facts_block), *view]

@@ -33,3 +33,6 @@ workspace/*
 !workspace/subagents/
 !workspace/subagents/*.yaml
 !workspace/subagents/*.yml
+!workspace/skills/
+!workspace/skills/*/
+!workspace/skills/*/SKILL.md

@@ -2,25 +2,24 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M12 complete  
+**Last updated:** M13 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M12)
+## Current status (M13)
 
 | Piece | Status |
 |---|---|
-| ReAct StateGraph | M2 |
-| Filesystem / shell / git | M3–M4 |
-| Checkpointer / stream / compact / memory | M5–M8 |
-| Permissions / HITL / Docker shell | M9–M11 |
-| Sub-agents | **M12 Done** |
-| Skills | Next: M13 |
+| Core ReAct + tools + sessions + stream | M2–M6 |
+| Compact + memory + permissions + HITL + sandbox | M7–M11 |
+| Sub-agents | M12 |
+| Skills (progressive disclosure) | **M13 Done** |
+| MCP client | Next: M14 |
 
-Parent tools include `run_subagent` (YAML defs in `workspace/subagents/`). Child = nested ReAct graph, isolated messages, same model.
+Skills: catalog inject every turn; `load_skill` loads full SKILL.md body. Sub-agents remain nested graphs via `run_subagent`.
 
 ## ReAct core (M2–M11)
 

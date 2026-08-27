@@ -13,9 +13,17 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M12 study guide)
+## Concept Q&A index (M0–M13 study guide)
 
-Study this before starting M13.
+Study this before starting M14.
+
+### M13 — Skills (progressive disclosure)
+
+- **Q: Skill vs sub-agent?**  
+  A: Skill = load playbook into **this** agent’s context (`load_skill`). Sub-agent = **child graph** with fresh messages (`run_subagent`).
+- **Q: What is progressive disclosure?**  
+  A: L0 catalog (name+description) every turn; L1 full body only after `load_skill`. Saves context vs dumping all playbooks into the system prompt.
+- Link: [M13](docs/milestones/M13-skills-progressive-disclosure.md)
 
 ### M12 — Sub-agents
 
@@ -179,6 +187,14 @@ Study this before starting M13.
   A: `./scripts/test.sh tests/unit/test_m8_*.py`; integration `test_m8_memory_live` / `test_m8_pgvector_live`; `./scripts/db-inspect.sh`; optional `ollama pull nomic-embed-text`.
 - Later: M20 ingestion/chunking; M21 local Elasticsearch; M18/M19 channel → PR + quality gate.
 - Link: [M8](docs/milestones/M8-project-long-term-memory.md)
+
+---
+
+## 2026-08-26 — M13: Skills progressive disclosure
+
+- Insight: Catalog L0 always; `load_skill` L1 body; not a nested agent.
+- Commands: `./scripts/test.sh tests/unit/test_m13_skills.py`
+- Link: [docs/milestones/M13-skills-progressive-disclosure.md](docs/milestones/M13-skills-progressive-disclosure.md)
 
 ---
 
