@@ -190,6 +190,14 @@ Study this before starting M14.
 
 ---
 
+## 2026-08-26 — Dig: what “prompt pipeline inject” means
+
+- **Q: What does prompt pipeline inject mean?**  
+  A: Before each model call, the host **builds the message list** the LLM will see (system, history, tool results, extras). **Inject** = the runtime **inserts extra text into that list** without the model having issued a tool call for it. Our repo already does this for `AGENT.md`, Neo4j facts, and the skills **catalog** in `_inject_memory_view` / `inject_skills_view` — that *is* prompt-pipeline inject. Industry skill **bodies** often load the same way (host appends the SKILL.md text into the assembled prompt). Our skill **body** activation is different: model must call `load_skill` first (tool path); we only re-inject scanned bodies afterward.
+- Link: `agent/graph.py` (`_inject_memory_view`), `agent/skills.py`, `agent/project_memory.py`
+
+---
+
 ## 2026-08-26 — Dig: how we load skills vs industry inject
 
 - **Q: We load via a tool — how does industry load? Straight into the system prompt?**  
