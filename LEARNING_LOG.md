@@ -182,6 +182,14 @@ Study this before starting M13.
 
 ---
 
+## 2026-08-26 — Dig: subagent is a tool, not a new parent node
+
+- **Q: How does the subagent run — new graph node, or a tool? Why does `build_subagent_tools` return a list?**  
+  A: **Tool, not a new parent node.** Parent topology stays `call_model` ↔ `tools`. `run_subagent` is a normal `StructuredTool`; when the parent model calls it, `ToolNode` runs the function, which **internally** `build_agent_graph(...).invoke(...)` for the child (nested graph, fresh messages). Returning `list[BaseTool]` matches every other builder (`build_coding_tools`, `build_shell_tools`, …) so `build_default_tools` can splat `*build_subagent_tools(...)`. Today the list has **one** tool (`run_subagent`); a list keeps the door open for “one tool per YAML name” later without changing the assembler. Not because LangGraph requires multiple tools.
+- Link: `agent/subagents.py`, `tools/default.py`
+
+---
+
 ## 2026-08-26 — M12: Sub-agents
 
 - Insight: `run_subagent` → nested graph, isolated messages, YAML allowlist; parent topology unchanged.
