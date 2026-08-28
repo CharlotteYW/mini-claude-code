@@ -45,7 +45,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M13 | [Skills (progressive disclosure)](milestones/M13-skills-progressive-disclosure.md) | **Done.** Catalog always on; `load_skill` loads full body; vs M12 subagents. |
 | M14 | [MCP client](milestones/M14-mcp-client.md) | **Done.** Adapter merges stdio MCP tools into ToolNode; in-repo echo_math demo; opt-in config. |
 | M15 | [Lifecycle hooks](milestones/M15-lifecycle-hooks.md) | **Done.** PreToolUse / PostToolUse / Stop in policy plane; demo handlers; topology unchanged. |
-| M16 | Plugins & slash commands | Declarative plugin packs + `/command` templates. |
+| M16 | [Plugins & slash commands](milestones/M16-plugins-slash-commands.md) | **Done.** Plugin packs, `/review`, `/help` discovery, hook merge; topology unchanged. |
 
 ## Tier 4 — Optional
 

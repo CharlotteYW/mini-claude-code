@@ -100,6 +100,9 @@ class Settings(BaseSettings):
     hooks_config_path: str = Field(default="", alias="HOOKS_CONFIG_PATH")
     hooks_use_demo: bool = Field(default=False, alias="HOOKS_USE_DEMO")
 
+    # Plugin packs (M16). Scan workspace/plugins when enabled.
+    plugins_enabled: bool = Field(default=True, alias="PLUGINS_ENABLED")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

@@ -42,6 +42,34 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 Study this before starting M16.
 
+---
+
+## 2026-08-28 — M16: Plugins & slash commands
+
+- Shipped: `plugins.py`, `slash_commands.py`, `workspace/plugins/review`, CLI `/help` + `/review`.
+- Insight: Plugin = **bundle** (slash + hooks); slash = **turn entry** template; hooks still **per tool**; graph unchanged.
+- Results: [M16](docs/milestones/M16-plugins-slash-commands.md).
+
+---
+
+## Concept Q&A index (M0–M16 study guide)
+
+Study this before starting M17.
+
+### M16 — Plugins & slash commands
+
+- **Q: What is a plugin here?**  
+  A: A **declarative pack** (`workspace/plugins/<id>/plugin.yaml`) that can register **slash commands** (prompt templates) and optionally **append hook handler ids** — not a new graph node or pip package.
+- **Q: Plugin vs slash vs hook vs skill?**  
+  A: **Slash** = user types `/review` → CLI expands template once at turn entry. **Hook** = Pre/Post around every tool call. **Skill** = playbook in context via `load_skill`. **Plugin** = container that can ship slash + hooks together.
+- **Q: Why `/help` not interactive `/plugins` menu?**  
+  A: **方案 A** — list-only discovery (like Claude Code’s catalog, without TUI picker). User still types `/review` manually; interactive menu = later dig.
+- **Q: Where does slash run?**  
+  A: **CLI/REPL** (`dispatch_slash_input`) before `graph.invoke` — not inside LangGraph.
+- **Q: Hook merge order?**  
+  A: Base `hooks.yaml` / demo / env path first, then **append** plugin hook ids; dedupe within each list.
+- Link: [M16](docs/milestones/M16-plugins-slash-commands.md)
+
 ### M15 — Lifecycle hooks
 
 - **Q: Hooks vs permissions vs HITL?**  

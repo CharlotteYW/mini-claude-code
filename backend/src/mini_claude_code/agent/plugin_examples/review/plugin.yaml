@@ -1,0 +1,17 @@
+name: review
+description: Structured code review prompts and optional safety hooks.
+slash_commands:
+  review:
+    description: Review git diff and recent changes; output structured findings.
+    template: |
+      You are reviewing code changes in this workspace.
+      Use git_status and git_diff (read-only) to inspect what changed.
+      Output a structured review:
+      - Summary (1–2 sentences)
+      - Findings (bullets: file, issue, severity)
+      - Suggested next steps (no mutating actions unless the user asks)
+
+      Focus area from user (if any): {{args}}
+hooks:
+  pre_tool_use:
+    - block_dangerous_shell

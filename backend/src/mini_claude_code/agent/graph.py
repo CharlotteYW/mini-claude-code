@@ -11,7 +11,8 @@ Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
 Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messages.
 Skills (M13): catalog inject + ``load_skill`` progressive disclosure.
 MCP (M14): optional adapter tools merged into the same ToolNode (opt-in config).
-Hooks (M15): Pre/Post around tools; Stop when the turn ends without tool_calls.
+Hooks (M15): Pre/Post around tools; Stop on final model message without tool_calls.
+Plugins (M16): slash expand + hook merge at CLI/graph build; `/help` lists commands.
 """
 
 from __future__ import annotations

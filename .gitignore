@@ -37,3 +37,6 @@ workspace/*
 !workspace/skills/*/
 !workspace/skills/*/SKILL.md
 !workspace/hooks.example.yaml
+!workspace/plugins/
+!workspace/plugins/*/
+!workspace/plugins/*/plugin.yaml

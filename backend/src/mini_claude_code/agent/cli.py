@@ -15,6 +15,8 @@ from mini_claude_code.agent.checkpointer import (
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
 from mini_claude_code.agent.hitl import invoke_with_hitl
+from mini_claude_code.agent.plugins import PluginPack, resolve_plugins
+from mini_claude_code.agent.slash_commands import dispatch_slash_input, slash_registry_from_plugins
 from mini_claude_code.agent.stream_render import consume_agent_stream
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
@@ -62,7 +64,21 @@ def _run_once(
     *,
     stream: bool,
     plan_mode: bool,
+    slash_registry: dict[str, dict[str, str]],
+    plugins: list[PluginPack],
 ) -> int:
+    try:
+        dispatch = dispatch_slash_input(
+            prompt, slash_registry, plugins=plugins
+        )
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    if dispatch.kind == "list":
+        print(dispatch.list_text)
+        return 0
+    prompt = dispatch.prompt
+
     # Plan Mode has no ask interrupts — token streaming is fine.
     # Otherwise HITL uses invoke + Command(resume) (M10 teaching path).
     if stream and plan_mode:
@@ -91,7 +107,13 @@ def _run_once(
 
 
 def _run_repl(
-    graph, config: dict, *, stream: bool, plan_mode: bool
+    graph,
+    config: dict,
+    *,
+    stream: bool,
+    plan_mode: bool,
+    slash_registry: dict[str, dict[str, str]],
+    plugins: list[PluginPack],
 ) -> int:
     print("REPL mode — empty line or Ctrl-D to exit.")
     while True:
@@ -103,7 +125,13 @@ def _run_repl(
         if not line:
             break
         code = _run_once(
-            graph, line, config, stream=stream, plan_mode=plan_mode
+            graph,
+            line,
+            config,
+            stream=stream,
+            plan_mode=plan_mode,
+            slash_registry=slash_registry,
+            plugins=plugins,
         )
         if code != 0:
             return code
@@ -214,6 +242,17 @@ def main(argv: list[str] | None = None) -> int:
         print("  session:      off")
     if not args.repl:
         print(f"  prompt:       {args.prompt}")
+    workspace = resolve_workspace_root(settings)
+    plugins = resolve_plugins(settings, workspace_root=workspace)
+    try:
+        slash_registry = slash_registry_from_plugins(plugins)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    print(f"  plugins:      {len(plugins)} pack(s)")
+    if slash_registry:
+        names = ", ".join(f"/{n}" for n in sorted(slash_registry))
+        print(f"  slash_cmds:   {names}  (/help to list)")
     print()
 
     config: dict = {"recursion_limit": DEFAULT_RECURSION_LIMIT}
@@ -237,7 +276,12 @@ def main(argv: list[str] | None = None) -> int:
                 graph = _build(checkpointer)
                 if args.repl:
                     return _run_repl(
-                        graph, config, stream=stream, plan_mode=plan_mode
+                        graph,
+                        config,
+                        stream=stream,
+                        plan_mode=plan_mode,
+                        slash_registry=slash_registry,
+                        plugins=plugins,
                     )
                 return _run_once(
                     graph,
@@ -245,11 +289,18 @@ def main(argv: list[str] | None = None) -> int:
                     config,
                     stream=stream,
                     plan_mode=plan_mode,
+                    slash_registry=slash_registry,
+                    plugins=plugins,
                 )
         graph = _build(None)
         if args.repl:
             return _run_repl(
-                graph, config, stream=stream, plan_mode=plan_mode
+                graph,
+                config,
+                stream=stream,
+                plan_mode=plan_mode,
+                slash_registry=slash_registry,
+                plugins=plugins,
             )
         return _run_once(
             graph,
@@ -257,6 +308,8 @@ def main(argv: list[str] | None = None) -> int:
             config,
             stream=stream,
             plan_mode=plan_mode,
+            slash_registry=slash_registry,
+            plugins=plugins,
         )
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

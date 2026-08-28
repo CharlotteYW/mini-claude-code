@@ -137,18 +137,14 @@ def resolve_hook_registry(
     *,
     workspace_root: Path | None = None,
 ) -> HookRegistry:
-    """Resolve hooks: HOOKS_CONFIG_PATH > workspace/hooks.yaml > HOOKS_USE_DEMO."""
+    """Resolve hooks: base config + merged plugin hook sections (M16)."""
+    from mini_claude_code.agent.plugins import resolve_merged_hooks_dict
+
     settings = settings or get_settings()
-    path_raw = settings.hooks_config_path.strip()
-    if path_raw:
-        return load_hook_registry_from_yaml(Path(path_raw).expanduser().resolve())
-    root = workspace_root or resolve_workspace_root(settings)
-    default_path = root / "hooks.yaml"
-    if default_path.is_file():
-        return load_hook_registry_from_yaml(default_path)
-    if settings.hooks_use_demo:
-        return demo_hook_registry()
-    return HookRegistry()
+    merged = resolve_merged_hooks_dict(settings, workspace_root=workspace_root)
+    if merged is None:
+        return HookRegistry()
+    return load_hook_registry_from_dict(merged)
 
 
 def run_pre_hooks(
