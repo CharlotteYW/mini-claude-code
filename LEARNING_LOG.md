@@ -38,12 +38,6 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M15 study guide)
-
-Study this before starting M16.
-
----
-
 ## 2026-08-28 — M16: Plugins & slash commands
 
 - Shipped: `plugins.py`, `slash_commands.py`, `workspace/plugins/review`, CLI `/help` + `/review`.
