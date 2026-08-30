@@ -173,6 +173,7 @@ Plugin = declarative **bundle** for interface (slash) + policy (hooks). Slash ex
 - Duplicate slash names across plugins → startup/CLI error (by design).
 - Plugin hooks dedupe by handler id — same id from base + plugin runs once.
 - `PLUGINS_ENABLED=0` skips scan entirely.
+- **`/help` / `/plugins` must short-circuit before checkpointer** — otherwise a down Postgres makes discovery fail (fixed: early dispatch in `cli.main`).
 
 ### Testing results
 

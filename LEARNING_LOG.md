@@ -38,6 +38,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-08-30 — Dig: /help should not need Postgres
+
+- **Q: Why did `./scripts/agent.sh "/help"` fail with Postgres connection refused?**  
+  A: Bug: CLI allocated a HITL `thread_id` and opened the checkpointer **before** slash dispatch. `/help` / `/plugins` are meta list-only commands and must exit after printing the registry — no graph, no Postgres. Fixed by early `dispatch_slash_input` in `cli.main` before checkpointer setup. `/review` still needs a running agent stack (Postgres or `--checkpointer memory`).
+- Link: `agent/cli.py`, M16
+
+---
+
 ## 2026-08-28 — M16: Plugins & slash commands
 
 - Shipped: `plugins.py`, `slash_commands.py`, `workspace/plugins/review`, CLI `/help` + `/review`.

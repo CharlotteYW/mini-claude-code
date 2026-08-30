@@ -187,6 +187,35 @@ def main(argv: list[str] | None = None) -> int:
 
     plan_mode = bool(args.plan or settings.agent_plan_mode)
 
+    if not args.repl and not args.prompt:
+        args.prompt = (
+            "Use write_file to create demo.txt with contents hello, then read_file it."
+        )
+
+    workspace = resolve_workspace_root(settings)
+    plugins = resolve_plugins(settings, workspace_root=workspace)
+    try:
+        slash_registry = slash_registry_from_plugins(plugins)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    # Meta slash (/help, /plugins): list only — no checkpointer / graph / Postgres.
+    if not args.repl and args.prompt:
+        try:
+            early = dispatch_slash_input(
+                args.prompt, slash_registry, plugins=plugins
+            )
+        except ValueError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        if early.kind == "list":
+            print(f"workspace:  {workspace}")
+            print(f"plugins:    {len(plugins)} pack(s)")
+            print()
+            print(early.list_text)
+            return 0
+
     thread_id = args.thread_id
     if args.new_thread:
         thread_id = str(uuid4())
@@ -206,10 +235,6 @@ def main(argv: list[str] | None = None) -> int:
     if args.repl and not use_checkpoint:
         print("ERROR: --repl requires a thread id", file=sys.stderr)
         return 1
-    if not args.repl and not args.prompt:
-        args.prompt = (
-            "Use write_file to create demo.txt with contents hello, then read_file it."
-        )
 
     backend: CheckpointBackend | None = (
         args.checkpointer  # type: ignore[assignment]
@@ -221,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     print("mini-claude-code agent (FS + shell/git + sessions + stream + HITL)")
     print(f"  provider:     {settings.llm_provider}")
     print(f"  model:        {settings.llm_model}")
-    print(f"  workspace:    {resolve_workspace_root(settings)}")
+    print(f"  workspace:    {workspace}")
     print(f"  streaming:    {'on' if stream else 'off (--no-stream)'}")
     print(
         f"  plan_mode:    {'on (mutating tools denied)' if plan_mode else 'off'}"
@@ -242,13 +267,6 @@ def main(argv: list[str] | None = None) -> int:
         print("  session:      off")
     if not args.repl:
         print(f"  prompt:       {args.prompt}")
-    workspace = resolve_workspace_root(settings)
-    plugins = resolve_plugins(settings, workspace_root=workspace)
-    try:
-        slash_registry = slash_registry_from_plugins(plugins)
-    except ValueError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
     print(f"  plugins:      {len(plugins)} pack(s)")
     if slash_registry:
         names = ", ".join(f"/{n}" for n in sorted(slash_registry))

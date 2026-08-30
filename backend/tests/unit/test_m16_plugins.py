@@ -123,3 +123,24 @@ def test_plugins_disabled_empty(tmp_path: Path) -> None:
 def test_format_slash_list_empty() -> None:
     text = format_slash_list({})
     assert "none" in text.lower()
+
+
+def test_cli_help_exits_without_checkpointer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """/help must not open Postgres / build the graph."""
+    from mini_claude_code.agent import cli as cli_mod
+
+    calls: list[str] = []
+
+    def boom_checkpointer(*_a, **_k):  # noqa: ANN001
+        calls.append("checkpointer")
+        raise AssertionError("open_checkpointer should not run for /help")
+
+    def boom_graph(*_a, **_k):  # noqa: ANN001
+        calls.append("graph")
+        raise AssertionError("build_agent_graph should not run for /help")
+
+    monkeypatch.setattr(cli_mod, "open_checkpointer", boom_checkpointer)
+    monkeypatch.setattr(cli_mod, "build_agent_graph", boom_graph)
+    code = cli_mod.main(["/help"])
+    assert code == 0
+    assert calls == []
