@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M17 complete  
+**Last updated:** M18 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M17)
+## Current status (M18)
 
 | Piece | Status |
 |---|---|
@@ -17,9 +17,10 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Compact + memory + permissions + HITL + sandbox | M7–M11 |
 | Sub-agents / Skills / MCP / Hooks | M12–M15 |
 | Plugins & slash commands | M16 |
-| Eval harness / retry / usage | **M17 Done** |
+| Eval harness / retry / usage | M17 |
+| Slack OAuth channel + open PR | **M18 Done** |
 
-Eval: `backend/evals/cases/*.yaml` + `./scripts/eval.sh`. Usage: `--usage` or `USAGE_REPORT=1`.
+Slack: OAuth install → `workspace/slack_installations.json` → Socket Mode → same graph. PR: `open_pull_request` + `GH_TOKEN` (dry-run default).
 
 ## ReAct core (M2–M11)
 
@@ -48,6 +49,7 @@ Every milestone ships unit + integration tests. Strategy: [notes/testing.md](not
 flowchart TB
   subgraph ui [Interface]
     CLI[CLI streaming]
+    Slack[Slack Socket Mode]
   end
   subgraph core [Core ReAct loop - LangGraph StateGraph]
     Model[call_model]
@@ -70,6 +72,7 @@ flowchart TB
     EvalRunner[mcc-eval cases]
   end
   CLI --> Compact
+  Slack --> Compact
   Compact --> Memory
   Memory --> Model
   Model --> Retry
@@ -132,5 +135,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
 - **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
 - **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
-- **M9–M17 Done** — permissions through eval/retry/usage — see [ROADMAP.md](ROADMAP.md)
+- **M9–M18 Done** — permissions through Slack channel — see [ROADMAP.md](ROADMAP.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

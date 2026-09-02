@@ -62,9 +62,33 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M17 study guide)
+## 2026-09-01 — M18: Slack OAuth → agent → open PR
 
-Study this before starting M18.
+- Shipped: `slack_oauth.py`, `slack_adapter.py`, `slack_bot.py`, `mcc-slack`, `open_pull_request` + `GH_TOKEN`.
+- Insight: Slack = **interface adapter** (OAuth + Socket Mode); graph unchanged; GitHub = env token not OAuth.
+- Results: [M18](docs/milestones/M18-chat-channel-open-pr.md).
+
+---
+
+## Concept Q&A index (M0–M18 study guide)
+
+Study this before starting M19.
+
+### M18 — Slack OAuth channel + open PR
+
+- **Q: Why Slack OAuth instead of pasting a bot token?**  
+  A: Production Slack apps use **OAuth v2 install** — each workspace gets its own bot token stored after admin approval. Pasting `SLACK_BOT_TOKEN` in `.env` is still supported as a **shortcut** for local dev.
+- **Q: Why Socket Mode?**  
+  A: Local dev without a public HTTPS URL (no ngrok). App-level `SLACK_APP_TOKEN` + bot token receive events over a WebSocket.
+- **Q: Slack OAuth vs GitHub OAuth?**  
+  A: **Different layers.** Slack OAuth = who may run the bot in a workspace. **GitHub = `GH_TOKEN`** in M18 (server-side PAT) — simpler for a learning repo; per-user PR attribution is a later dig.
+- **Q: Channel vs graph?**  
+  A: Adapter maps `slack:{team}:{channel}:{thread}` → checkpointer `thread_id`, then same `build_agent_graph`. No new LangGraph nodes.
+- **Q: HITL in Slack?**  
+  A: Default **`CHANNEL_PLAN_MODE=1`** (read-only). Non-plan: reply `approve` / `deny` in thread to resume interrupt.
+- **Q: Does `open_pull_request` push?**  
+  A: **No.** Creates PR via `gh`/REST when `PR_DRY_RUN=0`; head branch must already exist on remote.
+- Link: [M18](docs/milestones/M18-chat-channel-open-pr.md)
 
 ### M17 — Eval harness & cost/retry
 

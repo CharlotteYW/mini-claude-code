@@ -9,6 +9,7 @@ from langchain_core.tools import BaseTool
 
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.tools.fs import build_coding_tools
+from mini_claude_code.tools.github_pr import build_github_pr_tools
 from mini_claude_code.tools.git_tools import build_git_tools
 from mini_claude_code.tools.mcp_loader import (
     load_mcp_tools_sync,
@@ -48,6 +49,7 @@ def build_default_tools(
             docker_network=settings.shell_docker_network,
         ),
         *build_git_tools(root),
+        *build_github_pr_tools(root, settings=settings),
         *build_memory_tools(settings),
         *build_subagent_tools(
             root,

@@ -19,6 +19,7 @@ dependencies = [
     "pyyaml>=6.0",
     "langchain-mcp-adapters>=0.3.2",
     "mcp>=1.29.1",
+    "slack-sdk>=3.27.0",
 ]
 
 [project.scripts]
@@ -26,6 +27,7 @@ mcc-smoke = "mini_claude_code.smoke:main"
 mcc-tools-parity = "mini_claude_code.parity:main"
 mcc-agent = "mini_claude_code.agent.cli:main"
 mcc-eval = "mini_claude_code.eval.cli:main"
+mcc-slack = "mini_claude_code.slack_cli:main"
 mcc-db-inspect = "mini_claude_code.db_inspect:main"
 
 [dependency-groups]

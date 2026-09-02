@@ -52,7 +52,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | ID | Title | Goal |
 |---|---|---|
 | M17 | [Eval harness & cost/retry](milestones/M17-eval-harness-cost-retry.md) | **Done.** Eval cases + `mcc-eval`, LLM retry/backoff, `--usage` token footer. |
-| M18 | [Slack OAuth → agent → open PR](milestones/M18-chat-channel-open-pr.md) | **Planned.** Slack OAuth v2 install + Socket Mode adapter; same graph + `thread_id`; `open_pull_request` via `GH_TOKEN` (dry-run default); M19 gate deferred. |
+| M18 | [Slack OAuth → agent → open PR](milestones/M18-chat-channel-open-pr.md) | **Done.** Slack OAuth + Socket Mode; `open_pull_request` via `GH_TOKEN`; M19 gate deferred. |
 | M19 | Pre-ship quality gate (format + test until green) | Before any PR or push: run formatter + full test suite; on failure, agent keeps editing/re-running until green (bounded retries). Owner may `git push` to the target branch; non-owner / default path opens a PR only. |
 | M20 | Doc ingestion + production-ish memory pipeline | Chunking, cleaning, and metadata for project docs/notes; write into Neo4j and/or pgvector with clearer schemas. Local-first “production improvements” (still Compose on a laptop — few users). |
 | M21 | Elasticsearch (local Compose) | Add ES (or OpenSearch) to Compose for full-text / keyword search tools beside Neo4j (relations) and pgvector (semantic). Teach when ES wins vs graph vs vectors. |
@@ -61,7 +61,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M24 | Plugin hooks & discovery (industry) | **Parked (industry parity).** Shell/script hook runners (Claude Code–style); optional SessionStart-style lifecycle; interactive slash picker beyond list-only `/help`; reuse slash expand from M18 channels. |
 | M25 | Plugin install & trust (local-first) | **Parked (industry parity).** Install from path/git; versioned manifests; allowlist / deny-by-default for hook runners and MCP spawn; document gap vs signed marketplace — **simplification:** no npm store. |
 
-**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer Slack OAuth + Socket Mode for local dev; dry-run PR creation, and deny-by-default until M9/M10 policy exists. Always call through **M19** so channel-triggered ships cannot skip CI-like checks. Reuse M16 `dispatch_slash_input` for channel messages that start with `/`.
+**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. **Slack OAuth v2** for workspace install (bot token per `team_id`); **GitHub via `GH_TOKEN`** only (no GitHub OAuth in M18). Socket Mode for local dev; dry-run PR default; deny-by-default until M9/M10. Always call through **M19** so channel-triggered ships cannot skip CI-like checks. Reuse M16 `dispatch_slash_input` for messages that start with `/`.
 
 **M19 learning notes (when we get there):** this is an *agentic quality loop*, not “hope the human ran pytest.” Wire `./scripts/test.sh` (+ formatter, e.g. ruff/black once chosen) as tools or a single `ship_check` tool; treat red tests as recoverable errors in the ReAct loop. Cap iterations to avoid infinite spend. **Simplification:** local checks only first (no mandatory GitHub Actions wait); production would also require remote CI status. Owner-push is a policy switch (`SHIP_MODE=pr|push`) with HITL confirmation from M9/M10 — never silent force-push.
 

@@ -45,6 +45,7 @@ MUTATING_TOOLS: frozenset[str] = frozenset(
         "git_commit",
         "remember_fact",
         "remember_note",
+        "open_pull_request",
     }
 )
 

@@ -108,6 +108,27 @@ class Settings(BaseSettings):
     llm_retry_backoff_sec: float = Field(default=1.0, alias="LLM_RETRY_BACKOFF_SEC")
     usage_report: bool = Field(default=False, alias="USAGE_REPORT")
 
+    # Slack channel adapter (M18).
+    slack_client_id: str = Field(default="", alias="SLACK_CLIENT_ID")
+    slack_client_secret: str = Field(default="", alias="SLACK_CLIENT_SECRET")
+    slack_signing_secret: str = Field(default="", alias="SLACK_SIGNING_SECRET")
+    slack_app_token: str = Field(default="", alias="SLACK_APP_TOKEN")
+    slack_bot_token: str = Field(default="", alias="SLACK_BOT_TOKEN")
+    slack_bot_user_id: str = Field(default="", alias="SLACK_BOT_USER_ID")
+    slack_oauth_redirect_uri: str = Field(
+        default="http://127.0.0.1:3917/slack/oauth/callback",
+        alias="SLACK_OAUTH_REDIRECT_URI",
+    )
+    slack_oauth_port: int = Field(default=3917, alias="SLACK_OAUTH_PORT")
+    slack_channel_allowlist: str = Field(default="", alias="SLACK_CHANNEL_ALLOWLIST")
+    slack_installations_path: str = Field(default="", alias="SLACK_INSTALLATIONS_PATH")
+    channel_plan_mode: bool = Field(default=True, alias="CHANNEL_PLAN_MODE")
+    slack_progress_emoji: str = Field(default="eyes", alias="SLACK_PROGRESS_EMOJI")
+
+    # GitHub PR tool (M18). Token only — no GitHub OAuth in this milestone.
+    gh_token: str | None = Field(default=None, alias="GH_TOKEN")
+    pr_dry_run: bool = Field(default=True, alias="PR_DRY_RUN")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""
