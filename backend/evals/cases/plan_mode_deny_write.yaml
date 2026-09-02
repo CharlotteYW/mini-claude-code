@@ -1,0 +1,16 @@
+name: plan_mode_deny_write
+description: Plan Mode denies write_file; transcript shows PERMISSION_DENIED.
+toolset: coding
+plan_mode: true
+prompt: Write plan.txt with secret content.
+fake_llm:
+  steps:
+    - tool_calls:
+        - name: write_file
+          args: {path: plan.txt, content: secret}
+          id: eval-write-1
+    - content: Could not write — permission denied.
+assertions:
+  - type: permission_denied
+  - type: tool_called
+    name: write_file

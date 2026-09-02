@@ -182,4 +182,5 @@ Plugin = declarative **bundle** for interface (slash) + policy (hooks). Slash ex
 
 ### Open questions / next dig
 
-- Interactive slash picker; untrusted plugin code load; plugin-provided tools/skills; M18 channel adapters reusing slash expand.
+- **Parked → [M23–M25](../ROADMAP.md) (Tier 4):** industry plugin parity — skills/MCP/subagents in pack; shell hook runners + interactive discovery; local install/trust.
+- M18 channel adapters reusing slash expand (see M18 learning notes).

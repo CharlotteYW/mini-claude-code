@@ -2,24 +2,24 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M16 complete  
+**Last updated:** M17 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M16)
+## Current status (M17)
 
 | Piece | Status |
 |---|---|
 | Core ReAct + tools + sessions + stream | M2–M6 |
 | Compact + memory + permissions + HITL + sandbox | M7–M11 |
 | Sub-agents / Skills / MCP / Hooks | M12–M15 |
-| Plugins & slash commands | **M16 Done** |
-| Eval harness (optional) | Next: M17 |
+| Plugins & slash commands | M16 |
+| Eval harness / retry / usage | **M17 Done** |
 
-Plugins: `workspace/plugins/*/plugin.yaml` → slash templates + merged hooks. `/help` lists commands without invoking the agent.
+Eval: `backend/evals/cases/*.yaml` + `./scripts/eval.sh`. Usage: `--usage` or `USAGE_REPORT=1`.
 
 ## ReAct core (M2–M11)
 
@@ -63,10 +63,17 @@ flowchart TB
     MCP[MCP tool merge]
     Compact[Context compact]
     Memory[Memory inject]
+    Retry[LLM retry backoff]
+    Usage[Token usage accounting]
+  end
+  subgraph eval [Eval harness outside graph]
+    EvalRunner[mcc-eval cases]
   end
   CLI --> Compact
   Compact --> Memory
   Memory --> Model
+  Model --> Retry
+  Retry --> Usage
   Tools --> Hooks
   Hooks --> Perm
   Perm --> HITL
@@ -125,5 +132,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
 - **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
 - **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
-- **M9–M16 Done** — permissions through plugins/slash — see [ROADMAP.md](ROADMAP.md)
+- **M9–M17 Done** — permissions through eval/retry/usage — see [ROADMAP.md](ROADMAP.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

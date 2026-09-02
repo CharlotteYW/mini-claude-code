@@ -54,9 +54,31 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M16 study guide)
+## 2026-08-30 — M17: Eval harness & cost/retry
 
-Study this before starting M17.
+- Shipped: `agent/retry.py`, `agent/usage.py`, `eval/runner.py`, `mcc-eval`, `./scripts/eval.sh`, CLI `--usage`.
+- Insight: Eval sits **beside** the graph (YAML cases + scripted fake LLM); retry wraps **LLM invoke only**; usage reads `usage_metadata` with M7-style fallback estimate.
+- Results: [M17](docs/milestones/M17-eval-harness-cost-retry.md).
+
+---
+
+## Concept Q&A index (M0–M17 study guide)
+
+Study this before starting M18.
+
+### M17 — Eval harness & cost/retry
+
+- **Q: Eval vs pytest?**  
+  A: **pytest** pins functions and branches with mocks. **Eval** runs the **whole agent graph** on YAML scenarios (prompt + fake-LLM script + transcript assertions) — closer to “did the agent behave sensibly on this turn sequence?”
+- **Q: Why eval outside LangGraph?**  
+  A: Same Option B lesson as hooks/plugins — regression harness is **orchestration around** `build_agent_graph`, not a new cognition node.
+- **Q: Retry vs HITL?**  
+  A: **Retry** = automatic backoff on transient LLM/API errors at `bound.invoke`. **HITL** = deliberate human pause on risky **tools**. Different failure modes; retry does not re-ask the user.
+- **Q: Usage vs compaction `estimate_tokens`?**  
+  A: **Compaction (M7)** estimates proactively to **prevent** context overflow. **Usage (M17)** measures **after** LLM calls — prefers `usage_metadata`, falls back to chars/4 when providers omit it.
+- **Q: What does `--usage` show?**  
+  A: Per-run footer: `llm_calls`, input/output/total tokens, plus count of calls that needed fallback estimate.
+- Link: [M17](docs/milestones/M17-eval-harness-cost-retry.md)
 
 ### M16 — Plugins & slash commands
 
@@ -70,6 +92,8 @@ Study this before starting M17.
   A: **CLI/REPL** (`dispatch_slash_input`) before `graph.invoke` — not inside LangGraph.
 - **Q: Hook merge order?**  
   A: Base `hooks.yaml` / demo / env path first, then **append** plugin hook ids; dedupe within each list.
+- **Q: How do industry plugins compare?**  
+  A: Same **pack + merge** idea; industry packs usually also bundle skills, MCP, subagents, shell hooks, install/trust. M16 = slash + hook id only. Parked: **[M23](docs/ROADMAP.md)** (pack expansion), **[M24](docs/ROADMAP.md)** (shell hooks + picker), **[M25](docs/ROADMAP.md)** (install/trust).
 - Link: [M16](docs/milestones/M16-plugins-slash-commands.md)
 
 ### M15 — Lifecycle hooks

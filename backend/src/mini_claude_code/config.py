@@ -103,6 +103,11 @@ class Settings(BaseSettings):
     # Plugin packs (M16). Scan workspace/plugins when enabled.
     plugins_enabled: bool = Field(default=True, alias="PLUGINS_ENABLED")
 
+    # LLM reliability / observability (M17).
+    llm_max_retries: int = Field(default=3, alias="LLM_MAX_RETRIES")
+    llm_retry_backoff_sec: float = Field(default=1.0, alias="LLM_RETRY_BACKOFF_SEC")
+    usage_report: bool = Field(default=False, alias="USAGE_REPORT")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""

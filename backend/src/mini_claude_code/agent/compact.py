@@ -110,18 +110,33 @@ def safe_prefix_end(messages: Sequence[BaseMessage], keep_recent: int) -> int:
     return max(0, cut)
 
 
-def default_summarizer(llm: Any) -> Summarizer:
+def default_summarizer(
+    llm: Any,
+    *,
+    settings: Any = None,
+    on_response: Callable[[BaseMessage], None] | None = None,
+) -> Summarizer:
     """Build a no-tools summarizer using the same chat model family."""
 
     def _summarize(prefix: Sequence[BaseMessage]) -> BaseMessage:
-        transcript = format_messages_for_summary(prefix)
-        response = llm.invoke(
-            [
-                SystemMessage(content=_SUMMARY_SYSTEM),
-                HumanMessage(content=transcript),
-            ]
-        )
-        text = _message_text(response) if isinstance(response, BaseMessage) else str(response)
+        from mini_claude_code.agent.retry import invoke_with_retry
+        from mini_claude_code.config import get_settings
+
+        cfg = settings or get_settings()
+
+        def _call() -> BaseMessage:
+            response = llm.invoke(
+                [
+                    SystemMessage(content=_SUMMARY_SYSTEM),
+                    HumanMessage(content=format_messages_for_summary(prefix)),
+                ]
+            )
+            return response if isinstance(response, BaseMessage) else AIMessage(content=str(response))
+
+        response = invoke_with_retry(_call, settings=cfg)
+        if on_response is not None:
+            on_response(response)
+        text = _message_text(response)
         return SystemMessage(content=f"[conversation summary]\n{text.strip()}")
 
     return _summarize

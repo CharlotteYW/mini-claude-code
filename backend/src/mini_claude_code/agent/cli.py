@@ -18,6 +18,7 @@ from mini_claude_code.agent.hitl import invoke_with_hitl
 from mini_claude_code.agent.plugins import PluginPack, resolve_plugins
 from mini_claude_code.agent.slash_commands import dispatch_slash_input, slash_registry_from_plugins
 from mini_claude_code.agent.stream_render import consume_agent_stream
+from mini_claude_code.agent.usage import USAGE_ACCUMULATOR_KEY, UsageAccumulator
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
 
@@ -66,6 +67,7 @@ def _run_once(
     plan_mode: bool,
     slash_registry: dict[str, dict[str, str]],
     plugins: list[PluginPack],
+    usage_acc: UsageAccumulator | None,
 ) -> int:
     try:
         dispatch = dispatch_slash_input(
@@ -84,6 +86,8 @@ def _run_once(
     if stream and plan_mode:
         try:
             consume_agent_stream(graph, prompt, config)
+            if usage_acc is not None:
+                print(usage_acc.format_footer(), file=sys.stderr)
             return 0
         except Exception as exc:  # noqa: BLE001
             print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
@@ -103,6 +107,8 @@ def _run_once(
         _print_transcript(result["messages"])
     else:
         print("=== done ===")
+    if usage_acc is not None:
+        print(usage_acc.format_footer(), file=sys.stderr)
     return 0
 
 
@@ -114,6 +120,7 @@ def _run_repl(
     plan_mode: bool,
     slash_registry: dict[str, dict[str, str]],
     plugins: list[PluginPack],
+    usage_acc: UsageAccumulator | None,
 ) -> int:
     print("REPL mode — empty line or Ctrl-D to exit.")
     while True:
@@ -132,6 +139,7 @@ def _run_repl(
             plan_mode=plan_mode,
             slash_registry=slash_registry,
             plugins=plugins,
+            usage_acc=usage_acc,
         )
         if code != 0:
             return code
@@ -178,6 +186,11 @@ def main(argv: list[str] | None = None) -> int:
         "--plan",
         action="store_true",
         help="Plan Mode: deny mutating tools (read-only policy). Also AGENT_PLAN_MODE=1.",
+    )
+    parser.add_argument(
+        "--usage",
+        action="store_true",
+        help="Print token usage summary after the run (also USAGE_REPORT=1).",
     )
     args = parser.parse_args(argv)
 
@@ -274,8 +287,13 @@ def main(argv: list[str] | None = None) -> int:
     print()
 
     config: dict = {"recursion_limit": DEFAULT_RECURSION_LIMIT}
+    usage_acc: UsageAccumulator | None = None
+    if args.usage or settings.usage_report:
+        usage_acc = UsageAccumulator()
     if thread_id:
-        config["configurable"] = {"thread_id": thread_id}
+        config.setdefault("configurable", {})["thread_id"] = thread_id
+    if usage_acc is not None:
+        config.setdefault("configurable", {})[USAGE_ACCUMULATOR_KEY] = usage_acc
 
     def _build(checkpointer=None):
         return build_agent_graph(
@@ -284,6 +302,7 @@ def main(argv: list[str] | None = None) -> int:
             plan_mode=plan_mode,
             # Production path: interrupt inside wrap (no stdin ask_callback).
             ask_callback=None,
+            usage_accumulator=usage_acc,
         )
 
     try:
@@ -300,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
                         plan_mode=plan_mode,
                         slash_registry=slash_registry,
                         plugins=plugins,
+                        usage_acc=usage_acc,
                     )
                 return _run_once(
                     graph,
@@ -309,6 +329,7 @@ def main(argv: list[str] | None = None) -> int:
                     plan_mode=plan_mode,
                     slash_registry=slash_registry,
                     plugins=plugins,
+                    usage_acc=usage_acc,
                 )
         graph = _build(None)
         if args.repl:
@@ -319,6 +340,7 @@ def main(argv: list[str] | None = None) -> int:
                 plan_mode=plan_mode,
                 slash_registry=slash_registry,
                 plugins=plugins,
+                usage_acc=usage_acc,
             )
         return _run_once(
             graph,
@@ -328,6 +350,7 @@ def main(argv: list[str] | None = None) -> int:
             plan_mode=plan_mode,
             slash_registry=slash_registry,
             plugins=plugins,
+            usage_acc=usage_acc,
         )
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

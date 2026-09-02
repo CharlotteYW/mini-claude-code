@@ -51,14 +51,17 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 
 | ID | Title | Goal |
 |---|---|---|
-| M17 | Eval harness & cost/retry | Tiny evals; retries/backoff; token accounting; optional Anthropic prompt caching. |
-| M18 | Chat channel → agent → open PR | Slack and/or Discord bot as a thin adapter: channel message → `thread_id` session → ReAct agent; ship via M19 gate then open PR (or owner push). |
+| M17 | [Eval harness & cost/retry](milestones/M17-eval-harness-cost-retry.md) | **Done.** Eval cases + `mcc-eval`, LLM retry/backoff, `--usage` token footer. |
+| M18 | [Slack OAuth → agent → open PR](milestones/M18-chat-channel-open-pr.md) | **Planned.** Slack OAuth v2 install + Socket Mode adapter; same graph + `thread_id`; `open_pull_request` via `GH_TOKEN` (dry-run default); M19 gate deferred. |
 | M19 | Pre-ship quality gate (format + test until green) | Before any PR or push: run formatter + full test suite; on failure, agent keeps editing/re-running until green (bounded retries). Owner may `git push` to the target branch; non-owner / default path opens a PR only. |
 | M20 | Doc ingestion + production-ish memory pipeline | Chunking, cleaning, and metadata for project docs/notes; write into Neo4j and/or pgvector with clearer schemas. Local-first “production improvements” (still Compose on a laptop — few users). |
 | M21 | Elasticsearch (local Compose) | Add ES (or OpenSearch) to Compose for full-text / keyword search tools beside Neo4j (relations) and pgvector (semantic). Teach when ES wins vs graph vs vectors. |
 | M22 | Async agent runtime (drop MCP sync wrap) | End-to-end async invoke/stream path so MCP adapter tools run natively without `asyncio.run` sync wrap; align CLI / HITL resume / permission wrap with `ainvoke`. |
+| M23 | Plugin pack expansion (skills / MCP / subagents) | **Parked (industry parity).** Extend `plugin.yaml` to declare bundled skills, MCP server entries, and subagent YAML refs; merge into existing M13/M14/M12 planes — still Option B, no new graph nodes. |
+| M24 | Plugin hooks & discovery (industry) | **Parked (industry parity).** Shell/script hook runners (Claude Code–style); optional SessionStart-style lifecycle; interactive slash picker beyond list-only `/help`; reuse slash expand from M18 channels. |
+| M25 | Plugin install & trust (local-first) | **Parked (industry parity).** Install from path/git; versioned manifests; allowlist / deny-by-default for hook runners and MCP spawn; document gap vs signed marketplace — **simplification:** no npm store. |
 
-**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer one channel first (Discord *or* Slack), dry-run PR creation, and deny-by-default until M9/M10 policy exists. Always call through **M19** so channel-triggered ships cannot skip CI-like checks.
+**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. Opening PRs needs an explicit, permissioned git/GitHub path (M4 deliberately had no `git push`). Prefer Slack OAuth + Socket Mode for local dev; dry-run PR creation, and deny-by-default until M9/M10 policy exists. Always call through **M19** so channel-triggered ships cannot skip CI-like checks. Reuse M16 `dispatch_slash_input` for channel messages that start with `/`.
 
 **M19 learning notes (when we get there):** this is an *agentic quality loop*, not “hope the human ran pytest.” Wire `./scripts/test.sh` (+ formatter, e.g. ruff/black once chosen) as tools or a single `ship_check` tool; treat red tests as recoverable errors in the ReAct loop. Cap iterations to avoid infinite spend. **Simplification:** local checks only first (no mandatory GitHub Actions wait); production would also require remote CI status. Owner-push is a policy switch (`SHIP_MODE=pr|push`) with HITL confirmation from M9/M10 — never silent force-push.
 
@@ -67,6 +70,12 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 **M21 learning notes (when we get there):** ES complements, does not replace, Neo4j or pgvector — keyword/full-text at scale vs relations vs semantic similarity. Add as another Compose service (local). Agent gets search tools; document the three-way choice. Optional: hybrid later (ES filter + vector re-rank) as a dig after M20/M21.
 
 **M22 learning notes (when we get there):** M14 kept a **sync** ReAct/CLI path and wrapped MCP tools with `asyncio.run(ainvoke)` so ToolNode/permissions keep working. Production-shaped runtimes usually stay async end-to-end (`ainvoke` / `astream`, async tool execution, HITL resume without nested event loops). Goal: remove `wrap_mcp_tool_for_sync` as the default path; keep sync only as a thin compatibility shim if needed. Pair with optional digs: stateful `client.session(...)`, MCP HTTP transport. Do **not** replace MCP with plain local `@tool` demos — that drops the protocol lesson.
+
+**M23 learning notes (when we get there):** M16 plugins = slash + hook **id** merge only. Industry packs often also ship **skills** (playbooks), **MCP** (stdio/HTTP entries), and **subagent** defs. Teach merge semantics: plugin declares → runtime registers into the same extension planes (skills catalog / `build_default_tools` MCP list / subagent loader) — not new parent nodes. Contrast: slash changes HumanMessage; skills change prompt view; MCP expands tool list; subagents add `run_subagent` targets. **Simplification:** local `workspace/plugins/<id>/` tree with co-located assets; no remote marketplace.
+
+**M24 learning notes (when we get there):** Industry hooks (e.g. Claude Code) often run **shell commands** with JSON stdin/stdout, not only in-process Python ids. Add opt-in runner behind M9/M10 (deny-by-default for mutating shell). Discovery beyond M16 **方案 A**: numbered picker or TUI — still CLI boundary, not graph nodes. Optional **SessionStart** / **UserPromptSubmit** hooks as extension-plane dig if they clarify lifecycle without graph bloat.
+
+**M25 learning notes (when we get there):** Production plugins imply **trust**: signed packages, permission prompts, scoped MCP/network. Learning repo: `mcc plugins install ./path` or git clone into `workspace/plugins/`; manifest `version` + `requires`; block unknown hook runners until allowlisted. Label what a real marketplace still needs (signing, updates, org policy). Do not silently auto-load arbitrary Python from plugin paths (M16 deliberately avoided this).
 
 ## Status legend
 

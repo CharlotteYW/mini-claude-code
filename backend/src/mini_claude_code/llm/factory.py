@@ -42,6 +42,8 @@ def create_chat_model(
             raise ValueError(
                 "LLM_PROVIDER=anthropic requires ANTHROPIC_API_KEY in the environment."
             )
+        # M17 dig: Anthropic prompt caching uses cache_control breakpoints on
+        # system/tool blocks — not wired here; see M17 milestone open questions.
         return ChatAnthropic(model=model_name, api_key=settings.anthropic_api_key)
 
     if provider == "openai":

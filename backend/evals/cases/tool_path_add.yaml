@@ -1,0 +1,17 @@
+name: tool_path_add
+description: Fake LLM calls add tool once, then answers with the sum.
+toolset: demo
+plan_mode: false
+prompt: Use the add tool to compute 17 + 25.
+fake_llm:
+  steps:
+    - tool_calls:
+        - name: add
+          args: {a: 17, b: 25}
+          id: eval-add-1
+    - content: The sum of 17 and 25 is 42.
+assertions:
+  - type: tool_called
+    name: add
+  - type: content_contains
+    text: "42"

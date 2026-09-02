@@ -13,6 +13,7 @@ Skills (M13): catalog inject + ``load_skill`` progressive disclosure.
 MCP (M14): optional adapter tools merged into the same ToolNode (opt-in config).
 Hooks (M15): Pre/Post around tools; Stop on final model message without tool_calls.
 Plugins (M16): slash expand + hook merge at CLI/graph build; `/help` lists commands.
+Retry/usage (M17): transient LLM retry at invoke; optional token accounting footer.
 """
 
 from __future__ import annotations
@@ -38,7 +39,9 @@ from mini_claude_code.agent.hooks import (
 )
 from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
+from mini_claude_code.agent.retry import invoke_with_retry
 from mini_claude_code.agent.skills import inject_skills_view
+from mini_claude_code.agent.usage import UsageAccumulator, get_usage_accumulator, record_llm_usage
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
 from mini_claude_code.memory.neo4j_facts import recall_facts_block
@@ -88,6 +91,7 @@ def build_agent_graph(
     apply_tool_permissions: bool = True,
     hook_registry: HookRegistry | None = None,
     apply_tool_hooks: bool = True,
+    usage_accumulator: UsageAccumulator | None = None,
 ) -> CompiledStateGraph:
     """Compile call_model ↔ tools ReAct graph.
 
@@ -130,7 +134,21 @@ def build_agent_graph(
     if apply_tool_hooks:
         tool_list = apply_hooks(tool_list, registry)
     bound = model.bind_tools(tool_list)
-    summarizer = default_summarizer(model)
+
+    def _record_usage(response: Any, config: RunnableConfig) -> None:
+        record_llm_usage(
+            response,
+            config,
+            fallback=usage_accumulator or get_usage_accumulator(config),
+        )
+
+    summarizer = default_summarizer(
+        model,
+        settings=settings,
+        on_response=lambda msg: record_llm_usage(
+            msg, None, fallback=usage_accumulator
+        ),
+    )
 
     def call_model(
         state: MessagesState, config: RunnableConfig
@@ -147,7 +165,11 @@ def build_agent_graph(
         prompt_messages = _inject_memory_view(
             compacted, workspace_root=workspace, settings=settings
         )
-        response = bound.invoke(prompt_messages, config)
+        response = invoke_with_retry(
+            lambda: bound.invoke(prompt_messages, config),
+            settings=settings,
+        )
+        _record_usage(response, config)
         # Stop hooks: turn ended without further tool_calls (best-effort).
         if (
             apply_tool_hooks

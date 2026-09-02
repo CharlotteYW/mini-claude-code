@@ -1,0 +1,8 @@
+name: live_smoke
+description: Optional live eval — skipped in mcc-eval; integration test runs when provider available.
+live: true
+toolset: demo
+prompt: Reply with exactly the word pong.
+assertions:
+  - type: content_contains
+    text: pong

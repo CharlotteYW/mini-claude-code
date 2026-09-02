@@ -25,6 +25,7 @@ dependencies = [
 mcc-smoke = "mini_claude_code.smoke:main"
 mcc-tools-parity = "mini_claude_code.parity:main"
 mcc-agent = "mini_claude_code.agent.cli:main"
+mcc-eval = "mini_claude_code.eval.cli:main"
 mcc-db-inspect = "mini_claude_code.db_inspect:main"
 
 [dependency-groups]
