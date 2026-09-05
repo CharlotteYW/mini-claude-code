@@ -139,8 +139,38 @@ def test_format_agent_reply() -> None:
             AIMessage(content="done"),
         ]
     )
-    assert "hi" in text
+    # Slack already shows the user message — do not echo "You: hi".
+    assert "hi" not in text
     assert "done" in text
+
+
+def test_format_agent_reply_this_turn_only_skips_prior() -> None:
+    text = format_agent_reply(
+        [
+            HumanMessage(content="who are you"),
+            AIMessage(content="I am an assistant"),
+            HumanMessage(content="write primes"),
+            AIMessage(content="def count_primes(n): ..."),
+        ]
+    )
+    assert "who are you" not in text
+    assert "I am an assistant" not in text
+    assert "write primes" not in text
+    assert "count_primes" in text
+
+
+def test_messages_for_this_turn() -> None:
+    from mini_claude_code.agent.slack_adapter import messages_for_this_turn
+
+    msgs = [
+        HumanMessage(content="a"),
+        AIMessage(content="1"),
+        HumanMessage(content="b"),
+        AIMessage(content="2"),
+    ]
+    turn = messages_for_this_turn(msgs)
+    assert len(turn) == 1
+    assert turn[0].content == "2"
 
 
 class _FakeBound:

@@ -78,13 +78,34 @@ def should_ignore_event(event: dict[str, Any], *, bot_user_id: str | None) -> bo
     return False
 
 
-def format_agent_reply(messages: list[Any]) -> str:
-    """Compact transcript for Slack thread reply."""
-    lines: list[str] = []
-    for message in messages:
+def messages_for_this_turn(messages: list[Any]) -> list[Any]:
+    """Keep only messages after the latest HumanMessage (this Slack turn).
+
+    Checkpointer returns the full session transcript; Slack already shows prior
+    thread posts, so replying with the whole history looks like a bug.
+    """
+    last_human = -1
+    for idx, message in enumerate(messages):
         if isinstance(message, HumanMessage):
-            lines.append(f"You: {message.content}")
-        elif isinstance(message, ToolMessage):
+            last_human = idx
+    if last_human < 0:
+        return list(messages)
+    return list(messages[last_human + 1 :])
+
+
+def format_agent_reply(messages: list[Any], *, this_turn_only: bool = True) -> str:
+    """Compact Slack reply — default: this turn's AI/tool output only.
+
+    Skips echoing HumanMessage (already visible in Slack). Prior turns stay in
+    the checkpointer for the model, but are not re-posted to the channel.
+    """
+    view = messages_for_this_turn(messages) if this_turn_only else list(messages)
+    lines: list[str] = []
+    for message in view:
+        if isinstance(message, HumanMessage):
+            # User already sees their Slack message; do not echo it.
+            continue
+        if isinstance(message, ToolMessage):
             preview = str(message.content)
             if len(preview) > 400:
                 preview = preview[:400] + "…"
@@ -96,7 +117,7 @@ def format_agent_reply(messages: list[Any]) -> str:
                 )
                 lines.append(f"AI (tools): {calls}")
             if message.content:
-                lines.append(f"AI: {message.content}")
+                lines.append(str(message.content))
     if not lines:
         return "(no output)"
     body = "\n".join(lines)
