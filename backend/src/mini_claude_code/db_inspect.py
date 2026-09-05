@@ -87,6 +87,22 @@ def inspect_postgres(
                     """
                     SELECT EXISTS (
                       SELECT 1 FROM information_schema.tables
+                      WHERE table_schema = 'public' AND table_name = 'memory_chunks'
+                    )
+                    """
+                )
+                if cur.fetchone()[0]:
+                    cur.execute("SELECT count(*) FROM memory_chunks")
+                    print(f"    memory_chunks: {cur.fetchone()[0]} rows (pgvector M20)")
+                else:
+                    print(
+                        "    memory_chunks: (missing — created on first ingest_docs)"
+                    )
+
+                cur.execute(
+                    """
+                    SELECT EXISTS (
+                      SELECT 1 FROM information_schema.tables
                       WHERE table_schema = 'public' AND table_name = 'checkpoints'
                     )
                     """
@@ -156,7 +172,7 @@ def inspect_neo4j(settings: Settings) -> int:
         print("ERROR: neo4j driver not installed (run ./scripts/setup.sh)", file=sys.stderr)
         return 1
 
-    print("=== Neo4j (graph memory / Fact nodes — M8) ===")
+    print("=== Neo4j (graph memory — M8 Fact + M20 Document/Chunk) ===")
     print(f"  uri: {settings.neo4j_uri}")
     try:
         driver = neo4j.GraphDatabase.driver(
@@ -183,7 +199,9 @@ def inspect_neo4j(settings: Settings) -> int:
                     for record in session.run("MATCH (n) RETURN n LIMIT 5"):
                         print(f"    {record['n']}")
                 else:
-                    print("  (empty — no Fact nodes yet; try remember_fact via the agent)")
+                    print(
+                        "  (empty — try remember_fact or ingest_docs via the agent)"
+                    )
                 facts = session.run(
                     "MATCH (f:Fact) RETURN f.text AS text, f.kind AS kind "
                     "ORDER BY f.created_at DESC LIMIT 5"
@@ -193,6 +211,15 @@ def inspect_neo4j(settings: Settings) -> int:
                     print("  recent Fact nodes:")
                     for r in rows:
                         print(f"    [{r['kind']}] {r['text']}")
+                docs = session.run("MATCH (d:Document) RETURN count(d)").single()[0]
+                chunks = session.run("MATCH (c:Chunk) RETURN count(c)").single()[0]
+                print(f"  Document nodes: {docs}  Chunk nodes: {chunks} (M20)")
+                if docs:
+                    for r in session.run(
+                        "MATCH (d:Document) RETURN d.source_path AS p, d.title AS t "
+                        "ORDER BY d.created_at DESC LIMIT 5"
+                    ):
+                        print(f"    doc path={r['p']!r} title={r['t']!r}")
         finally:
             driver.close()
     except Exception as exc:  # noqa: BLE001

@@ -27,6 +27,7 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "git_log",
         "recall_facts",
         "recall_notes",
+        "search_chunks",
         # Demo / tests (M1) + M14 in-repo MCP echo_math demos
         "add",
         "echo",
@@ -47,6 +48,7 @@ MUTATING_TOOLS: frozenset[str] = frozenset(
         "git_commit",
         "remember_fact",
         "remember_note",
+        "ingest_docs",
         "open_pull_request",
         "git_push",
     }

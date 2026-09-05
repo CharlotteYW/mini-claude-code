@@ -120,8 +120,8 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 |---|---|---|
 | Python | `uv` + `pyproject.toml` under `backend/` | `uv sync` via `setup.sh` |
 | Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | `PostgresSaver` via `open_checkpointer` (M5); MemorySaver optional |
-| Vectors | `pgvector` + `memory_notes` | M8-B: Ollama embed (`EMBEDDING_MODEL`, default `nomic-embed-text`) |
-| Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8: `Fact` nodes via `remember_fact` / `recall_facts` |
+| Vectors | `pgvector` + `memory_notes` + `memory_chunks` | M8-B notes; M20 ingest chunks (`doc_id`, path, index) via Ollama embed |
+| Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8 `Fact`; M20 `Document`/`Chunk` + `HAS_CHUNK`/`NEXT` |
 | Sandbox | Docker SDK ephemeral containers | M11; host subprocess until then (labeled insecure) |
 | Frontend | Deferred | Until streaming/trace visualization helps learning |
 
@@ -137,4 +137,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
 - **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
 - **M9–M19 Done** — permissions through ship gate — see [ROADMAP.md](ROADMAP.md)
+- **M20 Done** — [milestones/M20-doc-ingestion-memory-pipeline.md](milestones/M20-doc-ingestion-memory-pipeline.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

@@ -54,7 +54,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M17 | [Eval harness & cost/retry](milestones/M17-eval-harness-cost-retry.md) | **Done.** Eval cases + `mcc-eval`, LLM retry/backoff, `--usage` token footer. |
 | M18 | [Slack OAuth → agent → open PR](milestones/M18-chat-channel-open-pr.md) | **Done.** Slack OAuth + Socket Mode; `open_pull_request` via `GH_TOKEN`; M19 gate deferred. |
 | M19 | [Pre-ship quality gate](milestones/M19-pre-ship-quality-gate.md) | **Done.** `ship_check` (ruff + unit tests); gate `open_pull_request`; optional `git_push` when `SHIP_MODE=push`. |
-| M20 | Doc ingestion + production-ish memory pipeline | Chunking, cleaning, and metadata for project docs/notes; write into Neo4j and/or pgvector with clearer schemas. Local-first “production improvements” (still Compose on a laptop — few users). |
+| M20 | [Doc ingestion & memory pipeline](milestones/M20-doc-ingestion-memory-pipeline.md) | **Done.** Chunk/clean/metadata ingest → pgvector `memory_chunks` + Neo4j Document/Chunk; `ingest_docs` / `search_chunks`. |
 | M21 | Elasticsearch (local Compose) | Add ES (or OpenSearch) to Compose for full-text / keyword search tools beside Neo4j (relations) and pgvector (semantic). Teach when ES wins vs graph vs vectors. |
 | M22 | Async agent runtime (drop MCP sync wrap) | End-to-end async invoke/stream path so MCP adapter tools run natively without `asyncio.run` sync wrap; align CLI / HITL resume / permission wrap with `ainvoke`. |
 | M23 | Plugin pack expansion (skills / MCP / subagents) | **Parked (industry parity).** Extend `plugin.yaml` to declare bundled skills, MCP server entries, and subagent YAML refs; merge into existing M13/M14/M12 planes — still Option B, no new graph nodes. |

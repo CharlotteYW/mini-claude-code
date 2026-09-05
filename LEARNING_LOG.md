@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M20: Doc ingestion & memory pipeline
+
+- Shipped: `memory/ingest.py` + `pipeline.py` + `pgvector_chunks` / `neo4j_docs`; tools `ingest_docs` / `search_chunks`; sample `workspace/docs/`.
+- Insight: **Ingestion is a plane outside the graph** — DBs store chunks; they do not invent chunk boundaries. Dual-write teaches vectors (fuzzy) vs graph (Document→Chunk→NEXT) from the **same** pipeline output.
+- See Concept Q&A index (M20) below; Results: [M20](docs/milestones/M20-doc-ingestion-memory-pipeline.md).
+
+---
+
 ## 2026-09-05 — Parked: M26 MCP content policy (`no-ai` docs)
 
 - User request: learn **tool/MCP safety beyond M9 ACL** — e.g. Google Doc (or demo doc) whose **title or first line** contains `no-ai` → tool returns “cannot read,” body never enters model context.
@@ -133,9 +141,23 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M19 study guide)
+## Concept Q&A index (M0–M20 study guide)
 
-Study this before starting the next milestone (M20 or M26 if prioritized).
+Study this before starting the next milestone (M21 or M26 if prioritized).
+
+### M20 — Doc ingestion & memory pipeline
+
+- **Q: Does Neo4j “do chunking”?**  
+  A: **No.** Chunking/cleaning is an **ingestion pipeline**. Neo4j (and pgvector) only **store** Document/Chunk rows the pipeline writes. Confusing the two hides why RAG quality lives in ingest, not in Cypher.
+- **Q: Why both pgvector chunks and Neo4j Document/Chunk?**  
+  A: Same chunks, different questions. **pgvector** = “find text *like* this” (embeddings). **Neo4j** = structure/provenance (`HAS_CHUNK`, `NEXT`) and cheap keyword CONTAINS. M8 `Fact` stays for crisp beliefs — not file body storage.
+- **Q: ingest_docs vs remember_note / remember_fact?**  
+  A: **ingest_docs** = batch files → many chunks + metadata. **remember_note** = one ad-hoc blurb. **remember_fact** = one durable preference/truth node. Wrong tool → either un-citeable blobs or graph spam.
+- **Q: Without metadata, what degrades?**  
+  A: The model cannot cite `docs/foo.md#2`; re-ingest cannot replace by path; debugging “why this hit?” becomes opaque.
+- **Q: Why sync tool call, not a job queue?**  
+  A: Teaching simplification — one ReAct turn runs the pipeline. Production multi-tenant ingest still needs workers, retries, ACL, and evals (labeled in Results).
+- Link: [M20](docs/milestones/M20-doc-ingestion-memory-pipeline.md)
 
 ### M19 — Pre-ship quality gate
 

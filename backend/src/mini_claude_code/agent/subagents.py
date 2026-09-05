@@ -102,7 +102,7 @@ def build_tool_catalog(
             docker_network=settings.shell_docker_network,
         ),
         *build_git_tools(root),
-        *build_memory_tools(settings),
+        *build_memory_tools(settings, workspace_root=root),
     ]
     return {t.name: t for t in tools if t.name not in _FORBIDDEN_CHILD_TOOLS}
 

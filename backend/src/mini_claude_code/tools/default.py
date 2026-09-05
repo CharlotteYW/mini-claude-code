@@ -57,7 +57,7 @@ def build_default_tools(
         *build_git_tools(root),
         *ship_tools,
         *pr_tools,
-        *build_memory_tools(settings),
+        *build_memory_tools(settings, workspace_root=root),
         *build_subagent_tools(
             root,
             settings=settings,
