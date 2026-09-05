@@ -29,7 +29,8 @@ def _load_dotenv_from_repo_root() -> None:
         from dotenv import load_dotenv
     except ImportError:
         return
-    repo_root = Path(__file__).resolve().parents[3]
+    # agent/slack_cli.py → …/mini_claude_code/agent → parents[4] = repo root
+    repo_root = Path(__file__).resolve().parents[4]
     env_path = repo_root / ".env"
     if env_path.is_file():
         load_dotenv(env_path, override=False)

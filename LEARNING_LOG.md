@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — Dig: why is `slack_cli` not under `agent/` like `cli.py`?
+
+- **Q: Why was `slack_cli` at package root instead of `agent/`?**  
+  A: Packaging habit, not agent design. Runtime already lived under `agent/` (`slack_bot` / `adapter` / `oauth`); CLI was a thin console entry.
+- **Follow-up:** Moved to **`agent/slack_cli.py`**; `mcc-slack = mini_claude_code.agent.slack_cli:main`. Also fixed `.env` discovery depth for both `agent/cli.py` and `agent/slack_cli.py` (`parents[4]` = repo root).
+- Link: M18, `agent/slack_cli.py`, `agent/cli.py`, `pyproject.toml` scripts
+
+---
+
 ## 2026-09-05 — M20: Doc ingestion & memory pipeline
 
 - Shipped: `memory/ingest.py` + `pipeline.py` + `pgvector_chunks` / `neo4j_docs`; tools `ingest_docs` / `search_chunks`; sample `workspace/docs/`.

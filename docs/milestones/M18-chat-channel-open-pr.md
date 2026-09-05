@@ -133,7 +133,7 @@ flowchart TB
 - **`agent/slack_oauth.py`**: OAuth v2 install URL, code exchange, JSON installation store (`workspace/slack_installations.json`).
 - **`agent/slack_adapter.py`**: message normalize → slash dispatch → `thread_id` session → graph invoke; text `approve`/`deny` HITL resume.
 - **`agent/slack_bot.py`**: Socket Mode listener; posts thread replies.
-- **`slack_cli.py`**: `mcc-slack install` (local callback server) + `mcc-slack run`.
+- **`agent/slack_cli.py`**: `mcc-slack install` (local callback server) + `mcc-slack run`.
 - **`tools/github_pr.py`**: `open_pull_request` with `PR_DRY_RUN=1` default; live via `GH_TOKEN` + `gh`/REST.
 - **`CHANNEL_PLAN_MODE=1`** default for Slack bot (read-only policy).
 
