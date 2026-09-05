@@ -127,13 +127,23 @@ flowchart TB
 ### Commands & how to reproduce
 
 ```bash
+# One-shot demo (unit + ingest workspace/docs + search marker):
+./scripts/m20-demo.sh
+
+# Offline unit only:
 ./scripts/test.sh tests/unit/test_m20_ingest.py -v
+
+# Live integration (Compose + ollama pull nomic-embed-text):
 ./scripts/test.sh tests/integration/test_m20_ingest_live.py -v
-# Agent (Compose + Ollama nomic-embed-text):
-./scripts/agent.sh --plan "ingest_docs on docs/ then search_chunks for pnpm"
+
+# Agent path (ingest_docs is ask / denied in Plan Mode — omit --plan or approve):
+./scripts/agent.sh "Use ingest_docs on docs/ then search_chunks for M20_MARKER_PURPLE_ORBIT"
+
 # Inspect stores:
-uv run --directory backend mcc-db-inspect   # or project entrypoint if configured
+./scripts/db-inspect.sh
 ```
+
+Demo file: `workspace/docs/m20-demo.md` (marker `M20_MARKER_PURPLE_ORBIT`).
 
 ### As-built graph + delta
 

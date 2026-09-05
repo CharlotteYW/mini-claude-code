@@ -13,6 +13,46 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — Dig: Neo4j dual-write is scaffolding for next steps?
+
+- **Q: So Neo4j Document/Chunk (+ edges) is mainly paving the road for later?**  
+  A: **Mostly yes.** M20 proves the ingest pipeline can dual-write a graph shape; primary search stays pgvector. Next uses: M21 keyword/ES beside the same chunks; optional digs that *read* `HAS_CHUNK`/`NEXT` (neighbor expand). Plus today’s weak CONTAINS fallback when vectors are down.
+- Link: M20 Results / Open questions; ROADMAP M21
+
+---
+
+## 2026-09-05 — Dig: do we actually use Neo4j Document/Chunk after ingest?
+
+- **Q: `search_chunks` uses cosine — is Neo4j used? We store HAS_CHUNK/NEXT but it feels unused.**  
+  A: **Correct observation.** Happy path retrieval is **only pgvector**. Neo4j Document/Chunk is used as: (1) **keyword fallback** when embed/Postgres fails (`search_chunks_keyword` = `CONTAINS` on Chunk nodes — does **not** walk `HAS_CHUNK`/`NEXT`); (2) **teaching dual-write** — same pipeline can feed a graph store; (3) **inspectability** (`mcc-db-inspect` / Browser); (4) **scaffold** for later digs (expand neighbors via `NEXT`, entity links). M8 `Fact` is a different Neo4j use (beliefs). **Simplification:** edges are written now, rarely *read* in M20 — intentional, not a hidden ranking feature.
+- Link: M20, `memory_tools.search_chunks_tool`, `neo4j_docs.py`
+
+---
+
+## 2026-09-05 — Dig: why not inverted index / BM25 in M20?
+
+- **Q: Why didn’t M20 use inverted index + BM25?**  
+  A: M20’s learning target is **dense retrieval** (embed → pgvector cosine) and the **ingest pipeline** (chunk/metadata/dual-write). BM25/inverted index is a **different retrieval family** (keyword/IDF) — parked for **M21 Elasticsearch**, so you can contrast three stores: Neo4j relations, pgvector semantic, ES full-text. Without M20 first, you’d skip “pipeline vs store” and jump to yet another DB. BM25 still wins for exact tokens, rare IDs, boolean filters; vectors win for paraphrase / fuzzy intent. Hybrid (ES filter + vector re-rank) is a later dig.
+- Link: M20 `search_chunks`, ROADMAP M21
+
+---
+
+## 2026-09-05 — Dig: where is `search_chunks` and what algorithm?
+
+- **Q: Where is `search_chunks`, what algorithm?**  
+  A: **Core:** `memory/pgvector_chunks.py::search_chunks` — embed query with Ollama (`nomic-embed-text`) → pgvector **cosine distance** (`<=>`), order ascending distance, `score = 1 - distance`. **Tool wrap:** `tools/memory_tools.py` (`search_chunks` name); on embed/DB failure falls back to Neo4j `search_chunks_keyword` (case-insensitive `CONTAINS`, not semantic). Not BM25/ES (that’s M21).
+- Link: M20, `pgvector_chunks.search_chunks`, `neo4j_docs.search_chunks_keyword`
+
+---
+
+## 2026-09-05 — Dig: M20 mental model (chunk → store → search)
+
+- **Q: Is M20 just “split a doc into chunks, save to DB, search later”?**  
+  A: **Yes — that is the core loop.** Extra teaching layers: (1) **pipeline** does clean/chunk/metadata; DBs only store; (2) **dual write** — same chunks → pgvector (semantic) + Neo4j Document/Chunk (structure/keyword); (3) tools `ingest_docs` / `search_chunks` on the existing ReAct graph; (4) not the chat checkpointer — survives new `thread_id`s; (5) still distinct from M8 `remember_fact` / `remember_note`.
+- Link: M20, `memory/ingest.py`, `pipeline.py`, `pgvector_chunks.py`, `neo4j_docs.py`
+
+---
+
 ## 2026-09-05 — Dig: why is `slack_cli` not under `agent/` like `cli.py`?
 
 - **Q: Why was `slack_cli` at package root instead of `agent/`?**  
