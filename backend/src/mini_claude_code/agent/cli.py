@@ -1,8 +1,9 @@
-"""CLI entrypoint for the ReAct agent (M2+ … M10 HITL interrupt)."""
+"""CLI entrypoint for the ReAct agent (M2+ … M10 HITL; M22 async-first)."""
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -14,10 +15,13 @@ from mini_claude_code.agent.checkpointer import (
     open_checkpointer,
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
-from mini_claude_code.agent.hitl import invoke_with_hitl
+from mini_claude_code.agent.hitl import ainvoke_with_hitl, invoke_with_hitl
 from mini_claude_code.agent.plugins import PluginPack, resolve_plugins
 from mini_claude_code.agent.slash_commands import dispatch_slash_input, slash_registry_from_plugins
-from mini_claude_code.agent.stream_render import consume_agent_stream
+from mini_claude_code.agent.stream_render import (
+    consume_agent_astream,
+    consume_agent_stream,
+)
 from mini_claude_code.agent.usage import USAGE_ACCUMULATOR_KEY, UsageAccumulator
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
@@ -59,7 +63,7 @@ def _print_transcript(messages: list[object]) -> None:
     print("=== done ===")
 
 
-def _run_once(
+async def _run_once_async(
     graph,
     prompt: str,
     config: dict,
@@ -69,6 +73,7 @@ def _run_once(
     slash_registry: dict[str, dict[str, str]],
     plugins: list[PluginPack],
     usage_acc: UsageAccumulator | None,
+    use_sync: bool,
 ) -> int:
     try:
         dispatch = dispatch_slash_input(
@@ -83,10 +88,12 @@ def _run_once(
     prompt = dispatch.prompt
 
     # Plan Mode has no ask interrupts — token streaming is fine.
-    # Otherwise HITL uses invoke + Command(resume) (M10 teaching path).
     if stream and plan_mode:
         try:
-            consume_agent_stream(graph, prompt, config)
+            if use_sync:
+                consume_agent_stream(graph, prompt, config)
+            else:
+                await consume_agent_astream(graph, prompt, config)
             if usage_acc is not None:
                 print(usage_acc.format_footer(), file=sys.stderr)
             return 0
@@ -96,12 +103,15 @@ def _run_once(
 
     if stream and not plan_mode:
         print(
-            "Note: HITL ask uses invoke + interrupt (not token stream). "
+            "Note: HITL ask uses ainvoke + interrupt (not token stream). "
             "Use --plan for stream-only read sessions.",
             file=sys.stderr,
         )
 
-    result, code = invoke_with_hitl(graph, prompt, config)
+    if use_sync:
+        result, code = invoke_with_hitl(graph, prompt, config)
+    else:
+        result, code = await ainvoke_with_hitl(graph, prompt, config)
     if code != 0:
         return code
     if result and "messages" in result:
@@ -113,6 +123,34 @@ def _run_once(
     return 0
 
 
+def _run_once(
+    graph,
+    prompt: str,
+    config: dict,
+    *,
+    stream: bool,
+    plan_mode: bool,
+    slash_registry: dict[str, dict[str, str]],
+    plugins: list[PluginPack],
+    usage_acc: UsageAccumulator | None,
+    use_sync: bool = False,
+) -> int:
+    """Sync entry used by REPL loop; delegates to async helper."""
+    return asyncio.run(
+        _run_once_async(
+            graph,
+            prompt,
+            config,
+            stream=stream,
+            plan_mode=plan_mode,
+            slash_registry=slash_registry,
+            plugins=plugins,
+            usage_acc=usage_acc,
+            use_sync=use_sync,
+        )
+    )
+
+
 def _run_repl(
     graph,
     config: dict,
@@ -122,6 +160,7 @@ def _run_repl(
     slash_registry: dict[str, dict[str, str]],
     plugins: list[PluginPack],
     usage_acc: UsageAccumulator | None,
+    use_sync: bool,
 ) -> int:
     print("REPL mode — empty line or Ctrl-D to exit.")
     while True:
@@ -141,6 +180,7 @@ def _run_repl(
             slash_registry=slash_registry,
             plugins=plugins,
             usage_acc=usage_acc,
+            use_sync=use_sync,
         )
         if code != 0:
             return code
@@ -193,6 +233,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print token usage summary after the run (also USAGE_REPORT=1).",
     )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Use sync graph.invoke/stream (compat shim). Default is async ainvoke/astream (M22).",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -200,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
 
     plan_mode = bool(args.plan or settings.agent_plan_mode)
+    use_sync = bool(args.sync)
 
     if not args.repl and not args.prompt:
         args.prompt = (
@@ -261,6 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  provider:     {settings.llm_provider}")
     print(f"  model:        {settings.llm_model}")
     print(f"  workspace:    {workspace}")
+    print(f"  runtime:      {'sync (--sync)' if use_sync else 'async (ainvoke/astream)'}")
     print(f"  streaming:    {'on' if stream else 'off (--no-stream)'}")
     print(
         f"  plan_mode:    {'on (mutating tools denied)' if plan_mode else 'off'}"
@@ -321,6 +368,7 @@ def main(argv: list[str] | None = None) -> int:
                         slash_registry=slash_registry,
                         plugins=plugins,
                         usage_acc=usage_acc,
+                        use_sync=use_sync,
                     )
                 return _run_once(
                     graph,
@@ -331,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
                     slash_registry=slash_registry,
                     plugins=plugins,
                     usage_acc=usage_acc,
+                    use_sync=use_sync,
                 )
         graph = _build(None)
         if args.repl:
@@ -342,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
                 slash_registry=slash_registry,
                 plugins=plugins,
                 usage_acc=usage_acc,
+                use_sync=use_sync,
             )
         return _run_once(
             graph,
@@ -352,6 +402,7 @@ def main(argv: list[str] | None = None) -> int:
             slash_registry=slash_registry,
             plugins=plugins,
             usage_acc=usage_acc,
+            use_sync=use_sync,
         )
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

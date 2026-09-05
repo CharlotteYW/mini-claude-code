@@ -79,6 +79,7 @@ def invoke_with_hitl(
     Returns ``(final_result_or_none, exit_code)``.
     **Simplification:** uses ``invoke`` (not token streaming) so Command resume
     stays obvious; Plan Mode can still stream separately in the CLI.
+    Prefer ``ainvoke_with_hitl`` on the default async CLI path (M22).
     """
     decide = approve_fn or prompt_approval
     payload: Any = {"messages": [HumanMessage(content=prompt)]}
@@ -98,6 +99,38 @@ def invoke_with_hitl(
 
         # Single bool resume covers the usual one-tool interrupt; if the human
         # rejects any pending payload, resume False for the batch.
+        approved = True
+        for item in pending:
+            if not decide(item):
+                approved = False
+                break
+        payload = Command(resume=approved)
+
+
+async def ainvoke_with_hitl(
+    graph: Any,
+    prompt: str,
+    config: dict,
+    *,
+    approve_fn: Callable[[Any], bool] | None = None,
+) -> tuple[dict[str, Any] | None, int]:
+    """Async twin of ``invoke_with_hitl`` using ``graph.ainvoke`` (M22)."""
+    decide = approve_fn or prompt_approval
+    payload: Any = {"messages": [HumanMessage(content=prompt)]}
+
+    while True:
+        try:
+            result = await graph.ainvoke(payload, config=config)
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
+            return None, 1
+
+        pending = result_interrupt_values(result) or pending_interrupt_values(
+            graph, config
+        )
+        if not pending:
+            return result if isinstance(result, dict) else None, 0
+
         approved = True
         for item in pending:
             if not decide(item):

@@ -249,15 +249,23 @@ def _wrap_one_with_hooks(tool: BaseTool, registry: HookRegistry) -> BaseTool:
             registry, tool=name, args=call_args, result=result
         )
 
-    if args_schema is not None:
-        return StructuredTool.from_function(
-            func=_hooked,
-            name=name,
-            description=description,
-            args_schema=args_schema,
+    async def _ahooked(**kwargs: Any) -> Any:
+        # M22: preserve ainvoke through the hook plane (Pre/Post stay sync).
+        args = _normalize_args(kwargs)
+        args_dict = args if isinstance(args, dict) else {}
+        pre = run_pre_hooks(registry, tool=name, args=args_dict)
+        if not pre.allow:
+            return hook_denied_message(name, pre.reason)
+        call_args = pre.args if pre.args is not None else args_dict
+        result = await tool.ainvoke(call_args)
+        return run_post_hooks(
+            registry, tool=name, args=call_args, result=result
         )
-    return StructuredTool.from_function(
-        func=_hooked,
+
+    return StructuredTool(
         name=name,
         description=description,
+        args_schema=args_schema,
+        func=_hooked,
+        coroutine=_ahooked,
     )

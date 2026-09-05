@@ -165,6 +165,8 @@ def build_agent_graph(
         prompt_messages = _inject_memory_view(
             compacted, workspace_root=workspace, settings=settings
         )
+        # Keep call_model sync so graph.invoke (tests / --sync) still works.
+        # M22 async win is ToolNode → tool.ainvoke (permission/hook coroutines).
         response = invoke_with_retry(
             lambda: bound.invoke(prompt_messages, config),
             settings=settings,

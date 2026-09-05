@@ -127,8 +127,9 @@ def test_load_mcp_tools_sync_calls_client_when_configured() -> None:
     fake_tools = [echo]
     conns = default_demo_connections()
 
-    async def fake_load(connections: dict) -> list:
+    async def fake_load(connections: dict, *, sync_shim: bool = True) -> list:
         assert connections == conns
+        assert sync_shim is True
         return fake_tools
 
     with patch.object(mod, "load_mcp_tools_async", side_effect=fake_load):

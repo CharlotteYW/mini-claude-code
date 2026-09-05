@@ -140,4 +140,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M9–M19 Done** — permissions through ship gate — see [ROADMAP.md](ROADMAP.md)
 - **M20 Done** — [milestones/M20-doc-ingestion-memory-pipeline.md](milestones/M20-doc-ingestion-memory-pipeline.md)
 - **M21 Done** — [milestones/M21-elasticsearch-fulltext.md](milestones/M21-elasticsearch-fulltext.md)
+- **M22 Done** — [milestones/M22-async-agent-runtime.md](milestones/M22-async-agent-runtime.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

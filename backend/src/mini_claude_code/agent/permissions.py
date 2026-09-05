@@ -136,44 +136,52 @@ def _wrap_one(
     description = tool.description or name
     args_schema = getattr(tool, "args_schema", None)
 
-    def _guarded(**kwargs: Any) -> Any:
-        # ToolNode may pass a single dict payload; normalize.
-        args = _normalize_args(kwargs)
-        args_dict = args if isinstance(args, dict) else {}
+    def _decide(args_dict: dict[str, Any]) -> tuple[PermissionMode, Any | None]:
+        """Return (mode, denial_string_or_None). None denial means proceed."""
         mode = resolve_permission(name, plan_mode=plan_mode)
         if mode == "auto":
-            return tool.invoke(args)
+            return mode, None
         if mode == "deny":
-            return denial_message(name, mode, plan_mode=plan_mode)
-        # ask — durable pause (M10) or test callback (M9 leftover for unit tests)
+            return mode, denial_message(name, mode, plan_mode=plan_mode)
         if ask_callback is not None:
             approved = bool(ask_callback(name, args_dict))
         else:
-            # Requires a compiled graph with a checkpointer; resume via Command.
             approved = bool(
                 interrupt(approval_interrupt_payload(name, args_dict))
             )
         if not approved:
-            return denial_message(
+            return mode, denial_message(
                 name,
                 mode,
                 plan_mode=plan_mode,
                 reason="user rejected tool call",
             )
+        return mode, None
+
+    def _guarded(**kwargs: Any) -> Any:
+        args = _normalize_args(kwargs)
+        args_dict = args if isinstance(args, dict) else {}
+        _mode, denied = _decide(args_dict)
+        if denied is not None:
+            return denied
         return tool.invoke(args)
 
-    # Preserve schema for bind_tools; StructuredTool keeps the same contract as ToolNode.
-    if args_schema is not None:
-        return StructuredTool.from_function(
-            func=_guarded,
-            name=name,
-            description=description,
-            args_schema=args_schema,
-        )
-    return StructuredTool.from_function(
-        func=_guarded,
+    async def _aguard(**kwargs: Any) -> Any:
+        # M22: async ToolNode uses ainvoke — must not fall back to sync invoke
+        # (which would asyncio.run MCP tools inside a running loop).
+        args = _normalize_args(kwargs)
+        args_dict = args if isinstance(args, dict) else {}
+        _mode, denied = _decide(args_dict)
+        if denied is not None:
+            return denied
+        return await tool.ainvoke(args)
+
+    return StructuredTool(
         name=name,
         description=description,
+        args_schema=args_schema,
+        func=_guarded,
+        coroutine=_aguard,
     )
 
 

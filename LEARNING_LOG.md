@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M22: Async agent runtime
+
+- Shipped: permission/hook **coroutines**; CLI default `ainvoke`/`astream` + `--sync`; MCP shim flagged; `ainvoke_with_hitl`.
+- Insight: The real MCP nested-loop bug was **wraps that only set `func`**, forcing ToolNode back to sync `invoke` → `asyncio.run`. Async CLI alone was not enough.
+- See Concept Q&A index (M22); Results: [M22](docs/milestones/M22-async-agent-runtime.md).
+
+---
+
 ## 2026-09-05 — M21: Elasticsearch full-text
 
 - Shipped: Compose `mcc-elasticsearch`; `elasticsearch_chunks.py`; triple-write ingest; tool `search_keyword`; `./scripts/m21-demo.sh`.
@@ -198,9 +206,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M21 study guide)
+## Concept Q&A index (M0–M22 study guide)
 
-Study this before starting the next milestone (M22 or M26 if prioritized).
+Study this before starting the next milestone (M23 parked / M26 user-parked / or next active).
+
+### M22 — Async agent runtime
+
+- **Q: Why did MCP need `asyncio.run` before?**  
+  A: Adapter tools were coroutine-first; sync ToolNode needed a `func`. M14 added `asyncio.run(ainvoke)`. That is fine only when **no event loop is running**.
+- **Q: What was the deeper bug?**  
+  A: Permission/hook wraps rebuilt tools with **only `func`**, dropping `coroutine`. Even `graph.ainvoke` then called sync `invoke` → nested `asyncio.run`.
+- **Q: What does M22 change?**  
+  A: Wraps expose **`func` + `coroutine`** (`await tool.ainvoke`). CLI defaults to **`ainvoke`/`astream`**. MCP sync shim remains for `--sync` / tests, not the hot path.
+- **Q: Why is `call_model` still sync?**  
+  A: LangGraph sync `invoke` cannot run async-only nodes; keeping sync preserves the unit suite. Async win is primarily the **tool plane**.
+- Link: [M22](docs/milestones/M22-async-agent-runtime.md)
 
 ### M21 — Elasticsearch full-text
 

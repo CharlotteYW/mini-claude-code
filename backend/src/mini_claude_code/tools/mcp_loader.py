@@ -1,10 +1,13 @@
-"""MCP client → LangChain tools (M14).
+"""MCP client → LangChain tools (M14 / M22).
 
 Call chain (teaching):
   MCP_CONFIG / path / demo → MultiServerMCPClient → adapter BaseTool list
   → merge into build_default_tools → M9 apply_permissions → ToolNode
 
-**Simplification:** sync agent loads tools once at graph build via ``asyncio.run``.
+**M22:** prefer ``graph.ainvoke`` / ``astream`` so MCP tools use native
+``ainvoke`` (no nested ``asyncio.run``). Sync ``invoke`` still works via an
+optional ``func`` shim on prepared MCP tools.
+
 Adapter default for ``get_tools()`` is often **stateless per call** (new stdio
 session each invoke) — fine for echo/add; stateful MCP sessions are a later dig.
 """
@@ -125,15 +128,16 @@ def _normalize_mcp_result(result: Any) -> Any:
 
 
 def wrap_mcp_tool_for_sync(tool: BaseTool) -> BaseTool:
-    """MCP adapter tools are coroutine-only; sync ToolNode needs ``func``.
+    """Prepare an MCP adapter tool for sync *and* async graph paths (M14/M22).
 
-    **Simplification:** each sync invoke uses ``asyncio.run`` (and may spawn a
-    fresh stdio session per call under the adapter default). Do not nest inside
-    an already-running event loop.
+    Always attaches ``coroutine`` (native ``ainvoke`` — no event-loop nesting).
+    Also attaches ``func`` via ``asyncio.run`` as a **sync shim** for
+    ``graph.invoke`` / tests. Prefer ``graph.ainvoke`` / ``astream`` so ToolNode
+    uses ``coroutine`` and never calls ``asyncio.run``.
     """
     from langchain_core.tools import StructuredTool
 
-    if getattr(tool, "func", None) is not None:
+    if getattr(tool, "_mcc_mcp_prepared", False):
         return tool
 
     async def _acall(**kwargs: Any) -> Any:
@@ -142,32 +146,67 @@ def wrap_mcp_tool_for_sync(tool: BaseTool) -> BaseTool:
     def _call(**kwargs: Any) -> Any:
         return asyncio.run(_acall(**kwargs))
 
-    return StructuredTool(
+    prepared = StructuredTool(
         name=tool.name,
         description=tool.description or tool.name,
         args_schema=getattr(tool, "args_schema", None),
         func=_call,
         coroutine=_acall,
     )
+    prepared._mcc_mcp_prepared = True  # type: ignore[attr-defined]
+    prepared._mcc_mcp_sync_shim = True  # type: ignore[attr-defined]
+    return prepared
+
+
+def prepare_mcp_tool_async_only(tool: BaseTool) -> BaseTool:
+    """MCP tool with coroutine only — for async-first graphs (no asyncio.run shim)."""
+    from langchain_core.tools import StructuredTool
+
+    if getattr(tool, "_mcc_mcp_prepared", False) and not getattr(
+        tool, "_mcc_mcp_sync_shim", True
+    ):
+        return tool
+
+    async def _acall(**kwargs: Any) -> Any:
+        return _normalize_mcp_result(await tool.ainvoke(kwargs))
+
+    prepared = StructuredTool(
+        name=tool.name,
+        description=tool.description or tool.name,
+        args_schema=getattr(tool, "args_schema", None),
+        coroutine=_acall,
+    )
+    prepared._mcc_mcp_prepared = True  # type: ignore[attr-defined]
+    prepared._mcc_mcp_sync_shim = False  # type: ignore[attr-defined]
+    return prepared
 
 
 async def load_mcp_tools_async(
     connections: dict[str, dict[str, Any]],
+    *,
+    sync_shim: bool = True,
 ) -> list[BaseTool]:
-    """Discover tools from MCP servers via langchain-mcp-adapters."""
+    """Discover tools from MCP servers via langchain-mcp-adapters.
+
+    ``sync_shim=True`` (default): also attach ``func`` via ``asyncio.run`` for
+    sync ``invoke``. ``sync_shim=False``: coroutine-only (async graph path).
+    """
     if not connections:
         return []
     from langchain_mcp_adapters.client import MultiServerMCPClient
 
     client = MultiServerMCPClient(connections)
     raw = list(await client.get_tools())
-    return [wrap_mcp_tool_for_sync(t) for t in raw]
+    if sync_shim:
+        return [wrap_mcp_tool_for_sync(t) for t in raw]
+    return [prepare_mcp_tool_async_only(t) for t in raw]
 
 
 def load_mcp_tools_sync(
     connections: dict[str, dict[str, Any]] | None = None,
     *,
     settings: Settings | None = None,
+    sync_shim: bool = True,
 ) -> list[BaseTool]:
     """Sync wrapper for graph build. Empty connections → []."""
     conns = (
@@ -177,4 +216,4 @@ def load_mcp_tools_sync(
     )
     if not conns:
         return []
-    return asyncio.run(load_mcp_tools_async(conns))
+    return asyncio.run(load_mcp_tools_async(conns, sync_shim=sync_shim))
