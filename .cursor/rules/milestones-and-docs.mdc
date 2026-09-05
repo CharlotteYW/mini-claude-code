@@ -14,8 +14,12 @@ alwaysApply: true
    - In **docs**: fill Results (including Testing results), append `LEARNING_LOG.md`, update `docs/architecture.md` if topology changed.
    - **Concept Q&A:** prepend/update English Q→A in `LEARNING_LOG.md` for doubts raised in the review chat (and core “why / without it” for that milestone). See `.cursor/rules/learning-log-qa.mdc`.
    - Land **unit + integration tests** for code added in this milestone (see `docs/notes/testing.md`).
-4. Commit + push, then do not mark Done until the close-out checklist passes.
-5. **Before the next milestone Plan:** point the user at the prior milestone’s Learning Log Q&A; wait for them to be ready, then write the new Plan.
+4. Commit + **push to `origin`**, then do not mark Done until the close-out checklist passes.
+5. **Before starting the next milestone Plan (hard gate):**
+   - Working tree must be **clean** (`git status` empty of staged/unstaged/untracked work that belongs in the repo).
+   - Local branch must be **synced with remote** (no unpushed commits for the closed milestone).
+   - If anything is dirty or unpushed: **commit + push first**, then write the new Plan.
+   - Also point the user at the prior milestone’s Learning Log Q&A; wait for them to be ready.
 
 ## Required sections in every milestone file
 
@@ -49,8 +53,10 @@ alwaysApply: true
 - Results complete (commands + why + graphs + testing results)
 - LEARNING_LOG.md entry added (**including Concept Q&A** from review chat — see `learning-log-qa.mdc`)
 - architecture.md updated if needed
-- Changes committed (English message) and pushed to GitHub
+- Changes committed (English message) and **pushed to GitHub**
+- `git status` clean and branch not ahead of `origin` for that close-out
 - Stop and wait for next approval (user studies Learning Log before the next Plan)
+- **Do not draft the next milestone Plan until the previous close-out is committed and pushed**
 
 ## Simplifications
 

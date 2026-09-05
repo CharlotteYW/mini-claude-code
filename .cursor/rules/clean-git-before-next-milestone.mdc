@@ -1,0 +1,23 @@
+---
+description: Require clean git (commit+push) before starting the next milestone Plan
+alwaysApply: true
+---
+
+# Clean git before next milestone
+
+## Hard gate
+
+Before drafting or coding the **next** milestone:
+
+1. Run / assume `git status` — working tree must be **clean** (no leftover milestone edits sitting uncommitted).
+2. Branch must not be quietly **ahead of `origin`** with unpushed Done work — **push** first.
+3. If dirty or unpushed: **commit (English message) + `git push`**, confirm clean/`main...origin/main` (or equivalent), **then** write the new Plan.
+
+## Why
+
+Keeps each milestone a reviewable remote checkpoint; avoids stacking M17+M18+fixes in one ambiguous tree; matches the user’s standing request: start the next milestone only from a clean status.
+
+## Related
+
+- Close-out still requires commit + push (see `milestones-and-docs.mdc`).
+- User must still say **approved** before coding the new Plan.

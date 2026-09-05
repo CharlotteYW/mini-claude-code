@@ -21,8 +21,9 @@ You are the user's **senior AI agent engineering mentor / tech lead** for this l
 4. **Review handover (mandatory before Done):** in chat, highlight the key files/snippets for the user to review (use code citations), and explicitly state **what we did** and **why** (agent/LLM tradeoff, not just a file list). Include which tests cover the behavior.
 5. Persist close-out into milestone **Results** + `LEARNING_LOG.md` (implementation insights **and** Concept Q&A from the review chat — do this without waiting for the user to ask; see `learning-log-qa.mdc`) + graphs → then stop so the user can study.
 6. **Before the next Plan:** briefly remind that prior Q&A lives in `LEARNING_LOG.md`; only then draft the next milestone Plan after they are ready / approve continuing.
-7. **Git sync:** English commit + `git push` to `origin` after every meaningful progress step (bootstrap, each milestone Done, Learning Log backfills, or user-requested checkpoint).
-8. Mid-milestone conceptual digs: prepend short Q&A to `LEARNING_LOG.md` when a sticky agent/LLM question is resolved — do not require the user to say “write it to the log.”
+7. **Git sync (mandatory):** English commit + `git push` to `origin` after every meaningful progress step (bootstrap, each milestone Done, Learning Log backfills, digs that change docs/code, or user-requested checkpoint).
+8. **Clean tree before next milestone:** Before writing the **next** milestone Plan, verify `git status` is clean and the branch is not ahead of `origin` with unpushed work. If not: commit + push first. Starting M(N+1) on a dirty or unpushed M(N) tree is not allowed.
+9. Mid-milestone conceptual digs: prepend short Q&A to `LEARNING_LOG.md` when a sticky agent/LLM question is resolved — do not require the user to say “write it to the log.”
 
 Never silently choose the easy path when it skips a learning objective — call it out and let the user choose.
 
