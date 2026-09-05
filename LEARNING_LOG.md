@@ -13,6 +13,61 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — Parked: M26 MCP content policy (`no-ai` docs)
+
+- User request: learn **tool/MCP safety beyond M9 ACL** — e.g. Google Doc (or demo doc) whose **title or first line** contains `no-ai` → tool returns “cannot read,” body never enters model context.
+- Parked as **[M26](docs/ROADMAP.md)** after M19–M25 lane; teaching contrast: M9 tool allow/deny vs **content-aware** client wrap vs server-enforced MCP policy.
+- Link: ROADMAP M26 learning notes
+
+---
+
+## 2026-09-05 — Dig: is `slack.sh run` a long-lived listener? vs production
+
+- **Q: Does `./scripts/slack.sh run` mean our agent keeps listening to Slack?**  
+  A: **Yes for Socket Mode.** `mcc-slack run` is a **long-lived process**: connect WebSocket → register handler → `Event().wait()` until Ctrl+C. Each inbound message runs the agent (synchronously in M18). Stop the process → no replies.
+- **Q: Is enterprise the same?**  
+  A: **Same idea (something must be always-on to receive events), different packaging.** Production often: K8s Deployment / systemd service, auto-restart, multiple workers, **ack fast then queue** agent work (Redis/SQS), or Events API behind HTTPS + autoscaling. M18 simplification: one laptop process, agent runs inline on the listener thread.
+- Link: M18, `scripts/slack.sh`, `slack_bot.run_socket_mode_bot`
+
+---
+
+## 2026-09-05 — Dig: why both xoxb- and xapp-?
+
+- **Q: When I send a Slack message, I use the OAuth bot token — why also `SLACK_APP_TOKEN`?**  
+  A: **Two jobs, two tokens.** `xoxb-` (from OAuth install) = **act as the bot** (read/post/reactions via Web API). `xapp-` (App-Level Token, `connections:write`) = **only** opens the **Socket Mode WebSocket** so Slack can push events to your laptop. Message *content* path uses `xoxb-`; event *delivery* path uses `xapp-`. Events API setups often skip `xapp-` (Slack POSTs your HTTPS URL instead).
+- Link: M18, `slack_bot.py` (`SocketModeClient(app_token=..., web_client=WebClient(bot_token))`)
+
+---
+
+## 2026-09-05 — Dig: where OAuth tokens live (local JSON vs enterprise)
+
+- **Q: Is writing the bot token to a local file “how Slack does auth”?**  
+  A: **No.** Slack (and most OAuth apps) standardize the **handshake** (authorize → code → `oauth.v2.access` → token). **Storage is your app’s job.** Our `workspace/slack_installations.json` is a **teaching simplification**. Production: encrypted DB / secrets manager keyed by `team_id` (or org), never commit tokens, rotate/revoke, least privilege.
+- **Q: Do agents/enterprise do the same?**  
+  A: Same pattern family — **install once, store credential, reuse** — but storage and identity get stricter (Vault/KMS, SSO for *humans*, service accounts for *bots*, short-lived tokens where possible). Agent ↔ Slack is usually **bot/app credential**, not each end-user’s OAuth for every message.
+- Link: M18, `slack_oauth.py` (`save_installation`)
+
+---
+
+## 2026-09-05 — Dig: Slack OAuth install vs day-to-day; Socket Mode vs Events API
+
+- **Q: First install vs later runs — what is authorized when?**  
+  A: **Install (OAuth v2)** = admin once grants scopes → you receive a long-lived **bot token** (`xoxb-`) per workspace, stored in `slack_installations.json`. **Later `run`** does **not** re-OAuth; it loads that token + `SLACK_APP_TOKEN` (`xapp-`) and opens Socket Mode. Re-install only when scopes change or token revoked.
+- **Q: Socket Mode vs Events API?**  
+  A: Same *event payload* shape; different *delivery*. **Events API** = Slack **HTTP POSTs** your public HTTPS URL (you are the server). **Socket Mode** = your process opens a **WebSocket outbound** to Slack and receives events (you are the client; no ngrok). Production SaaS often uses Events API + load-balanced HTTPS; local/dev and some enterprise setups prefer Socket Mode.
+- Link: M18, `slack_oauth.py`, `slack_cli.py`, `slack_bot.py`
+
+---
+
+## 2026-09-05 — Dig: Slack multi-turn should not re-post full transcript
+
+- **Q: Why did the second Slack reply include the first turn's "You: … / AI: …"?**  
+  A: Checkpointer correctly keeps the **full session** for the model, but `format_agent_reply` was dumping **all** `result["messages"]` back into Slack. Thread UX already shows prior posts — reply should be **this turn only** (messages after the latest HumanMessage), and should not echo the user's HumanMessage.
+- Fix: `messages_for_this_turn` + `format_agent_reply(..., this_turn_only=True)` in `slack_adapter.py`.
+- Link: M18, `agent/slack_adapter.py`
+
+---
+
 ## 2026-08-27 — M15: Lifecycle hooks
 
 - Shipped: `agent/hooks.py` + `hook_demos.py`; Pre → permissions → body → Post; Stop on final AIMessage.
@@ -70,14 +125,46 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M18 study guide)
+## 2026-09-05 — M19: Pre-ship quality gate
 
-Study this before starting M19.
+- Shipped: `tools/ship.py` (`ship_check`, gate wrap, optional `git_push`), `./scripts/ship-check.sh`, ruff in dev deps.
+- Insight: **ship_check** = local publish gate; **eval (M17)** = behavior regression. Enforce green before PR via tool wrap, not prompt hope. Fix-until-green is the ReAct loop + `SHIP_MAX_FIX_ITERS`.
+- Results: [M19](docs/milestones/M19-pre-ship-quality-gate.md).
+
+---
+
+## Concept Q&A index (M0–M19 study guide)
+
+Study this before starting the next milestone (M20 or M26 if prioritized).
+
+### M19 — Pre-ship quality gate
+
+- **Q: ship_check vs M17 eval?**  
+  A: **Eval** = scripted agent-behavior cases (often fake LLM). **ship_check** = **this repo’s** ruff + unit tests before you publish a change.
+- **Q: Who runs the fix loop?**  
+  A: The **ReAct agent** (edit tools → ship_check again). The gate only records pass/fail and **blocks** `open_pull_request` until green; `SHIP_MAX_FIX_ITERS` stops infinite consecutive fails.
+- **Q: Why wrap open_pull_request?**  
+  A: Prompt-only “please run tests first” is unreliable. A wrap returns `SHIP_GATE: …` so the model cannot dry-run/live PR without a green check when `SHIP_REQUIRE_GREEN=1`.
+- **Q: SHIP_MODE=pr vs push?**  
+  A: Default **pr** — open PR only. **push** also exposes `git_push` (ask + green, never `--force`).
+- **Q: Why checks use repo root not workspace/?**  
+  A: Agent FS jail is for demos; shipping quality is about **mini-claude-code** itself (`backend/` tests).
+- Link: [M19](docs/milestones/M19-pre-ship-quality-gate.md)
 
 ### M18 — Slack OAuth channel + open PR
 
 - **Q: Why Slack OAuth instead of pasting a bot token?**  
   A: Production Slack apps use **OAuth v2 install** — each workspace gets its own bot token stored after admin approval. Pasting `SLACK_BOT_TOKEN` in `.env` is still supported as a **shortcut** for local dev.
+- **Q: First install vs later `run` — call chain?**  
+  A: **Install once:** authorize URL → Allow → local callback `code` → `oauth.v2.access` → save `xoxb-` by `team_id`. **Later run:** load stored `xoxb-` + `SLACK_APP_TOKEN`; **no browser OAuth**. Re-install only when scopes change / revoke / new workspace.
+- **Q: Why both `xoxb-` and `xapp-`?**  
+  A: **`xoxb-`** = act as bot (Web API: post message, reactions). **`xapp-`** = open Socket Mode WebSocket only (`connections:write`). Delivery vs action — two keys.
+- **Q: Is local JSON token storage “how Slack / enterprise does it”?**  
+  A: **No.** OAuth *handshake* is standard; *storage* is our job. `slack_installations.json` = teaching simplification. Production: encrypted Installation Store / Vault / KMS keyed by org; SSO is for *humans* logging into consoles, not each Slack message.
+- **Q: Socket Mode vs Events API?**  
+  A: Same event *shape*; different *delivery*. Events API = Slack HTTPS POSTs your public URL (you are server). Socket Mode = you open outbound WebSocket (you are client; no ngrok). Socket carries **inbound events**; replies still use HTTPS Web API with `xoxb-`.
+- **Q: Does `slack.sh run` keep listening? Production too?**  
+  A: **Yes** — long-lived process (`connect` + wait). Enterprise also needs always-on receivers, but usually as a service + **ack fast / queue agent work** / multi-replica — not one laptop script running the LLM inline.
 - **Q: Why Socket Mode?**  
   A: Local dev without a public HTTPS URL (no ngrok). App-level `SLACK_APP_TOKEN` + bot token receive events over a WebSocket.
 - **Q: Slack OAuth vs GitHub OAuth?**  
@@ -88,6 +175,8 @@ Study this before starting M19.
   A: Default **`CHANNEL_PLAN_MODE=1`** (read-only). Non-plan: reply `approve` / `deny` in thread to resume interrupt.
 - **Q: Does `open_pull_request` push?**  
   A: **No.** Creates PR via `gh`/REST when `PR_DRY_RUN=0`; head branch must already exist on remote.
+- **Q: Why did multi-turn Slack replies repeat old turns?**  
+  A: Checkpointer returns the **full** transcript; Slack reply must format **only this turn** (after the latest HumanMessage) and skip echoing the user's message. Fixed in `format_agent_reply` / `messages_for_this_turn`.
 - Link: [M18](docs/milestones/M18-chat-channel-open-pr.md)
 
 ### M17 — Eval harness & cost/retry

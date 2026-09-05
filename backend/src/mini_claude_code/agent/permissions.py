@@ -34,6 +34,8 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "run_subagent",
         # M13: loading playbook text into context.
         "load_skill",
+        # M19: local format + tests (read-only side effects on CI logs only).
+        "ship_check",
     }
 )
 
@@ -46,6 +48,7 @@ MUTATING_TOOLS: frozenset[str] = frozenset(
         "remember_fact",
         "remember_note",
         "open_pull_request",
+        "git_push",
     }
 )
 

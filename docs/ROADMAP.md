@@ -53,13 +53,14 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 |---|---|---|
 | M17 | [Eval harness & cost/retry](milestones/M17-eval-harness-cost-retry.md) | **Done.** Eval cases + `mcc-eval`, LLM retry/backoff, `--usage` token footer. |
 | M18 | [Slack OAuth → agent → open PR](milestones/M18-chat-channel-open-pr.md) | **Done.** Slack OAuth + Socket Mode; `open_pull_request` via `GH_TOKEN`; M19 gate deferred. |
-| M19 | Pre-ship quality gate (format + test until green) | Before any PR or push: run formatter + full test suite; on failure, agent keeps editing/re-running until green (bounded retries). Owner may `git push` to the target branch; non-owner / default path opens a PR only. |
+| M19 | [Pre-ship quality gate](milestones/M19-pre-ship-quality-gate.md) | **Done.** `ship_check` (ruff + unit tests); gate `open_pull_request`; optional `git_push` when `SHIP_MODE=push`. |
 | M20 | Doc ingestion + production-ish memory pipeline | Chunking, cleaning, and metadata for project docs/notes; write into Neo4j and/or pgvector with clearer schemas. Local-first “production improvements” (still Compose on a laptop — few users). |
 | M21 | Elasticsearch (local Compose) | Add ES (or OpenSearch) to Compose for full-text / keyword search tools beside Neo4j (relations) and pgvector (semantic). Teach when ES wins vs graph vs vectors. |
 | M22 | Async agent runtime (drop MCP sync wrap) | End-to-end async invoke/stream path so MCP adapter tools run natively without `asyncio.run` sync wrap; align CLI / HITL resume / permission wrap with `ainvoke`. |
 | M23 | Plugin pack expansion (skills / MCP / subagents) | **Parked (industry parity).** Extend `plugin.yaml` to declare bundled skills, MCP server entries, and subagent YAML refs; merge into existing M13/M14/M12 planes — still Option B, no new graph nodes. |
 | M24 | Plugin hooks & discovery (industry) | **Parked (industry parity).** Shell/script hook runners (Claude Code–style); optional SessionStart-style lifecycle; interactive slash picker beyond list-only `/help`; reuse slash expand from M18 channels. |
 | M25 | Plugin install & trust (local-first) | **Parked (industry parity).** Install from path/git; versioned manifests; allowlist / deny-by-default for hook runners and MCP spawn; document gap vs signed marketplace — **simplification:** no npm store. |
+| M26 | MCP tool content policy & safety | **Parked (user request).** Content-aware guards on MCP (and builtin) tools — e.g. refuse reading a doc whose title/first line contains `no-ai`; contrast M9 tool-level ACL, M15 hooks, server-side vs client-side policy. |
 
 **M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. **Slack OAuth v2** for workspace install (bot token per `team_id`); **GitHub via `GH_TOKEN`** only (no GitHub OAuth in M18). Socket Mode for local dev; dry-run PR default; deny-by-default until M9/M10. Always call through **M19** so channel-triggered ships cannot skip CI-like checks. Reuse M16 `dispatch_slash_input` for messages that start with `/`.
 
@@ -77,6 +78,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 
 **M25 learning notes (when we get there):** Production plugins imply **trust**: signed packages, permission prompts, scoped MCP/network. Learning repo: `mcc plugins install ./path` or git clone into `workspace/plugins/`; manifest `version` + `requires`; block unknown hook runners until allowlisted. Label what a real marketplace still needs (signing, updates, org policy). Do not silently auto-load arbitrary Python from plugin paths (M16 deliberately avoided this).
 
+**M26 learning notes (when we get there):** M9 answers “may this *tool* run?” (auto/ask/deny). M15 hooks can audit/block by *name/args*. M26 teaches **content-aware policy**: after (or before) an MCP read, inspect title / first line / metadata for markers like `no-ai` / `CONFIDENTIAL` and return a deny string so the model never sees the body. Teaching demo: in-repo fake “docs” MCP (or fixture files) — **not** live Google Docs OAuth unless opted in. Contrast **server-enforced** policy (MCP server refuses) vs **client wrap** after `get_tools` (our agent cannot trust a hostile server). Prefer fail-closed; label that real Google Docs needs Drive API + shared labels/ACLs, not only a first-line convention.
 ## Status legend
 
 Milestone files use: `Planned` / `In Progress` / `Done`. Only M0 has a full Plan doc so far; later files are created when we enter that milestone.

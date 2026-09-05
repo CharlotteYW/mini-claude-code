@@ -18,6 +18,7 @@ from mini_claude_code.tools.mcp_loader import (
 )
 from mini_claude_code.tools.memory_tools import build_memory_tools
 from mini_claude_code.tools.shell import build_shell_tools
+from mini_claude_code.tools.ship import apply_ship_gate_to_tools, build_ship_tools
 
 
 def build_default_tools(
@@ -39,6 +40,11 @@ def build_default_tools(
 
     root = workspace_root.expanduser().resolve()
     settings = settings or get_settings()
+    ship_tools, ship_gate = build_ship_tools(root, settings=settings)
+    pr_tools = apply_ship_gate_to_tools(
+        build_github_pr_tools(root, settings=settings),
+        ship_gate,
+    )
     builtin: list[BaseTool] = [
         *build_coding_tools(root),
         *build_shell_tools(
@@ -49,7 +55,8 @@ def build_default_tools(
             docker_network=settings.shell_docker_network,
         ),
         *build_git_tools(root),
-        *build_github_pr_tools(root, settings=settings),
+        *ship_tools,
+        *pr_tools,
         *build_memory_tools(settings),
         *build_subagent_tools(
             root,

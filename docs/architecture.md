@@ -2,25 +2,24 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M18 complete  
+**Last updated:** M19 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M18)
+## Current status (M19)
 
 | Piece | Status |
 |---|---|
 | Core ReAct + tools + sessions + stream | M2–M6 |
 | Compact + memory + permissions + HITL + sandbox | M7–M11 |
 | Sub-agents / Skills / MCP / Hooks | M12–M15 |
-| Plugins & slash commands | M16 |
-| Eval harness / retry / usage | M17 |
-| Slack OAuth channel + open PR | **M18 Done** |
+| Plugins & slash / eval / Slack | M16–M18 |
+| Pre-ship quality gate | **M19 Done** |
 
-Slack: OAuth install → `workspace/slack_installations.json` → Socket Mode → same graph. PR: `open_pull_request` + `GH_TOKEN` (dry-run default).
+Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
 ## ReAct core (M2–M11)
 
@@ -67,6 +66,7 @@ flowchart TB
     Memory[Memory inject]
     Retry[LLM retry backoff]
     Usage[Token usage accounting]
+    Ship[ship_check gate]
   end
   subgraph eval [Eval harness outside graph]
     EvalRunner[mcc-eval cases]
@@ -82,6 +82,7 @@ flowchart TB
   Perm --> HITL
   HITL -->|approved| Sandbox[Docker sandbox]
   Sandbox -->|results| Tools
+  Ship -.->|before PR| Tools
 ```
 
 ### Why this split
@@ -89,7 +90,7 @@ flowchart TB
 | Layer | Responsibility | Without it |
 |---|---|---|
 | Core ReAct loop | Cognition: model ↔ tools | Manual `while` loops that cannot checkpoint/interrupt cleanly |
-| Policy / extension plane | Permissions, hooks, skills, MCP, compaction, memory, sandbox | Every concern becomes another graph node; graph becomes a god-object |
+| Policy / extension plane | Permissions, hooks, skills, MCP, compaction, memory, sandbox, ship gate | Every concern becomes another graph node; graph becomes a god-object |
 
 Rejected alternatives:
 
@@ -135,5 +136,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M6 Done** — [milestones/M6-streaming-cli.md](milestones/M6-streaming-cli.md)
 - **M7 Done** — [milestones/M7-context-compaction.md](milestones/M7-context-compaction.md)
 - **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
-- **M9–M18 Done** — permissions through Slack channel — see [ROADMAP.md](ROADMAP.md)
+- **M9–M19 Done** — permissions through ship gate — see [ROADMAP.md](ROADMAP.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

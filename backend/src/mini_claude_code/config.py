@@ -129,6 +129,11 @@ class Settings(BaseSettings):
     gh_token: str | None = Field(default=None, alias="GH_TOKEN")
     pr_dry_run: bool = Field(default=True, alias="PR_DRY_RUN")
 
+    # Pre-ship quality gate (M19).
+    ship_require_green: bool = Field(default=True, alias="SHIP_REQUIRE_GREEN")
+    ship_max_fix_iters: int = Field(default=3, alias="SHIP_MAX_FIX_ITERS")
+    ship_mode: str = Field(default="pr", alias="SHIP_MODE")
+
 
 def repo_root() -> Path:
     """mini-claude-code repo root (…/backend/src/mini_claude_code → parents[3])."""
