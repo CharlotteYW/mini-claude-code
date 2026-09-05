@@ -28,6 +28,7 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "recall_facts",
         "recall_notes",
         "search_chunks",
+        "search_keyword",
         # Demo / tests (M1) + M14 in-repo MCP echo_math demos
         "add",
         "echo",

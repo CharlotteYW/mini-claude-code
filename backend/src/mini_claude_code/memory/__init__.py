@@ -1,5 +1,6 @@
-"""Memory package — durable stores outside the chat transcript (M8/M20)."""
+"""Memory package — durable stores outside the chat transcript (M8/M20/M21)."""
 
+from mini_claude_code.memory.elasticsearch_chunks import KeywordChunkHit, search_keyword
 from mini_claude_code.memory.ingest import TextChunk, chunk_text, clean_text
 from mini_claude_code.memory.neo4j_facts import (
     MemoryFact,
@@ -18,6 +19,7 @@ from mini_claude_code.memory.pipeline import IngestResult, ingest_paths
 
 __all__ = [
     "IngestResult",
+    "KeywordChunkHit",
     "MemoryChunkHit",
     "MemoryFact",
     "MemoryNote",
@@ -32,4 +34,5 @@ __all__ = [
     "remember_fact",
     "remember_note",
     "search_chunks",
+    "search_keyword",
 ]

@@ -122,6 +122,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 | Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | `PostgresSaver` via `open_checkpointer` (M5); MemorySaver optional |
 | Vectors | `pgvector` + `memory_notes` + `memory_chunks` | M8-B notes; M20 ingest chunks (`doc_id`, path, index) via Ollama embed |
 | Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8 `Fact`; M20 `Document`/`Chunk` + `HAS_CHUNK`/`NEXT` |
+| Full-text | Elasticsearch (`mcc-elasticsearch`, `:9200`) | M21: `mcc_chunks` index + `search_keyword` (BM25) |
 | Sandbox | Docker SDK ephemeral containers | M11; host subprocess until then (labeled insecure) |
 | Frontend | Deferred | Until streaming/trace visualization helps learning |
 
@@ -138,4 +139,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M8 Done** — [milestones/M8-project-long-term-memory.md](milestones/M8-project-long-term-memory.md)
 - **M9–M19 Done** — permissions through ship gate — see [ROADMAP.md](ROADMAP.md)
 - **M20 Done** — [milestones/M20-doc-ingestion-memory-pipeline.md](milestones/M20-doc-ingestion-memory-pipeline.md)
+- **M21 Done** — [milestones/M21-elasticsearch-fulltext.md](milestones/M21-elasticsearch-fulltext.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

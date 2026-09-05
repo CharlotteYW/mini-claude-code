@@ -1,6 +1,6 @@
-"""Store-agnostic ingest orchestration (M20).
+"""Store-agnostic ingest orchestration (M20/M21).
 
-Pipeline: resolve paths → chunk → write pgvector and/or Neo4j.
+Pipeline: resolve paths → chunk → write pgvector and/or Neo4j and/or Elasticsearch.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from mini_claude_code.config import Settings, get_settings
+from mini_claude_code.memory.elasticsearch_chunks import write_chunks_es
 from mini_claude_code.memory.ingest import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
@@ -27,12 +28,14 @@ class IngestResult:
     chunks: list[TextChunk] = field(default_factory=list)
     pgvector_written: int = 0
     neo4j_written: int = 0
+    elasticsearch_written: int = 0
     errors: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
         lines = [
             f"ingested files={len(self.files)} chunks={len(self.chunks)} "
-            f"pgvector={self.pgvector_written} neo4j={self.neo4j_written}"
+            f"pgvector={self.pgvector_written} neo4j={self.neo4j_written} "
+            f"elasticsearch={self.elasticsearch_written}"
         ]
         for p in self.files:
             n = sum(1 for c in self.chunks if c.source_path == p)
@@ -63,10 +66,11 @@ def ingest_paths(
     embedder: Embedder | None = None,
     write_pgvector: bool = True,
     write_neo4j: bool = True,
+    write_elasticsearch: bool = True,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
 ) -> IngestResult:
-    """Jail-resolve ``pattern_or_path``, chunk files, dual-write stores."""
+    """Jail-resolve ``pattern_or_path``, chunk files, triple-write stores."""
     settings = settings or get_settings()
     root = workspace_root.expanduser().resolve()
     result = IngestResult()
@@ -128,5 +132,13 @@ def ingest_paths(
             )
         except Exception as exc:  # noqa: BLE001
             result.errors.append(f"neo4j: {exc}")
+
+    if write_elasticsearch:
+        try:
+            result.elasticsearch_written = write_chunks_es(
+                all_chunks, settings=settings, replace=True
+            )
+        except Exception as exc:  # noqa: BLE001
+            result.errors.append(f"elasticsearch: {exc}")
 
     return result

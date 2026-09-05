@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M21: Elasticsearch full-text
+
+- Shipped: Compose `mcc-elasticsearch`; `elasticsearch_chunks.py`; triple-write ingest; tool `search_keyword`; `./scripts/m21-demo.sh`.
+- Insight: **BM25 answers exact tokens**; cosine answers paraphrase; Neo4j answers structure — three stores, one ingest pipeline. Hybrid re-rank is a later dig.
+- See Concept Q&A index (M21) below; Results: [M21](docs/milestones/M21-elasticsearch-fulltext.md).
+
+---
+
 ## 2026-09-05 — Dig: Neo4j dual-write is scaffolding for next steps?
 
 - **Q: So Neo4j Document/Chunk (+ edges) is mainly paving the road for later?**  
@@ -190,9 +198,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M20 study guide)
+## Concept Q&A index (M0–M21 study guide)
 
-Study this before starting the next milestone (M21 or M26 if prioritized).
+Study this before starting the next milestone (M22 or M26 if prioritized).
+
+### M21 — Elasticsearch full-text
+
+- **Q: Does `search_keyword` reimplement BM25?**  
+  A: **No.** ES owns the inverted index + BM25. We index chunk docs and call `multi_match`; the engine scores.
+- **Q: Why a separate tool instead of folding into `search_chunks`?**  
+  A: Different retrieval family. One tool that “sometimes semantic sometimes keyword” hides the lesson. Agent (and you) should **choose** ES vs vectors on purpose.
+- **Q: When ES vs pgvector vs Neo4j?**  
+  A: **ES** = exact tokens / must-contain. **pgvector** = paraphrase / fuzzy intent. **Neo4j** = relations + M8 Facts (CONTAINS remains a weak emergency path only).
+- **Q: Is hybrid in M21?**  
+  A: **No** — deferred dig (ES filter + vector re-rank). First learn each store alone.
+- Link: [M21](docs/milestones/M21-elasticsearch-fulltext.md)
 
 ### M20 — Doc ingestion & memory pipeline
 

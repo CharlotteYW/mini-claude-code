@@ -1,6 +1,6 @@
-"""Inspect Compose-backed stores (Postgres checkpointer + Neo4j).
+"""Inspect Compose-backed stores (Postgres, Neo4j, Elasticsearch).
 
-Teaching helper: see what durable sessions actually look like in the DB,
+Teaching helper: see what durable sessions / memory indexes look like,
 without dumping opaque checkpoint blobs by default.
 """
 
@@ -13,7 +13,7 @@ from typing import Literal
 
 from mini_claude_code.config import Settings, get_settings
 
-Target = Literal["all", "postgres", "neo4j"]
+Target = Literal["all", "postgres", "neo4j", "elasticsearch"]
 
 CHECKPOINT_TABLES = (
     "checkpoints",
@@ -232,15 +232,50 @@ def inspect_neo4j(settings: Settings) -> int:
     return 0
 
 
+def inspect_elasticsearch(settings: Settings) -> int:
+    print("=== Elasticsearch (full-text chunks — M21) ===")
+    print(f"  url: {settings.elasticsearch_url}")
+    print(f"  index: {settings.elasticsearch_index}")
+    try:
+        from elasticsearch import Elasticsearch
+    except ImportError:
+        print(
+            "ERROR: elasticsearch package not installed (run ./scripts/setup.sh)",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        client = Elasticsearch(settings.elasticsearch_url)
+        if not client.ping():
+            print("ERROR: Elasticsearch ping failed", file=sys.stderr)
+            return 1
+        info = client.info()
+        print(f"  cluster: {info.get('cluster_name')}  version: {info.get('version', {}).get('number')}")
+        index = settings.elasticsearch_index
+        if not client.indices.exists(index=index):
+            print(f"  index {index!r}: (missing — created on first ingest_docs)")
+            return 0
+        count = client.count(index=index).get("count", 0)
+        print(f"  docs in {index}: {count}")
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"ERROR: Elasticsearch unreachable ({exc}). "
+            "Start with: docker compose --env-file .env up -d elasticsearch",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Inspect Postgres checkpointer tables and/or Neo4j graph."
+        description="Inspect Postgres, Neo4j, and/or Elasticsearch stores."
     )
     parser.add_argument(
         "target",
         nargs="?",
         default="all",
-        choices=["all", "postgres", "neo4j"],
+        choices=["all", "postgres", "neo4j", "elasticsearch"],
         help="Which store to inspect (default: all).",
     )
     parser.add_argument(
@@ -262,6 +297,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.thread_id and target == "neo4j":
             print("Note: --thread-id applies to Postgres only.", file=sys.stderr)
         codes.append(inspect_neo4j(settings))
+    if target in ("all", "elasticsearch"):
+        codes.append(inspect_elasticsearch(settings))
     return 1 if any(codes) else 0
 
 

@@ -1,4 +1,4 @@
-"""LangChain tools for Neo4j facts + pgvector notes + doc ingest (M8/M20)."""
+"""LangChain tools for Neo4j facts + pgvector notes + doc ingest (M8/M20/M21)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 from langchain_core.tools import tool
 
 from mini_claude_code.config import Settings, get_settings
+from mini_claude_code.memory.elasticsearch_chunks import search_keyword
 from mini_claude_code.memory.neo4j_docs import search_chunks_keyword
 from mini_claude_code.memory.neo4j_facts import recall_facts, remember_fact
 from mini_claude_code.memory.pgvector_chunks import search_chunks
@@ -19,7 +20,7 @@ def build_memory_tools(
     *,
     workspace_root: Path | None = None,
 ) -> list:
-    """Neo4j fact tools + pgvector notes + M20 ingest/search."""
+    """Neo4j fact tools + pgvector notes + ingest/search (semantic + keyword)."""
     settings = settings or get_settings()
     from mini_claude_code.config import resolve_workspace_root
 
@@ -93,12 +94,13 @@ def build_memory_tools(
 
     @tool
     def ingest_docs_tool(path: str) -> str:
-        """Ingest workspace markdown/text into pgvector + Neo4j (chunked with metadata).
+        """Ingest workspace markdown/text into pgvector + Neo4j + Elasticsearch.
 
         ``path`` is a file, directory, or glob under the workspace (e.g. docs/
-        or docs/*.md). Cleans, chunks, embeds, and dual-writes Document/Chunk
-        nodes plus memory_chunks rows. Re-ingest replaces prior chunks for
-        the same source path. Prefer this over remember_note for whole docs.
+        or docs/*.md). Cleans, chunks, embeds, and writes Document/Chunk nodes,
+        memory_chunks rows, and the ES ``mcc_chunks`` index. Re-ingest replaces
+        prior chunks for the same source path. Prefer this over remember_note
+        for whole docs.
         """
         try:
             result = ingest_paths(path, workspace_root=root, settings=settings)
@@ -111,13 +113,12 @@ def build_memory_tools(
         """Semantically search ingested document chunks (pgvector) by meaning.
 
         Returns text with source_path and chunk_index for citation. Use after
-        ingest_docs. For ad-hoc blurbs use recall_notes; for crisp facts use
-        recall_facts.
+        ingest_docs. Prefer search_keyword for exact tokens / error codes.
+        For ad-hoc blurbs use recall_notes; for crisp facts use recall_facts.
         """
         try:
             hits = search_chunks(query, limit=limit, settings=settings)
         except Exception as exc:  # noqa: BLE001
-            # Fall back to Neo4j keyword if embed/pg unavailable.
             try:
                 kw = search_chunks_keyword(query, limit=limit, settings=settings)
             except Exception as exc2:  # noqa: BLE001
@@ -141,12 +142,36 @@ def build_memory_tools(
             )
         return "\n".join(lines)
 
+    @tool
+    def search_keyword_tool(query: str, limit: int = 5) -> str:
+        """Full-text / BM25 search over ingested chunks in Elasticsearch.
+
+        Prefer this for exact markers, error codes, and must-contain tokens.
+        Prefer search_chunks when the user paraphrases and meaning matters more
+        than exact wording. Requires Compose Elasticsearch and prior ingest_docs.
+        """
+        try:
+            hits = search_keyword(query, limit=limit, settings=settings)
+        except Exception as exc:  # noqa: BLE001
+            return f"ERROR search_keyword: {exc}"
+        if not hits:
+            return "No keyword hits. Try ingest_docs first or a more exact token."
+        lines = []
+        for h in hits:
+            score = f" score={h.score:.3f}" if h.score is not None else ""
+            title = f" title={h.title!r}" if h.title else ""
+            lines.append(
+                f"- [{h.source_path}#{h.chunk_index}{title}{score}] {h.text}"
+            )
+        return "\n".join(lines)
+
     remember_fact_tool.name = "remember_fact"
     recall_facts_tool.name = "recall_facts"
     remember_note_tool.name = "remember_note"
     recall_notes_tool.name = "recall_notes"
     ingest_docs_tool.name = "ingest_docs"
     search_chunks_tool.name = "search_chunks"
+    search_keyword_tool.name = "search_keyword"
     return [
         remember_fact_tool,
         recall_facts_tool,
@@ -154,4 +179,5 @@ def build_memory_tools(
         recall_notes_tool,
         ingest_docs_tool,
         search_chunks_tool,
+        search_keyword_tool,
     ]

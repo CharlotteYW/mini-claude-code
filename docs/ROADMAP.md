@@ -55,7 +55,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M18 | [Slack OAuth → agent → open PR](milestones/M18-chat-channel-open-pr.md) | **Done.** Slack OAuth + Socket Mode; `open_pull_request` via `GH_TOKEN`; M19 gate deferred. |
 | M19 | [Pre-ship quality gate](milestones/M19-pre-ship-quality-gate.md) | **Done.** `ship_check` (ruff + unit tests); gate `open_pull_request`; optional `git_push` when `SHIP_MODE=push`. |
 | M20 | [Doc ingestion & memory pipeline](milestones/M20-doc-ingestion-memory-pipeline.md) | **Done.** Chunk/clean/metadata ingest → pgvector `memory_chunks` + Neo4j Document/Chunk; `ingest_docs` / `search_chunks`. |
-| M21 | Elasticsearch (local Compose) | Add ES (or OpenSearch) to Compose for full-text / keyword search tools beside Neo4j (relations) and pgvector (semantic). Teach when ES wins vs graph vs vectors. |
+| M21 | [Elasticsearch (local full-text)](milestones/M21-elasticsearch-fulltext.md) | **Done.** Compose ES; `search_keyword` BM25; triple-write ingest with M20 chunks. |
 | M22 | Async agent runtime (drop MCP sync wrap) | End-to-end async invoke/stream path so MCP adapter tools run natively without `asyncio.run` sync wrap; align CLI / HITL resume / permission wrap with `ainvoke`. |
 | M23 | Plugin pack expansion (skills / MCP / subagents) | **Parked (industry parity).** Extend `plugin.yaml` to declare bundled skills, MCP server entries, and subagent YAML refs; merge into existing M13/M14/M12 planes — still Option B, no new graph nodes. |
 | M24 | Plugin hooks & discovery (industry) | **Parked (industry parity).** Shell/script hook runners (Claude Code–style); optional SessionStart-style lifecycle; interactive slash picker beyond list-only `/help`; reuse slash expand from M18 channels. |

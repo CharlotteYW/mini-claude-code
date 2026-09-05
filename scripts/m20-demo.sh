@@ -39,7 +39,7 @@ print(result.summary())
 # Soft-fail: Neo4j-only still teaches pipeline; pgvector needs embed model.
 if not result.chunks:
     raise SystemExit(1)
-if result.errors and result.neo4j_written == 0 and result.pgvector_written == 0:
+if result.errors and result.neo4j_written == 0 and result.pgvector_written == 0 and result.elasticsearch_written == 0:
     raise SystemExit(1)
 if result.errors:
     print("(continuing with partial write — see ERROR lines above)")
@@ -51,10 +51,19 @@ PY
 from mini_claude_code.config import get_settings
 from mini_claude_code.memory.pgvector_chunks import search_chunks
 from mini_claude_code.memory.neo4j_docs import search_chunks_keyword
+from mini_claude_code.memory.elasticsearch_chunks import search_keyword
 
 get_settings.cache_clear()
 settings = get_settings()
 marker = "${MARKER}"
+
+print("--- Elasticsearch BM25 ---")
+try:
+    for h in search_keyword(marker, limit=3, settings=settings):
+        score = f"{h.score:.3f}" if h.score is not None else "?"
+        print(f"  [{h.source_path}#{h.chunk_index} score={score}] {h.text[:160]!r}")
+except Exception as exc:
+    print(f"  (skip/fail: {exc})")
 
 print("--- Neo4j keyword ---")
 try:

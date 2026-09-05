@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     neo4j_user: str = Field(default="neo4j", alias="NEO4J_USER")
     neo4j_password: str = Field(default="mini-claude-code", alias="NEO4J_PASSWORD")
 
+    # Elasticsearch full-text (M21). Local Compose; no auth in learning setup.
+    elasticsearch_url: str = Field(
+        default="http://localhost:9200", alias="ELASTICSEARCH_URL"
+    )
+    elasticsearch_index: str = Field(default="mcc_chunks", alias="ELASTICSEARCH_INDEX")
+
     # Agent filesystem jail (M3). Empty → <repo>/workspace
     workspace_root: str = Field(default="", alias="WORKSPACE_ROOT")
 
