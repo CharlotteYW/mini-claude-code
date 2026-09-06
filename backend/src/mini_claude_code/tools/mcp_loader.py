@@ -33,6 +33,11 @@ def echo_math_server_script() -> Path:
     return Path(__file__).resolve().parents[1] / "mcp_servers" / "echo_math.py"
 
 
+def fake_docs_server_script() -> Path:
+    """Absolute path to the M26 fake docs MCP server."""
+    return Path(__file__).resolve().parents[1] / "mcp_servers" / "fake_docs.py"
+
+
 def default_demo_connections() -> dict[str, dict[str, Any]]:
     """Stdio connection dict for the packaged echo_math server."""
     return {
@@ -40,6 +45,17 @@ def default_demo_connections() -> dict[str, dict[str, Any]]:
             "transport": "stdio",
             "command": sys.executable,
             "args": [str(echo_math_server_script())],
+        }
+    }
+
+
+def fake_docs_connections() -> dict[str, dict[str, Any]]:
+    """Stdio connection for fake_docs (content-policy teaching server)."""
+    return {
+        "fake_docs": {
+            "transport": "stdio",
+            "command": sys.executable,
+            "args": [str(fake_docs_server_script())],
         }
     }
 
@@ -69,7 +85,8 @@ def load_mcp_connections_file(path: Path) -> dict[str, dict[str, Any]]:
 def resolve_mcp_connections(settings: Settings | None = None) -> dict[str, dict[str, Any]]:
     """Resolve opt-in MCP servers from settings.
 
-    Priority: ``MCP_CONFIG_PATH`` > ``MCP_CONFIG`` > ``MCP_USE_DEMO``.
+    Priority: ``MCP_CONFIG_PATH`` > ``MCP_CONFIG`` > demo flags.
+    Demo flags: ``MCP_USE_DEMO`` (echo_math) and/or ``MCP_USE_FAKE_DOCS`` (M26).
     Empty / all off → {} (no MCP tools).
     """
     settings = settings or get_settings()
@@ -79,9 +96,12 @@ def resolve_mcp_connections(settings: Settings | None = None) -> dict[str, dict[
     inline = settings.mcp_config.strip()
     if inline:
         return parse_mcp_connections_json(inline)
+    out: dict[str, dict[str, Any]] = {}
     if settings.mcp_use_demo:
-        return default_demo_connections()
-    return {}
+        out.update(default_demo_connections())
+    if settings.mcp_use_fake_docs:
+        out.update(fake_docs_connections())
+    return out
 
 
 def merge_tools_reject_collisions(

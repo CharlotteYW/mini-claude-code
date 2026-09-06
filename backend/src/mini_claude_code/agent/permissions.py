@@ -32,6 +32,9 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         # Demo / tests (M1) + M14 in-repo MCP echo_math demos
         "add",
         "echo",
+        # M26 fake docs MCP
+        "list_docs",
+        "read_doc",
         # M12: delegation is orchestration; child tools are still permissioned.
         "run_subagent",
         # M13: loading playbook text into context.

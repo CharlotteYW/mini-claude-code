@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M26: MCP content policy
+
+- Shipped: `content_policy.py`; `fake_docs` MCP + fixtures; client wrap on `read_*` / optional `read_file`; `MCP_USE_FAKE_DOCS`; `./scripts/m26-demo.sh`.
+- Insight: **Tool ACL ≠ content policy.** M9 allows `read_doc`; M26 still withholds `no-ai` bodies. Client wrap is defense-in-depth; **server-enforced** is the trust boundary.
+- See Concept Q&A index (M26); Results: [M26](docs/milestones/M26-mcp-content-policy.md).
+
+---
+
 ## 2026-09-05 — M22: Async agent runtime
 
 - Shipped: permission/hook **coroutines**; CLI default `ainvoke`/`astream` + `--sync`; MCP shim flagged; `ainvoke_with_hitl`.
@@ -206,9 +214,23 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M22 study guide)
+## Concept Q&A index (M0–M26 study guide)
 
-Study this before starting the next milestone (M23 parked / M26 user-parked / or next active).
+Study this before starting the next milestone (M23–M25 parked industry lane, or next active).
+
+### M26 — MCP content policy & safety
+
+- **Q: How is M26 different from M9 permissions?**  
+  A: M9 gates **tool names** (auto/ask/deny). M26 inspects **returned text** (title / first line / H1 markers). A tool can be auto-allowed and still return `CONTENT_POLICY_DENIED`.
+- **Q: How is M26 different from M15 hooks?**  
+  A: Hooks see **name/args** (and can audit after). They do not, by default, parse document bodies for DLP markers. Content policy is a dedicated result screen.
+- **Q: Why both server deny and client wrap?**  
+  A: **Server** = source of truth; hostile/forgetful MCP cannot be fixed by client alone. **Client wrap** = defense-in-depth + same rules for builtin `read_file`. Teaching both clarifies the trust boundary.
+- **Q: Without M26, what degrades?**  
+  A: Any permitted `read_doc` / `read_file` can dump confidential text into the transcript → model context forever (and logs).
+- **Q: Is first-line `no-ai` production-ready?**  
+  A: **Simplification.** Real Drive/Docs need labels, ACLs, and store-side enforcement — not only a markdown convention.
+- Link: [M26](docs/milestones/M26-mcp-content-policy.md)
 
 ### M22 — Async agent runtime
 

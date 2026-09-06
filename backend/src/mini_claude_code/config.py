@@ -101,6 +101,17 @@ class Settings(BaseSettings):
     mcp_config: str = Field(default="", alias="MCP_CONFIG")
     mcp_config_path: str = Field(default="", alias="MCP_CONFIG_PATH")
     mcp_use_demo: bool = Field(default=False, alias="MCP_USE_DEMO")
+    # M26: in-repo fake docs MCP (list_docs / read_doc + server content policy).
+    mcp_use_fake_docs: bool = Field(default=False, alias="MCP_USE_FAKE_DOCS")
+
+    # Content policy (M26): screen read results for no-ai / CONFIDENTIAL markers.
+    content_policy_enabled: bool = Field(default=True, alias="CONTENT_POLICY_ENABLED")
+    content_policy_markers: str = Field(
+        default="no-ai,CONFIDENTIAL", alias="CONTENT_POLICY_MARKERS"
+    )
+    content_policy_wrap_builtin_read: bool = Field(
+        default=True, alias="CONTENT_POLICY_WRAP_BUILTIN_READ"
+    )
 
     # Lifecycle hooks (M15). Priority: HOOKS_CONFIG_PATH > workspace/hooks.yaml > HOOKS_USE_DEMO.
     hooks_config_path: str = Field(default="", alias="HOOKS_CONFIG_PATH")

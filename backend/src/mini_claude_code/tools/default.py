@@ -9,8 +9,8 @@ from langchain_core.tools import BaseTool
 
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.tools.fs import build_coding_tools
-from mini_claude_code.tools.github_pr import build_github_pr_tools
 from mini_claude_code.tools.git_tools import build_git_tools
+from mini_claude_code.tools.github_pr import build_github_pr_tools
 from mini_claude_code.tools.mcp_loader import (
     load_mcp_tools_sync,
     merge_tools_reject_collisions,
@@ -66,8 +66,18 @@ def build_default_tools(
         ),
         *build_skill_tools(root),
     ]
+    # M26: screen builtin read_file results (defense in depth vs no-ai files).
+    if settings.content_policy_enabled and settings.content_policy_wrap_builtin_read:
+        from mini_claude_code.content_policy import apply_content_policy_wrap
+
+        builtin = apply_content_policy_wrap(builtin, settings=settings)
+
     connections = resolve_mcp_connections(settings)
     if not connections:
         return builtin
     mcp_tools = load_mcp_tools_sync(connections, settings=settings)
+    if settings.content_policy_enabled:
+        from mini_claude_code.content_policy import apply_content_policy_wrap
+
+        mcp_tools = apply_content_policy_wrap(mcp_tools, settings=settings)
     return merge_tools_reject_collisions(builtin, mcp_tools)

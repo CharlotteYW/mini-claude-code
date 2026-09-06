@@ -62,6 +62,7 @@ flowchart TB
     Hooks[Lifecycle hooks]
     Skills[Skills progressive disclosure]
     MCP[MCP tool merge]
+    ContentPolicy[Content policy M26]
     Compact[Context compact]
     Memory[Memory inject]
     Retry[LLM retry backoff]
@@ -81,16 +82,19 @@ flowchart TB
   Hooks --> Perm
   Perm --> HITL
   HITL -->|approved| Sandbox[Docker sandbox]
-  Sandbox -->|results| Tools
+  Sandbox -->|results| ContentPolicy
+  ContentPolicy -->|screened ToolMessage| Tools
   Ship -.->|before PR| Tools
 ```
+
+Note: Content policy also runs **inside** MCP servers that enforce it (e.g. `fake_docs`); the plane node above is the **client wrap** path on returned text.
 
 ### Why this split
 
 | Layer | Responsibility | Without it |
 |---|---|---|
 | Core ReAct loop | Cognition: model ↔ tools | Manual `while` loops that cannot checkpoint/interrupt cleanly |
-| Policy / extension plane | Permissions, hooks, skills, MCP, compaction, memory, sandbox, ship gate | Every concern becomes another graph node; graph becomes a god-object |
+| Policy / extension plane | Permissions, hooks, skills, MCP, content policy, compaction, memory, sandbox, ship gate | Every concern becomes another graph node; graph becomes a god-object |
 
 Rejected alternatives:
 
@@ -141,4 +145,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M20 Done** — [milestones/M20-doc-ingestion-memory-pipeline.md](milestones/M20-doc-ingestion-memory-pipeline.md)
 - **M21 Done** — [milestones/M21-elasticsearch-fulltext.md](milestones/M21-elasticsearch-fulltext.md)
 - **M22 Done** — [milestones/M22-async-agent-runtime.md](milestones/M22-async-agent-runtime.md)
+- **M26 Done** — [milestones/M26-mcp-content-policy.md](milestones/M26-mcp-content-policy.md) (M23–M25 parked)
 - Full list: [ROADMAP.md](ROADMAP.md)
