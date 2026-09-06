@@ -82,26 +82,39 @@ def load_mcp_connections_file(path: Path) -> dict[str, dict[str, Any]]:
     return parse_mcp_connections_json(text)
 
 
-def resolve_mcp_connections(settings: Settings | None = None) -> dict[str, dict[str, Any]]:
-    """Resolve opt-in MCP servers from settings.
+def resolve_mcp_connections(
+    settings: Settings | None = None,
+    *,
+    plugins: list[Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Resolve opt-in MCP servers from settings, then merge plugin MCP (M23).
 
-    Priority: ``MCP_CONFIG_PATH`` > ``MCP_CONFIG`` > demo flags.
+    Priority for *base*: ``MCP_CONFIG_PATH`` > ``MCP_CONFIG`` > demo flags.
     Demo flags: ``MCP_USE_DEMO`` (echo_math) and/or ``MCP_USE_FAKE_DOCS`` (M26).
-    Empty / all off → {} (no MCP tools).
+    Plugin ``mcp:`` entries are unioned afterward; duplicate server name → error.
+    Empty / all off / no plugins → {} (no MCP tools).
     """
     settings = settings or get_settings()
     path_raw = settings.mcp_config_path.strip()
     if path_raw:
-        return load_mcp_connections_file(Path(path_raw).expanduser().resolve())
-    inline = settings.mcp_config.strip()
-    if inline:
-        return parse_mcp_connections_json(inline)
-    out: dict[str, dict[str, Any]] = {}
-    if settings.mcp_use_demo:
-        out.update(default_demo_connections())
-    if settings.mcp_use_fake_docs:
-        out.update(fake_docs_connections())
-    return out
+        base = load_mcp_connections_file(Path(path_raw).expanduser().resolve())
+    else:
+        inline = settings.mcp_config.strip()
+        if inline:
+            base = parse_mcp_connections_json(inline)
+        else:
+            base = {}
+            if settings.mcp_use_demo:
+                base.update(default_demo_connections())
+            if settings.mcp_use_fake_docs:
+                base.update(fake_docs_connections())
+
+    if not plugins:
+        return base
+
+    from mini_claude_code.agent.plugins import merge_mcp_connections
+
+    return merge_mcp_connections(base, plugins)
 
 
 def merge_tools_reject_collisions(
@@ -139,7 +152,7 @@ def _normalize_mcp_result(result: Any) -> Any:
             if isinstance(block, dict) and block.get("type") == "text":
                 texts.append(str(block.get("text", "")))
             elif hasattr(block, "text"):
-                texts.append(str(getattr(block, "text")))
+                texts.append(str(block.text))
             else:
                 return result
         if texts:

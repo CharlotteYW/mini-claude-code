@@ -1,0 +1,17 @@
+name: research
+description: >
+  Teaching pack (M23): bundled skill + subagent for document-oriented research
+  (merge into M13/M12 planes — not a new graph node).
+slash_commands:
+  research:
+    description: Research a topic using the doc-research skill and doc-scout subagent.
+    template: |
+      Research the following topic. Prefer load_skill("doc-research") for the
+      playbook, and run_subagent("doc-scout", ...) for a read-only file pass when
+      useful. Return a short structured answer.
+
+      Topic: {{args}}
+skills:
+  - skills/doc-research
+subagents:
+  - subagents/doc-scout.yaml

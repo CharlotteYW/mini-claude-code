@@ -72,13 +72,27 @@ def parse_skill_md(path: Path) -> SkillDef:
     return SkillDef(name=name, description=description, body=body, path=path)
 
 
-def load_skill_defs(workspace_root: Path) -> dict[str, SkillDef]:
-    """Load ``skills/*/SKILL.md``."""
+def load_skill_defs(
+    workspace_root: Path,
+    *,
+    extra: dict[str, SkillDef] | None = None,
+) -> dict[str, SkillDef]:
+    """Load ``skills/*/SKILL.md`` plus optional plugin extras (M23).
+
+    Name collision between workspace and ``extra`` → ValueError (fail closed).
+    """
     root = ensure_example_skills(workspace_root)
     found: dict[str, SkillDef] = {}
     for skill_md in sorted(root.glob(f"*/{SKILL_FILE_NAME}")):
         defn = parse_skill_md(skill_md)
         found[defn.name] = defn
+    for name, defn in (extra or {}).items():
+        if name in found:
+            raise ValueError(
+                f"Duplicate skill {name!r}: workspace {found[name].path} "
+                f"vs plugin asset {defn.path}"
+            )
+        found[name] = defn
     return found
 
 
@@ -118,9 +132,11 @@ def collect_loaded_skill_bodies(messages: list[BaseMessage]) -> dict[str, str]:
 def inject_skills_view(
     messages: list[BaseMessage],
     workspace_root: Path,
+    *,
+    extra_skills: dict[str, SkillDef] | None = None,
 ) -> list[BaseMessage]:
     """Prepend catalog (L0) and any loaded skill bodies (L1) for the prompt view."""
-    defs = load_skill_defs(workspace_root)
+    defs = load_skill_defs(workspace_root, extra=extra_skills)
     catalog = format_skills_catalog(defs)
     loaded = collect_loaded_skill_bodies(messages)
 
@@ -146,10 +162,14 @@ def inject_skills_view(
     return [*prefix, *out] if prefix else out
 
 
-def build_skill_tools(workspace_root: Path) -> list[BaseTool]:
+def build_skill_tools(
+    workspace_root: Path,
+    *,
+    extra_skills: dict[str, SkillDef] | None = None,
+) -> list[BaseTool]:
     """Parent tool ``load_skill`` (L1 activation)."""
     root = workspace_root.expanduser().resolve()
-    defs = load_skill_defs(root)
+    defs = load_skill_defs(root, extra=extra_skills)
     available = ", ".join(sorted(defs)) or "(none)"
 
     def load_skill(name: str) -> str:
@@ -161,8 +181,8 @@ def build_skill_tools(workspace_root: Path) -> list[BaseTool]:
         if not name or not name.strip():
             return "ERROR: skill name must be non-empty"
         key = name.strip()
-        # Reload defs so new files appear without rebuilding the graph.
-        current = load_skill_defs(root)
+        # Reload defs so new files / plugin packs appear without rebuilding.
+        current = load_skill_defs(root, extra=extra_skills)
         defn = current.get(key)
         if defn is None:
             return f"ERROR: unknown skill {key!r}. Available: {', '.join(sorted(current)) or '(none)'}"

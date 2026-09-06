@@ -55,7 +55,19 @@ def format_slash_list(
         lines.append("Installed plugin packs:")
         for pack in plugins:
             desc = pack.description or "(no description)"
-            lines.append(f"  {pack.id}: {pack.name} — {desc}")
+            planes: list[str] = []
+            if pack.slash_commands:
+                planes.append(f"slash={len(pack.slash_commands)}")
+            if any(pack.hooks.values()):
+                planes.append("hooks")
+            if pack.skill_refs:
+                planes.append(f"skills={len(pack.skill_refs)}")
+            if pack.mcp:
+                planes.append(f"mcp={len(pack.mcp)}")
+            if pack.subagent_refs:
+                planes.append(f"subagents={len(pack.subagent_refs)}")
+            plane_s = ", ".join(planes) if planes else "empty"
+            lines.append(f"  {pack.id}: {pack.name} — {desc} [{plane_s}]")
         lines.append("")
     if not registry:
         lines.append("  (none — add workspace/plugins/*/plugin.yaml)")

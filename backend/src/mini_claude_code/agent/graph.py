@@ -12,13 +12,14 @@ Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messag
 Skills (M13): catalog inject + ``load_skill`` progressive disclosure.
 MCP (M14): optional adapter tools merged into the same ToolNode (opt-in config).
 Hooks (M15): Pre/Post around tools; Stop on final model message without tool_calls.
-Plugins (M16): slash expand + hook merge at CLI/graph build; `/help` lists commands.
+Plugins (M16/M23): slash + hook merge; packs also contribute skills/MCP/subagents.
 Retry/usage (M17): transient LLM retry at invoke; optional token accounting footer.
 """
 
 from __future__ import annotations
 
-from typing import Any, Literal, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, RemoveMessage, SystemMessage
@@ -41,7 +42,11 @@ from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
 from mini_claude_code.agent.retry import invoke_with_retry
 from mini_claude_code.agent.skills import inject_skills_view
-from mini_claude_code.agent.usage import UsageAccumulator, get_usage_accumulator, record_llm_usage
+from mini_claude_code.agent.usage import (
+    UsageAccumulator,
+    get_usage_accumulator,
+    record_llm_usage,
+)
 from mini_claude_code.config import Settings, get_settings, resolve_workspace_root
 from mini_claude_code.llm import create_chat_model
 from mini_claude_code.memory.neo4j_facts import recall_facts_block
@@ -66,8 +71,15 @@ def _inject_memory_view(
     settings: Settings,
 ) -> list[Any]:
     """compact → AGENT.md → skills catalog/loaded → optional Neo4j facts."""
+    from mini_claude_code.agent.plugins import (
+        collect_plugin_skill_defs,
+        resolve_plugins,
+    )
+
     view = inject_project_memory(list(messages), workspace_root, ensure=True)
-    view = inject_skills_view(view, workspace_root)
+    plugins = resolve_plugins(settings, workspace_root=workspace_root)
+    extra_skills = collect_plugin_skill_defs(plugins) if plugins else None
+    view = inject_skills_view(view, workspace_root, extra_skills=extra_skills)
     facts_block = recall_facts_block(limit=8, settings=settings)
     if not facts_block:
         return view

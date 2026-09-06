@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M23: Plugin pack expansion
+
+- Shipped: `plugin.yaml` skills/mcp/subagents; merge into M13/M14/M12; packs `review`, `docs-mcp`, `research`; `./scripts/m23-demo.sh`.
+- Insight: A plugin is a **bundle that merges into existing planes** — not a new graph node. Slash ≠ skill ≠ MCP ≠ subagent.
+- See Concept Q&A index (M23); Results: [M23](docs/milestones/M23-plugin-pack-expansion.md).
+
+---
+
 ## 2026-09-05 — Dig: fake_docs purpose + where content_policy runs
 
 - **Q: Is fake_docs mainly a demo?**  
@@ -242,7 +250,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ## Concept Q&A index (M0–M26 study guide)
 
-Study this before starting the next milestone (M23–M25 parked industry lane, or next active).
+Study this before starting the next milestone (next: M24 parked industry hooks, or as planned).
+
+### M23 — Plugin pack expansion
+
+- **Q: What did M16 plugins lack?**  
+  A: Only **slash + hook ids**. Industry packs also ship **skills**, **MCP**, and **subagent** defs as one product surface.
+- **Q: Does a plugin add LangGraph nodes?**  
+  A: **No.** It merges into existing planes: slash (CLI), hooks, skills catalog/`load_skill`, MCP connections, `run_subagent` defs.
+- **Q: How do collisions fail?**  
+  A: Duplicate slash / skill name / MCP server name / subagent name → **ValueError** (fail closed), not silent override.
+- **Q: Why does fake_docs appear without MCP_USE_FAKE_DOCS?**  
+  A: Seeded **`docs-mcp`** pack declares `mcp.fake_docs.preset`. Pack contribution ≠ env flag. Disable with `PLUGINS_ENABLED=0` or remove the pack.
+- **Q: What is still deferred?**  
+  A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
+- Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
 
 ### M26 — MCP content policy & safety
 

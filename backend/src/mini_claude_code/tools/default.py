@@ -29,17 +29,26 @@ def build_default_tools(
     llm: BaseChatModel | None = None,
     plan_mode: bool = False,
 ) -> list[BaseTool]:
-    """Full default toolset including M12–M14 (subagents, skills, optional MCP).
+    """Full default toolset including M12–M14 (+ M23 plugin plane merges).
 
     Agent imports are lazy so ``import mini_claude_code.tools`` does not cycle
     through ``agent.graph`` → ``tools`` while the tools package is still loading.
     """
-    # Lazy: agent.skills / subagents pull agent.__init__ → graph → tools.
+    # Lazy: agent.skills / subagents / plugins pull agent.__init__ → graph → tools.
+    from mini_claude_code.agent.plugins import (
+        collect_plugin_skill_defs,
+        collect_plugin_subagent_defs,
+        resolve_plugins,
+    )
     from mini_claude_code.agent.skills import build_skill_tools
     from mini_claude_code.agent.subagents import build_subagent_tools
 
     root = workspace_root.expanduser().resolve()
     settings = settings or get_settings()
+    plugins = resolve_plugins(settings, workspace_root=root)
+    extra_skills = collect_plugin_skill_defs(plugins) if plugins else {}
+    extra_subagents = collect_plugin_subagent_defs(plugins) if plugins else {}
+
     ship_tools, ship_gate = build_ship_tools(root, settings=settings)
     pr_tools = apply_ship_gate_to_tools(
         build_github_pr_tools(root, settings=settings),
@@ -63,8 +72,9 @@ def build_default_tools(
             settings=settings,
             llm=llm,
             plan_mode=plan_mode,
+            extra_subagents=extra_subagents or None,
         ),
-        *build_skill_tools(root),
+        *build_skill_tools(root, extra_skills=extra_skills or None),
     ]
     # M26: screen builtin read_file results (defense in depth vs no-ai files).
     if settings.content_policy_enabled and settings.content_policy_wrap_builtin_read:
@@ -72,7 +82,7 @@ def build_default_tools(
 
         builtin = apply_content_policy_wrap(builtin, settings=settings)
 
-    connections = resolve_mcp_connections(settings)
+    connections = resolve_mcp_connections(settings, plugins=plugins)
     if not connections:
         return builtin
     mcp_tools = load_mcp_tools_sync(connections, settings=settings)

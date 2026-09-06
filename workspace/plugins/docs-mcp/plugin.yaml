@@ -1,0 +1,16 @@
+name: docs-mcp
+description: >
+  Teaching pack (M23): declares the in-repo fake_docs MCP server so the agent
+  gains list_docs / read_doc without MCP_USE_FAKE_DOCS env.
+slash_commands:
+  docs:
+    description: Inspect teaching docs via fake_docs MCP (respect content policy).
+    template: |
+      Use the fake_docs MCP tools (list_docs, read_doc) to answer the user.
+      Prefer list_docs first. If read_doc returns CONTENT_POLICY_DENIED, do not
+      invent the withheld body — explain that policy blocked it.
+
+      User request: {{args}}
+mcp:
+  fake_docs:
+    preset: fake_docs

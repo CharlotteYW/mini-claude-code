@@ -6,9 +6,10 @@ a fresh message list and an allowlisted tool set — isolated context, same mode
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import yaml
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -76,13 +77,27 @@ def load_subagent_def(path: Path) -> SubAgentDef:
     )
 
 
-def load_subagent_defs(workspace_root: Path) -> dict[str, SubAgentDef]:
-    """Load ``*.yaml`` / ``*.yml`` from workspace/subagents/."""
+def load_subagent_defs(
+    workspace_root: Path,
+    *,
+    extra: dict[str, SubAgentDef] | None = None,
+) -> dict[str, SubAgentDef]:
+    """Load ``*.yaml`` / ``*.yml`` from workspace/subagents/ plus plugin extras (M23).
+
+    Name collision between workspace and ``extra`` → ValueError (fail closed).
+    """
     root = ensure_example_subagents(workspace_root)
     found: dict[str, SubAgentDef] = {}
     for path in sorted(root.glob("*.yaml")) + sorted(root.glob("*.yml")):
         defn = load_subagent_def(path)
         found[defn.name] = defn
+    for name, defn in (extra or {}).items():
+        if name in found:
+            raise ValueError(
+                f"Duplicate subagent {name!r}: workspace {found[name].path} "
+                f"vs plugin asset {defn.path}"
+            )
+        found[name] = defn
     return found
 
 
@@ -143,11 +158,12 @@ def build_subagent_tools(
     settings: Settings | None = None,
     llm: BaseChatModel | None = None,
     plan_mode: bool = False,
+    extra_subagents: dict[str, SubAgentDef] | None = None,
 ) -> list[BaseTool]:
-    """Parent-facing ``run_subagent`` tool (loads YAML defs from workspace)."""
+    """Parent-facing ``run_subagent`` tool (loads YAML defs from workspace + plugins)."""
     settings = settings or get_settings()
     root = workspace_root.expanduser().resolve()
-    defs = load_subagent_defs(root)
+    defs = load_subagent_defs(root, extra=extra_subagents)
     catalog = build_tool_catalog(root, settings)
     available = ", ".join(sorted(defs)) or "(none)"
 
@@ -162,9 +178,11 @@ def build_subagent_tools(
         if not task or not task.strip():
             return "ERROR: task must be non-empty"
         key = name.strip()
-        defn = defs.get(key)
+        current = load_subagent_defs(root, extra=extra_subagents)
+        defn = current.get(key)
         if defn is None:
-            return f"ERROR: unknown subagent {key!r}. Available: {available}"
+            avail = ", ".join(sorted(current)) or "(none)"
+            return f"ERROR: unknown subagent {key!r}. Available: {avail}"
 
         try:
             child_tools = tools_for_allowlist(catalog, defn.tools)

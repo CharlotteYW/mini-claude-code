@@ -41,4 +41,8 @@ workspace/*
 !workspace/docs/*.md
 !workspace/plugins/
 !workspace/plugins/*/
-!workspace/plugins/*/plugin.yaml
+!workspace/plugins/**/
+!workspace/plugins/**/*.yaml
+!workspace/plugins/**/*.yml
+!workspace/plugins/**/*.md
+!workspace/plugins/**/SKILL.md
