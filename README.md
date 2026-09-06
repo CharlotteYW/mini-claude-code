@@ -13,17 +13,21 @@ By the end of this repo you should be able to:
 - Explain LangGraph primitives (StateGraph, checkpointer, interrupt, subgraph) and when to use each
 - Navigate the LangChain ecosystem (chat models, tools, MCP adapters) without treating it as a black box
 - Design agents with a **thin ReAct core** and a **policy/extension plane** (permissions, HITL, hooks, skills, sub-agents, plugins, content policy)
-- Reason about sessions vs long-term memory (checkpointer ≠ Neo4j/pgvector/ES)
+- Reason about sessions vs long-term memory (checkpointer ≠ Neo4j / pgvector / Elasticsearch)
+- Run async-first CLI (`ainvoke` / `astream`) and know when sync checkpointers break that path
 - Switch LLM providers via config (Ollama, Anthropic, OpenAI, OpenRouter) and reason about tool-calling differences
 
 ## Architecture (high level)
 
 Layered runtime:
 
-- **Core:** thin LangGraph ReAct loop (`call_model` ↔ `ToolNode`)
-- **Around it:** permissions / Plan Mode / HITL, hooks, skills, MCP, plugins + trust, content policy, compaction, memory stores, Docker sandbox, Slack as another UI
+- **Core:** thin LangGraph ReAct loop (`call_model` ↔ `ToolNode`) — topology unchanged from early ReAct through M26
+- **Around it:** permissions / Plan Mode / HITL, hooks, skills, MCP, plugins + trust, content policy, compaction, memory stores, Docker sandbox
+- **Interfaces:** CLI (`chat.sh` / `agent.sh`) and Slack Socket Mode — same graph, not a second agent
 
 Living diagram: [docs/architecture.md](docs/architecture.md). History: [docs/milestones/](docs/milestones/). Study Q&A: [LEARNING_LOG.md](LEARNING_LOG.md).
+
+**One-tool call onion (outer → inner):** Pre hooks → permissions / HITL → tool body (FS / shell / MCP) → content policy on result → Post hooks → `ToolMessage` → model.
 
 ## Defaults
 
@@ -32,10 +36,11 @@ Living diagram: [docs/architecture.md](docs/architecture.md). History: [docs/mil
 | Default LLM provider | `ollama` |
 | Default model | `gemma4:31b` |
 | Also supported | Anthropic, OpenAI, OpenRouter (config-driven) |
-| Sessions / checkpoints | PostgreSQL (`AsyncPostgresSaver` default async CLI; `--sync` uses sync saver) |
+| Sessions / checkpoints | PostgreSQL — default CLI uses `AsyncPostgresSaver`; `--sync` uses sync `PostgresSaver` |
 | Vectors / notes | pgvector (`memory_notes`, `memory_chunks`) |
-| Graph memory | Neo4j (`Fact`, Document/Chunk) |
-| Full-text | Elasticsearch (`search_keyword`) |
+| Graph memory | Neo4j (`Fact`, Document / Chunk + `NEXT`) |
+| Full-text | Elasticsearch (`search_keyword` BM25) |
+| Shell | Docker sandbox by default (`SHELL_BACKEND=host` opt-in, insecure) |
 
 ## Repo layout
 
@@ -47,43 +52,120 @@ mini-claude-code/
 ├── docs/
 │   ├── architecture.md
 │   ├── ROADMAP.md
-│   └── milestones/          # M0–M26 Done; M27–M38 Planned stubs
-├── backend/                 # Python (uv) package + tests
-├── mcp_servers/             # in-repo MCP demos (echo_math, fake_docs)
-├── workspace/               # agent cwd + plugins
-├── docker-compose.yml
-└── scripts/
-    ├── setup.sh / smoke.sh / parity.sh / test.sh
-    ├── agent.sh             # one-shot / flags
-    ├── chat.sh              # multi-turn REPL
-    ├── slack.sh             # Slack OAuth + Socket Mode bot
-    └── db-inspect.sh
+│   ├── notes/testing.md
+│   └── milestones/              # M0–M26 Done; M27–M38 Planned stubs
+├── backend/                     # uv package + pytest (unit / integration)
+├── mcp_servers/                 # echo_math, fake_docs (teaching MCP)
+├── workspace/                   # agent cwd + plugin packs
+├── docker-compose.yml           # Postgres+pgvector, Neo4j, Elasticsearch
+├── outputs/talk-mini-claude-code/  # optional share deck (.pptx)
+└── scripts/                     # see Quick start + Testing below
 ```
 
 ## Quick start
 
 ```bash
-cp .env.example .env   # or let setup create it
-./scripts/setup.sh
-./scripts/smoke.sh             # construct LLM client
-./scripts/smoke.sh --ping      # optional live invoke
-./scripts/parity.sh            # tool-calling parity
-./scripts/test.sh              # unit tests
-./scripts/test.sh -m integration
-
-# Agent
-./scripts/chat.sh              # interactive multi-turn (Postgres session)
-./scripts/agent.sh --plan "Create demo.txt with hello"   # Plan Mode: writes denied
-./scripts/agent.sh "Use write_file to create demo.txt with hello, then read it."
-
-# Slack (optional; needs SLACK_* in .env)
-./scripts/slack.sh install
-./scripts/slack.sh run
-
-./scripts/db-inspect.sh
+cp .env.example .env          # or let setup create it
+./scripts/setup.sh            # Compose + uv sync (+ optional Ollama pull)
+./scripts/smoke.sh            # construct LLM client
+./scripts/smoke.sh --ping     # optional live invoke
+./scripts/parity.sh           # M1: tool-calling parity across providers
 ```
 
-Neo4j Browser: http://localhost:7474 · Elasticsearch: http://localhost:9200
+### Agent CLI
+
+```bash
+./scripts/chat.sh                                    # multi-turn REPL (async + Postgres session)
+./scripts/chat.sh --thread-id my-session             # resume a thread
+./scripts/chat.sh --plan                             # Plan Mode: mutating tools denied
+./scripts/agent.sh "Use write_file to create demo.txt with hello, then read it."
+./scripts/agent.sh --plan "Create demo.txt with hello"   # expect write denied
+./scripts/agent.sh --sync --plan "hi"                # sync runtime shim
+./scripts/agent.sh --usage "Say hello in one sentence."
+```
+
+### Plugins / policy demos (no or minimal LLM)
+
+```bash
+./scripts/m23-demo.sh         # plugin packs merge
+./scripts/m24-demo.sh         # shell hooks + /pick
+./scripts/m25-demo.sh         # install / trust
+./scripts/m26-demo.sh         # fake_docs content policy (no-ai deny)
+# Avoid enabling fake_docs twice: either MCP_USE_FAKE_DOCS=1 OR docs-mcp plugin, not both.
+```
+
+### Memory / search demos
+
+```bash
+./scripts/m20-demo.sh         # doc ingest → pgvector + Neo4j
+./scripts/m21-demo.sh         # Elasticsearch keyword search
+./scripts/db-inspect.sh
+./scripts/db-inspect.sh postgres --thread-id demo-1
+```
+
+### Eval / ship / Slack
+
+```bash
+./scripts/eval.sh             # M17 fake-LLM eval harness
+./scripts/ship-check.sh       # M19: ruff + unit tests (same as ship_check tool)
+./scripts/slack.sh install    # OAuth once (needs SLACK_* in .env)
+./scripts/slack.sh run        # Socket Mode bot — same graph as CLI
+```
+
+Services (after setup): Neo4j Browser http://localhost:7474 · Elasticsearch http://localhost:9200
+
+## Testing
+
+Strategy: [docs/notes/testing.md](docs/notes/testing.md).
+
+| Layer | Marker | Needs |
+|---|---|---|
+| **Unit** | `-m unit` (default for `./scripts/test.sh`) | Nothing network / Compose |
+| **Integration** | `-m integration` | `.env` + Compose / Ollama / keys as applicable; tests **skip** if unavailable |
+
+### Commands (from repo root)
+
+```bash
+# All unit tests (default)
+./scripts/test.sh
+./scripts/test.sh -m unit -v
+
+# Integration (skips OK without services/keys)
+./scripts/test.sh -m integration -v
+
+# One file / one test
+./scripts/test.sh tests/unit/test_m26_content_policy.py -v
+./scripts/test.sh tests/unit/test_m5_checkpointer.py -v
+./scripts/test.sh tests/integration/test_m5_checkpointer_live.py -v
+./scripts/test.sh tests/integration/test_m26_fake_docs_live.py -v
+./scripts/test.sh tests/unit/test_m10_hitl.py::test_format_run_error_empty_str_uses_repr -v
+
+# Equivalent from backend/
+cd backend && uv run pytest -m unit -v
+cd backend && uv run pytest -m integration -v
+```
+
+### Milestone-oriented unit modules (examples)
+
+| Area | Unit module |
+|---|---|
+| Factory / parity | `test_m0_factory.py`, `test_m1_parity_unit.py` |
+| Graph / FS / shell | `test_m2_agent_graph.py`, `test_m3_fs_tools.py`, `test_m4_shell_git.py` |
+| Sessions / stream | `test_m5_checkpointer.py`, `test_m6_streaming.py`, `test_cli_tty_line.py` |
+| Compact / memory | `test_m7_compaction.py`, `test_m8_memory.py`, `test_m8_pgvector.py` |
+| Safety | `test_m9_permissions.py`, `test_m10_hitl.py`, `test_m11_sandbox.py` |
+| Extensibility | `test_m12_subagents.py` … `test_m16_plugins.py` |
+| Eval / Slack / ship | `test_m17_*`, `test_m18_*`, `test_m19_*` |
+| Ingest / ES / async | `test_m20_*`, `test_m21_*`, `test_m22_*` |
+| Plugins / policy | `test_m23_*` … `test_m26_content_policy.py` |
+
+Integration twins live under `backend/tests/integration/` (`*_live.py`).
+
+### Pre-ship gate
+
+```bash
+./scripts/ship-check.sh       # ruff + unit — what the agent’s ship_check tool runs
+```
 
 ## Milestone map (short)
 
@@ -93,7 +175,7 @@ Neo4j Browser: http://localhost:7474 · Elasticsearch: http://localhost:9200
 | 2 | M7–M11 | Compact, memory, permissions, HITL, Docker sandbox |
 | 3 | M12–M16 | Subagents, skills, MCP, hooks, plugins/slash |
 | 4 | M17–M26 | Eval, Slack, ship gate, ingest/ES, async, plugin packs/trust, content policy |
-| 5 | M27–M38 | Planned depth digs (hybrid retrieval, Store, traces, …) |
+| 5 | M27–M38 | Planned depth digs (hybrid retrieval, Store, traces, handoff, …) |
 
 ## Collaboration workflow
 
@@ -104,7 +186,7 @@ Neo4j Browser: http://localhost:7474 · Elasticsearch: http://localhost:9200
 5. **Commit and push**; clean tree before the next Plan
 6. Stop and wait for the next approval
 
-Testing strategy: [docs/notes/testing.md](docs/notes/testing.md). Details live in `.cursor/rules/`.
+Details: `.cursor/rules/`.
 
 ## Language
 
