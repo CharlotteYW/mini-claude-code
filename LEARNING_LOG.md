@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M25: Plugin install & trust
+
+- Shipped: `mcc-plugins` (install/list/trust/disable); `.trust.yaml`; `version`/`requires`; capability strip for MCP/shell; `./scripts/m25-demo.sh`.
+- Insight: **Install ≠ enable.** Presence on disk is not permission to spawn shell hooks or MCP.
+- See Concept Q&A index (M25); Results: [M25](docs/milestones/M25-plugin-install-trust.md).
+
+---
+
 ## 2026-09-05 — M24: Plugin hooks & discovery
 
 - Shipped: `shell_hooks.py`; script/shell hook entries; `HOOK_SHELL_*`; pack `shell-hooks`; `/pick` picker; `./scripts/m24-demo.sh`.
@@ -258,7 +266,19 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ## Concept Q&A index (M0–M26 study guide)
 
-Study this before starting the next milestone (next: M25 plugin install & trust).
+Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
+
+### M25 — Plugin install & trust
+
+- **Q: What does install do vs trust?**  
+  A: **Install** copies/clones into `workspace/plugins/<id>/` and writes a **disabled** trust row. **Trust** enables the pack and optionally grants `allow_mcp` / `allow_shell_hooks`.
+- **Q: Can a disabled pack still affect the agent?**  
+  A: **No** — `resolve_plugins` skips it (slash/skills/MCP/hooks from that pack stay out).
+- **Q: Is allow_shell_hooks enough to run scripts?**  
+  A: **No** — still need M24 `HOOK_SHELL_ENABLED=1` (defense in depth).
+- **Q: What is still missing vs production?**  
+  A: Signed packages, org policy UI, auto-updates, SBOM — labeled simplification (no marketplace).
+- Link: [M25](docs/milestones/M25-plugin-install-trust.md)
 
 ### M24 — Plugin hooks & discovery
 

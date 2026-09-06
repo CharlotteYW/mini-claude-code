@@ -1,4 +1,7 @@
 name: review
+version: "0.1.0"
+requires:
+  mini_claude_code: ">=0.1.0"
 description: Structured code review prompts and optional safety hooks.
 slash_commands:
   review:

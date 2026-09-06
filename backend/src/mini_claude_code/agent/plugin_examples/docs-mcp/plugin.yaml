@@ -1,4 +1,7 @@
 name: docs-mcp
+version: "0.1.0"
+requires:
+  mini_claude_code: ">=0.1.0"
 description: >
   Teaching pack (M23): declares the in-repo fake_docs MCP server so the agent
   gains list_docs / read_doc without MCP_USE_FAKE_DOCS env.

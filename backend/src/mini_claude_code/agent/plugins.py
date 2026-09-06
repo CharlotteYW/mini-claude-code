@@ -1,7 +1,9 @@
-"""Declarative plugin packs (M16/M23): scan manifests, merge extension planes.
+"""Declarative plugin packs (M16/M23/M25): scan, merge planes, trust gate.
 
 M16: slash + in-process hook ids.
-M23: also skills, MCP connections, subagent YAML — merge into existing loaders.
+M23: skills, MCP, subagents.
+M24: shell/script hook entries.
+M25: version/requires + trust enable/capabilities.
 """
 
 from __future__ import annotations
@@ -41,6 +43,9 @@ class PluginPack:
     mcp: dict[str, dict[str, Any]] = field(default_factory=dict)
     # M23: relative paths to subagent YAML files.
     subagent_refs: list[str] = field(default_factory=list)
+    # M25
+    version: str = "0.0.0"
+    requires: dict[str, str] = field(default_factory=dict)
 
 
 def plugin_examples_dir() -> Path:
@@ -95,6 +100,11 @@ def load_plugin_manifest(path: Path) -> PluginPack:
         data.get("subagents"), field_name="subagents", path=path
     )
     mcp = _parse_mcp_section(data.get("mcp"), path=path)
+    version = str(data.get("version") or "0.0.0").strip() or "0.0.0"
+    requires_raw = data.get("requires") or {}
+    if requires_raw and not isinstance(requires_raw, dict):
+        raise ValueError(f"requires must be a mapping in {path}")
+    requires = {str(k): str(v) for k, v in requires_raw.items()}
 
     return PluginPack(
         id=plugin_id,
@@ -106,6 +116,8 @@ def load_plugin_manifest(path: Path) -> PluginPack:
         skill_refs=skill_refs,
         mcp=mcp,
         subagent_refs=subagent_refs,
+        version=version,
+        requires=requires,
     )
 
 
@@ -229,20 +241,90 @@ def discover_plugins(
     return load_plugins_from_paths(manifests)
 
 
+def _package_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("mini-claude-code")
+    except Exception:  # noqa: BLE001
+        return "0.1.0"
+
+
+def strip_shell_hook_entries(hooks: dict[str, list[Any]]) -> dict[str, list[Any]]:
+    out: dict[str, list[Any]] = {}
+    for key, items in hooks.items():
+        kept: list[Any] = []
+        for item in items:
+            if isinstance(item, dict) and str(item.get("type") or "") in (
+                "script",
+                "shell",
+            ):
+                continue
+            kept.append(item)
+        out[key] = kept
+    return out
+
+
+def apply_trust_capabilities(pack: PluginPack, store: Any) -> PluginPack:
+    """Return a copy of pack with MCP/shell hooks stripped per trust flags."""
+    from dataclasses import replace
+
+    from mini_claude_code.agent.plugin_trust import TrustStore
+
+    assert isinstance(store, TrustStore)
+    hooks = pack.hooks
+    mcp = pack.mcp
+    if not store.allows_shell_hooks(pack.id):
+        hooks = strip_shell_hook_entries(hooks)
+    if not store.allows_mcp(pack.id):
+        mcp = {}
+    return replace(pack, hooks=hooks, mcp=mcp)
+
+
 def resolve_plugins(
     settings: Settings | None = None,
     *,
     workspace_root: Path | None = None,
     extra_roots: list[Path] | None = None,
     seed_examples: bool = True,
+    apply_trust: bool = True,
 ) -> list[PluginPack]:
+    """Discover packs, validate requires, apply M25 trust enable + capabilities."""
+    from mini_claude_code.agent.plugin_install import check_requires
+    from mini_claude_code.agent.plugin_trust import (
+        ensure_trust_entries,
+        load_trust_store,
+        pack_has_shell_hooks,
+    )
+
     settings = settings or get_settings()
     if not settings.plugins_enabled:
         return []
     root = workspace_root or resolve_workspace_root(settings)
-    return discover_plugins(
+    packs = discover_plugins(
         root, extra_roots=extra_roots, seed_examples=seed_examples
     )
+    pkg_ver = _package_version()
+    for pack in packs:
+        check_requires(pack.requires, package_version=pkg_ver)
+
+    if not apply_trust:
+        return packs
+
+    store = load_trust_store(root)
+    summaries = {
+        p.id: (bool(p.mcp), pack_has_shell_hooks(p.hooks)) for p in packs
+    }
+    ensure_trust_entries(
+        store, pack_summaries=summaries, write=True, workspace_root=root
+    )
+    out: list[PluginPack] = []
+    for pack in packs:
+        if not store.is_enabled(pack.id):
+            logger.info("Skipping disabled plugin pack %s", pack.id)
+            continue
+        out.append(apply_trust_capabilities(pack, store))
+    return out
 
 
 def merge_hook_config_dicts(

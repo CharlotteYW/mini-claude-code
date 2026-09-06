@@ -46,3 +46,4 @@ workspace/*
 !workspace/plugins/**/*.yml
 !workspace/plugins/**/*.md
 !workspace/plugins/**/SKILL.md
+workspace/plugins/.trust.yaml

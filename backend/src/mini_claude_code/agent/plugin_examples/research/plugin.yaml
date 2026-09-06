@@ -1,4 +1,7 @@
 name: research
+version: "0.1.0"
+requires:
+  mini_claude_code: ">=0.1.0"
 description: >
   Teaching pack (M23): bundled skill + subagent for document-oriented research
   (merge into M13/M12 planes — not a new graph node).

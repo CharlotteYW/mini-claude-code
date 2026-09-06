@@ -62,7 +62,7 @@ flowchart TB
     Hooks[Lifecycle hooks ids plus shell M24]
     Skills[Skills progressive disclosure]
     MCP[MCP tool merge]
-    Plugins[Plugin pack merge M16/M23]
+    Plugins[Plugin pack merge plus trust M25]
     ContentPolicy[Content policy M26]
     Compact[Context compact]
     Memory[Memory inject]
@@ -147,6 +147,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M21 Done** — [milestones/M21-elasticsearch-fulltext.md](milestones/M21-elasticsearch-fulltext.md)
 - **M22 Done** — [milestones/M22-async-agent-runtime.md](milestones/M22-async-agent-runtime.md)
 - **M23 Done** — [milestones/M23-plugin-pack-expansion.md](milestones/M23-plugin-pack-expansion.md)
-- **M24 Done** — [milestones/M24-plugin-hooks-discovery.md](milestones/M24-plugin-hooks-discovery.md) (M25 parked; M26 Done earlier)
+- **M24 Done** — [milestones/M24-plugin-hooks-discovery.md](milestones/M24-plugin-hooks-discovery.md)
+- **M25 Done** — [milestones/M25-plugin-install-trust.md](milestones/M25-plugin-install-trust.md) (plugin lane complete; M26 Done earlier)
 - **M26 Done** — [milestones/M26-mcp-content-policy.md](milestones/M26-mcp-content-policy.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

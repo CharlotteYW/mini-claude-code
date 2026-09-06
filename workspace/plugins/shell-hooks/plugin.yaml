@@ -1,4 +1,7 @@
 name: shell-hooks
+version: "0.1.0"
+requires:
+  mini_claude_code: ">=0.1.0"
 description: >
   Teaching pack (M24): allowlisted shell/script Pre hook that denies run_shell
   when the command contains FORBIDDEN_M24. Requires HOOK_SHELL_ENABLED=1.
