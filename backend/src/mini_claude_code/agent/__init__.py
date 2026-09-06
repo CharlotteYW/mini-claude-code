@@ -2,6 +2,7 @@
 
 from mini_claude_code.agent.checkpointer import (
     ensure_postgres_checkpoint_tables,
+    open_async_checkpointer,
     open_checkpointer,
     resolve_checkpoint_backend,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "ensure_postgres_checkpoint_tables",
     "estimate_tokens",
     "maybe_compact_messages",
+    "open_async_checkpointer",
     "open_checkpointer",
     "resolve_checkpoint_backend",
     "route_after_model",

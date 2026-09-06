@@ -5,6 +5,7 @@
 #        ./scripts/agent.sh --thread-id demo-1 "Remember ORANGE"
 #        ./scripts/agent.sh --repl --thread-id demo-1
 #        ./scripts/agent.sh --checkpointer memory --thread-id local-1 "hi"
+# Continuous chat shortcut (same as --repl): ./scripts/chat.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

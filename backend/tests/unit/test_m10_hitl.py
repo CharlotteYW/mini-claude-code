@@ -15,6 +15,7 @@ from langgraph.types import Command
 from mini_claude_code.agent.graph import build_agent_graph
 from mini_claude_code.agent.hitl import (
     format_approval_prompt,
+    format_run_error,
     invoke_with_hitl,
     pending_interrupt_values,
     result_interrupt_values,
@@ -31,6 +32,11 @@ def test_format_approval_prompt() -> None:
     )
     assert "write_file" in text
     assert "a.txt" in text
+
+
+def test_format_run_error_empty_str_uses_repr() -> None:
+    assert format_run_error(NotImplementedError()) == "NotImplementedError()"
+    assert "boom" in format_run_error(RuntimeError("boom"))
 
 
 def test_ask_interrupt_then_resume_approve(tmp_path: Path) -> None:

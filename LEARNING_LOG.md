@@ -13,6 +13,31 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — Dig: REPL Chinese backspace leaves first glyph
+
+- **Q: In `chat.sh` REPL, why can I delete only 2 of 3 Chinese characters? English is fine.**  
+  A: Cursor/VS Code **xterm** East-Asian width + erase-char is unreliable for CJK (Python readline makes it worse; even a prompt-only line can still fail). English is single-width so it looks fine. Fix: `tty_input.read_tty_line` uses **cbreak + full-line redraw** on each edit — backspace pops a Unicode codepoint and rewrites the line (`\r` + clear), never trusting the terminal to erase double-width glyphs. Optional Cursor setting: `"terminal.integrated.unicodeVersion": "11"`. External Terminal.app is also a valid workaround.
+- **Confirmed:** User retested after redraw editor — Chinese delete works.
+- Link: `agent/tty_input.py`
+
+---
+
+## 2026-09-05 — Dig: empty REPL error + AsyncPostgresSaver
+
+- **Q: Why did `./scripts/chat.sh` print `ERROR: agent run failed:` with nothing after the colon?**  
+  A: Exception was `NotImplementedError()` — **`str(exc)` is empty**. Sync `PostgresSaver` does not implement `aget_tuple`; default CLI after M22 calls `graph.ainvoke` → empty message. Fix: print `repr(exc)` when `str` is blank; use `AsyncPostgresSaver` via `open_async_checkpointer` on the async path.
+- **Q: Why did MemorySaver unit tests not catch this?**  
+  A: `MemorySaver` implements both sync and async APIs. Only **Postgres sync saver + ainvoke** hits the gap.
+- **Q: Why one event loop for the whole REPL?**  
+  A: `AsyncPostgresSaver` is an async context manager; holding the connection across turns means `_run_repl_async` inside one `asyncio.run`, not `asyncio.run` per turn (which would close the saver).
+- **Q: After fixing the checkpointer, why did MCP break inside async CLI?**  
+  A: Graph build still called `load_mcp_tools_sync` → `asyncio.run` while the session loop was already running. Fix: if a loop is running, load MCP in a **worker thread** with its own loop (stdio client stays sync-friendly at assemble time).
+- **Q: Why did `ainvoke` succeed then crash on HITL state read?**  
+  A: Fallback used sync `graph.get_state` → `AsyncPostgresSaver.get_tuple` forbids sync calls on the main thread. Use `pending_interrupt_values_async` / `aget_state` on the async path.
+- Link: `checkpointer.py` (`open_async_checkpointer`), `cli.py`, `hitl.format_run_error`, `mcp_loader.load_mcp_tools_sync`
+
+---
+
 ## 2026-09-05 — M25: Plugin install & trust
 
 - Shipped: `mcc-plugins` (install/list/trust/disable); `.trust.yaml`; `version`/`requires`; capability strip for MCP/shell; `./scripts/m25-demo.sh`.
@@ -330,7 +355,9 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
   A: Wraps expose **`func` + `coroutine`** (`await tool.ainvoke`). CLI defaults to **`ainvoke`/`astream`**. MCP sync shim remains for `--sync` / tests, not the hot path.
 - **Q: Why is `call_model` still sync?**  
   A: LangGraph sync `invoke` cannot run async-only nodes; keeping sync preserves the unit suite. Async win is primarily the **tool plane**.
-- Link: [M22](docs/milestones/M22-async-agent-runtime.md)
+- **Q: Why did default chat/REPL fail on Postgres after M22?**  
+  A: Sync `PostgresSaver` has no `aget_tuple`. Default `ainvoke` needs **`AsyncPostgresSaver`** (`open_async_checkpointer`). `--sync` still uses `open_checkpointer`. Empty error text = `NotImplementedError()` with blank `str`.
+- Link: [M22](docs/milestones/M22-async-agent-runtime.md), `open_async_checkpointer`
 
 ### M21 — Elasticsearch full-text
 

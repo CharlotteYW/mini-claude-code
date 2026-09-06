@@ -8,15 +8,32 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable
-from typing import Any, TextIO
+from typing import Any
 
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
+
+from mini_claude_code.agent.tty_input import read_tty_line
+
+
+def format_run_error(exc: BaseException) -> str:
+    """Human-readable failure; empty ``str(exc)`` (e.g. NotImplementedError) → repr."""
+    text = str(exc).strip()
+    if text:
+        return text
+    return repr(exc)
 
 
 def pending_interrupt_values(graph: Any, config: dict) -> list[Any]:
     """Return interrupt payloads for the current thread (empty if none)."""
     snap = graph.get_state(config)
+    interrupts = getattr(snap, "interrupts", None) or ()
+    return [getattr(item, "value", item) for item in interrupts]
+
+
+async def pending_interrupt_values_async(graph: Any, config: dict) -> list[Any]:
+    """Async twin for ``AsyncPostgresSaver`` (sync ``get_state`` is illegal there)."""
+    snap = await graph.aget_state(config)
     interrupts = getattr(snap, "interrupts", None) or ()
     return [getattr(item, "value", item) for item in interrupts]
 
@@ -51,7 +68,7 @@ def prompt_approval(
     def _in(prompt: str) -> str:
         if input_fn is not None:
             return input_fn(prompt)
-        return input(prompt)
+        return read_tty_line(prompt)
 
     def _out(text: str) -> None:
         if output_fn is not None:
@@ -88,7 +105,10 @@ def invoke_with_hitl(
         try:
             result = graph.invoke(payload, config=config)
         except Exception as exc:  # noqa: BLE001
-            print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
+            print(
+                f"ERROR: agent run failed: {format_run_error(exc)}",
+                file=sys.stderr,
+            )
             return None, 1
 
         pending = result_interrupt_values(result) or pending_interrupt_values(
@@ -122,12 +142,15 @@ async def ainvoke_with_hitl(
         try:
             result = await graph.ainvoke(payload, config=config)
         except Exception as exc:  # noqa: BLE001
-            print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
+            print(
+                f"ERROR: agent run failed: {format_run_error(exc)}",
+                file=sys.stderr,
+            )
             return None, 1
 
-        pending = result_interrupt_values(result) or pending_interrupt_values(
-            graph, config
-        )
+        pending = result_interrupt_values(result)
+        if not pending:
+            pending = await pending_interrupt_values_async(graph, config)
         if not pending:
             return result if isinstance(result, dict) else None, 0
 

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from mini_claude_code.agent.checkpointer import open_checkpointer
+from mini_claude_code.agent.checkpointer import open_async_checkpointer, open_checkpointer
 from mini_claude_code.agent.graph import build_agent_graph
 from mini_claude_code.config import Settings, get_settings
 
@@ -111,3 +112,42 @@ def test_postgres_different_threads_isolated() -> None:
     humans_b = [m for m in result_b["messages"] if isinstance(m, HumanMessage)]
     assert not any("APPLE" in str(m.content) for m in humans_b)
     assert any("hello" in str(m.content) for m in humans_b)
+
+
+def test_async_postgres_ainvoke_resumes_across_connections() -> None:
+    """Default CLI path: AsyncPostgresSaver + ainvoke (sync PostgresSaver fails aget)."""
+    settings = _load_repo_settings()
+    _postgres_or_skip(settings)
+    thread_id = f"integ-m5-async-{uuid4()}"
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": 10,
+    }
+
+    async def _run() -> None:
+        async with open_async_checkpointer(
+            settings, backend="postgres", setup=True
+        ) as cp:
+            graph = build_agent_graph(
+                llm=_EchoLLM(), tools=[], checkpointer=cp
+            )
+            await graph.ainvoke(
+                {"messages": [HumanMessage(content="codeword ORANGE")]},
+                config=config,
+            )
+
+        async with open_async_checkpointer(
+            settings, backend="postgres", setup=False
+        ) as cp:
+            graph = build_agent_graph(
+                llm=_EchoLLM(), tools=[], checkpointer=cp
+            )
+            result = await graph.ainvoke(
+                {"messages": [HumanMessage(content="what was the codeword?")]},
+                config=config,
+            )
+
+        humans = [m for m in result["messages"] if isinstance(m, HumanMessage)]
+        assert any("ORANGE" in str(m.content) for m in humans)
+
+    asyncio.run(_run())

@@ -241,7 +241,12 @@ def load_mcp_tools_sync(
     settings: Settings | None = None,
     sync_shim: bool = True,
 ) -> list[BaseTool]:
-    """Sync wrapper for graph build. Empty connections → []."""
+    """Sync wrapper for graph build. Empty connections → [].
+
+    When called from an already-running event loop (default async CLI holding
+    ``AsyncPostgresSaver``), ``asyncio.run`` is illegal — load in a worker
+    thread with its own loop instead.
+    """
     conns = (
         connections
         if connections is not None
@@ -249,4 +254,17 @@ def load_mcp_tools_sync(
     )
     if not conns:
         return []
-    return asyncio.run(load_mcp_tools_async(conns, sync_shim=sync_shim))
+
+    async def _load() -> list[BaseTool]:
+        return await load_mcp_tools_async(conns, sync_shim=sync_shim)
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_load())
+
+    # Nested run forbidden; MCP stdio client needs its own loop in a thread.
+    import concurrent.futures
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(lambda: asyncio.run(_load())).result()

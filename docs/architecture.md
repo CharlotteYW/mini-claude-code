@@ -124,7 +124,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 | Concern | Choice | Notes |
 |---|---|---|
 | Python | `uv` + `pyproject.toml` under `backend/` | `uv sync` via `setup.sh` |
-| Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | `PostgresSaver` via `open_checkpointer` (M5); MemorySaver optional |
+| Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | Sync `PostgresSaver` via `open_checkpointer` (`--sync`); async `AsyncPostgresSaver` via `open_async_checkpointer` (default CLI `ainvoke`/`astream`); MemorySaver optional |
 | Vectors | `pgvector` + `memory_notes` + `memory_chunks` | M8-B notes; M20 ingest chunks (`doc_id`, path, index) via Ollama embed |
 | Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8 `Fact`; M20 `Document`/`Chunk` + `HAS_CHUNK`/`NEXT` |
 | Full-text | Elasticsearch (`mcc-elasticsearch`, `:9200`) | M21: `mcc_chunks` index + `search_keyword` (BM25) |

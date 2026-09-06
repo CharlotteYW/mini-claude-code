@@ -12,10 +12,15 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from mini_claude_code.agent.checkpointer import (
     CheckpointBackend,
+    open_async_checkpointer,
     open_checkpointer,
 )
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
-from mini_claude_code.agent.hitl import ainvoke_with_hitl, invoke_with_hitl
+from mini_claude_code.agent.hitl import (
+    ainvoke_with_hitl,
+    format_run_error,
+    invoke_with_hitl,
+)
 from mini_claude_code.agent.plugins import PluginPack, resolve_plugins
 from mini_claude_code.agent.slash_commands import (
     dispatch_slash_input,
@@ -26,6 +31,7 @@ from mini_claude_code.agent.stream_render import (
     consume_agent_astream,
     consume_agent_stream,
 )
+from mini_claude_code.agent.tty_input import read_tty_line
 from mini_claude_code.agent.usage import USAGE_ACCUMULATOR_KEY, UsageAccumulator
 from mini_claude_code.config import get_settings, resolve_workspace_root
 
@@ -97,7 +103,7 @@ def _resolve_slash_prompt(
             )
             return None, 1
         try:
-            selection = input("Number: ").strip()
+            selection = read_tty_line("Number: ").strip()
         except EOFError:
             print("ERROR: no pick selection", file=sys.stderr)
             return None, 1
@@ -139,7 +145,10 @@ async def _run_once_async(
                 print(usage_acc.format_footer(), file=sys.stderr)
             return 0
         except Exception as exc:  # noqa: BLE001
-            print(f"ERROR: agent run failed: {exc}", file=sys.stderr)
+            print(
+                f"ERROR: agent run failed: {format_run_error(exc)}",
+                file=sys.stderr,
+            )
             return 1
 
     if stream and not plan_mode:
@@ -176,7 +185,7 @@ def _run_once(
     usage_acc: UsageAccumulator | None,
     use_sync: bool = False,
 ) -> int:
-    """Sync entry used by REPL loop; delegates to async helper."""
+    """Sync entry for ``--sync`` path; opens a nested event loop per turn."""
     return asyncio.run(
         _run_once_async(
             graph,
@@ -203,16 +212,54 @@ def _run_repl(
     usage_acc: UsageAccumulator | None,
     use_sync: bool,
 ) -> int:
+    """REPL for sync checkpointer (``--sync``); each turn uses ``asyncio.run``."""
     print("REPL mode — empty line or Ctrl-D to exit.")
     while True:
         try:
-            line = input("you> ").strip()
+            line = read_tty_line("you> ").strip()
         except EOFError:
             print()
             break
         if not line:
             break
         code = _run_once(
+            graph,
+            line,
+            config,
+            stream=stream,
+            plan_mode=plan_mode,
+            slash_registry=slash_registry,
+            plugins=plugins,
+            usage_acc=usage_acc,
+            use_sync=use_sync,
+        )
+        if code != 0:
+            return code
+    return 0
+
+
+async def _run_repl_async(
+    graph,
+    config: dict,
+    *,
+    stream: bool,
+    plan_mode: bool,
+    slash_registry: dict[str, dict[str, str]],
+    plugins: list[PluginPack],
+    usage_acc: UsageAccumulator | None,
+    use_sync: bool,
+) -> int:
+    """REPL inside one event loop (holds AsyncPostgresSaver for the session)."""
+    print("REPL mode — empty line or Ctrl-D to exit.")
+    while True:
+        try:
+            line = read_tty_line("you> ").strip()
+        except EOFError:
+            print()
+            break
+        if not line:
+            break
+        code = await _run_once_async(
             graph,
             line,
             config,
@@ -332,7 +379,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 1
             try:
-                selection = input("Number: ").strip()
+                selection = read_tty_line("Number: ").strip()
             except EOFError:
                 print("ERROR: no pick selection", file=sys.stderr)
                 return 1
@@ -422,6 +469,40 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     try:
+        # Default async path needs AsyncPostgresSaver (aget_tuple). Sync
+        # PostgresSaver + ainvoke raises empty NotImplementedError (M22 gap).
+        if use_checkpoint and not use_sync:
+
+            async def _async_session() -> int:
+                async with open_async_checkpointer(
+                    settings, backend=backend, setup=True
+                ) as checkpointer:
+                    graph = _build(checkpointer)
+                    if args.repl:
+                        return await _run_repl_async(
+                            graph,
+                            config,
+                            stream=stream,
+                            plan_mode=plan_mode,
+                            slash_registry=slash_registry,
+                            plugins=plugins,
+                            usage_acc=usage_acc,
+                            use_sync=False,
+                        )
+                    return await _run_once_async(
+                        graph,
+                        args.prompt or "",
+                        config,
+                        stream=stream,
+                        plan_mode=plan_mode,
+                        slash_registry=slash_registry,
+                        plugins=plugins,
+                        usage_acc=usage_acc,
+                        use_sync=False,
+                    )
+
+            return asyncio.run(_async_session())
+
         if use_checkpoint:
             with open_checkpointer(
                 settings, backend=backend, setup=True
@@ -436,7 +517,7 @@ def main(argv: list[str] | None = None) -> int:
                         slash_registry=slash_registry,
                         plugins=plugins,
                         usage_acc=usage_acc,
-                        use_sync=use_sync,
+                        use_sync=True,
                     )
                 return _run_once(
                     graph,
@@ -447,31 +528,58 @@ def main(argv: list[str] | None = None) -> int:
                     slash_registry=slash_registry,
                     plugins=plugins,
                     usage_acc=usage_acc,
-                    use_sync=use_sync,
+                    use_sync=True,
                 )
         graph = _build(None)
-        if args.repl:
-            return _run_repl(
+        if use_sync:
+            if args.repl:
+                return _run_repl(
+                    graph,
+                    config,
+                    stream=stream,
+                    plan_mode=plan_mode,
+                    slash_registry=slash_registry,
+                    plugins=plugins,
+                    usage_acc=usage_acc,
+                    use_sync=True,
+                )
+            return _run_once(
                 graph,
+                args.prompt or "",
                 config,
                 stream=stream,
                 plan_mode=plan_mode,
                 slash_registry=slash_registry,
                 plugins=plugins,
                 usage_acc=usage_acc,
-                use_sync=use_sync,
+                use_sync=True,
             )
-        return _run_once(
-            graph,
-            args.prompt or "",
-            config,
-            stream=stream,
-            plan_mode=plan_mode,
-            slash_registry=slash_registry,
-            plugins=plugins,
-            usage_acc=usage_acc,
-            use_sync=use_sync,
-        )
+
+        async def _async_no_checkpoint() -> int:
+            if args.repl:
+                return await _run_repl_async(
+                    graph,
+                    config,
+                    stream=stream,
+                    plan_mode=plan_mode,
+                    slash_registry=slash_registry,
+                    plugins=plugins,
+                    usage_acc=usage_acc,
+                    use_sync=False,
+                )
+            return await _run_once_async(
+                graph,
+                args.prompt or "",
+                config,
+                stream=stream,
+                plan_mode=plan_mode,
+                slash_registry=slash_registry,
+                plugins=plugins,
+                usage_acc=usage_acc,
+                use_sync=False,
+            )
+
+        return asyncio.run(_async_no_checkpoint())
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

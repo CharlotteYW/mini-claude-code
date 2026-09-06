@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -134,6 +135,29 @@ def test_load_mcp_tools_sync_calls_client_when_configured() -> None:
 
     with patch.object(mod, "load_mcp_tools_async", side_effect=fake_load):
         out = mod.load_mcp_tools_sync(conns)
+    assert out == fake_tools
+
+
+def test_load_mcp_tools_sync_from_running_event_loop() -> None:
+    """Async CLI builds the graph inside asyncio.run — must not nest asyncio.run."""
+    from mini_claude_code.tools import mcp_loader as mod
+
+    @tool
+    def echo(text: str) -> str:
+        """Echo."""
+        return text
+
+    fake_tools = [echo]
+    conns = default_demo_connections()
+
+    async def fake_load(connections: dict, *, sync_shim: bool = True) -> list:
+        return fake_tools
+
+    async def _inside_loop() -> list:
+        with patch.object(mod, "load_mcp_tools_async", side_effect=fake_load):
+            return mod.load_mcp_tools_sync(conns)
+
+    out = asyncio.run(_inside_loop())
     assert out == fake_tools
 
 
