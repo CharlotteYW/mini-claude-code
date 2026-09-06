@@ -116,6 +116,10 @@ class Settings(BaseSettings):
     # Lifecycle hooks (M15). Priority: HOOKS_CONFIG_PATH > workspace/hooks.yaml > HOOKS_USE_DEMO.
     hooks_config_path: str = Field(default="", alias="HOOKS_CONFIG_PATH")
     hooks_use_demo: bool = Field(default=False, alias="HOOKS_USE_DEMO")
+    # M24: shell/script hook runners (deny-by-default).
+    hook_shell_enabled: bool = Field(default=False, alias="HOOK_SHELL_ENABLED")
+    hook_shell_allowlist: str = Field(default="", alias="HOOK_SHELL_ALLOWLIST")
+    hook_shell_timeout_sec: float = Field(default=5.0, alias="HOOK_SHELL_TIMEOUT_SEC")
 
     # Plugin packs (M16). Scan workspace/plugins when enabled.
     plugins_enabled: bool = Field(default=True, alias="PLUGINS_ENABLED")

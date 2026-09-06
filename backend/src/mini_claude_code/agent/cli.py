@@ -17,7 +17,11 @@ from mini_claude_code.agent.checkpointer import (
 from mini_claude_code.agent.graph import DEFAULT_RECURSION_LIMIT, build_agent_graph
 from mini_claude_code.agent.hitl import ainvoke_with_hitl, invoke_with_hitl
 from mini_claude_code.agent.plugins import PluginPack, resolve_plugins
-from mini_claude_code.agent.slash_commands import dispatch_slash_input, slash_registry_from_plugins
+from mini_claude_code.agent.slash_commands import (
+    dispatch_slash_input,
+    resolve_pick_selection,
+    slash_registry_from_plugins,
+)
 from mini_claude_code.agent.stream_render import (
     consume_agent_astream,
     consume_agent_stream,
@@ -63,6 +67,51 @@ def _print_transcript(messages: list[object]) -> None:
     print("=== done ===")
 
 
+def _resolve_slash_prompt(
+    prompt: str,
+    slash_registry: dict[str, dict[str, str]],
+    plugins: list[PluginPack],
+) -> tuple[str | None, int]:
+    """Expand slash / handle list+pick. Returns (prompt_or_None, exit_code).
+
+    ``None`` prompt means the caller should exit with the given code (list/pick done
+    or error already printed).
+    """
+    try:
+        dispatch = dispatch_slash_input(prompt, slash_registry, plugins=plugins)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return None, 1
+    if dispatch.kind == "list":
+        print(dispatch.list_text)
+        return None, 0
+    if dispatch.kind == "pick":
+        print(dispatch.list_text)
+        if not dispatch.pick_choices:
+            return None, 0
+        if not sys.stdin.isatty():
+            print(
+                "ERROR: /pick requires an interactive TTY "
+                "(or call /command directly). Non-interactive: use /help.",
+                file=sys.stderr,
+            )
+            return None, 1
+        try:
+            selection = input("Number: ").strip()
+        except EOFError:
+            print("ERROR: no pick selection", file=sys.stderr)
+            return None, 1
+        try:
+            expanded = resolve_pick_selection(
+                slash_registry, selection, args=dispatch.prompt
+            )
+        except ValueError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return None, 1
+        return expanded, 0
+    return dispatch.prompt, 0
+
+
 async def _run_once_async(
     graph,
     prompt: str,
@@ -75,17 +124,9 @@ async def _run_once_async(
     usage_acc: UsageAccumulator | None,
     use_sync: bool,
 ) -> int:
-    try:
-        dispatch = dispatch_slash_input(
-            prompt, slash_registry, plugins=plugins
-        )
-    except ValueError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-    if dispatch.kind == "list":
-        print(dispatch.list_text)
-        return 0
-    prompt = dispatch.prompt
+    prompt, code = _resolve_slash_prompt(prompt, slash_registry, plugins)
+    if prompt is None:
+        return code
 
     # Plan Mode has no ask interrupts — token streaming is fine.
     if stream and plan_mode:
@@ -261,6 +302,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # Meta slash (/help, /plugins): list only — no checkpointer / graph / Postgres.
+    # /pick: numbered picker (may continue into the agent after selection).
     if not args.repl and args.prompt:
         try:
             early = dispatch_slash_input(
@@ -275,6 +317,32 @@ def main(argv: list[str] | None = None) -> int:
             print()
             print(early.list_text)
             return 0
+        if early.kind == "pick":
+            print(f"workspace:  {workspace}")
+            print(f"plugins:    {len(plugins)} pack(s)")
+            print()
+            print(early.list_text)
+            if not early.pick_choices:
+                return 0
+            if not sys.stdin.isatty():
+                print(
+                    "ERROR: /pick requires an interactive TTY "
+                    "(or call /command directly).",
+                    file=sys.stderr,
+                )
+                return 1
+            try:
+                selection = input("Number: ").strip()
+            except EOFError:
+                print("ERROR: no pick selection", file=sys.stderr)
+                return 1
+            try:
+                args.prompt = resolve_pick_selection(
+                    slash_registry, selection, args=early.prompt
+                )
+            except ValueError as exc:
+                print(f"ERROR: {exc}", file=sys.stderr)
+                return 1
 
     thread_id = args.thread_id
     if args.new_thread:

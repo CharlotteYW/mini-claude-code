@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 PLUGIN_MANIFEST = "plugin.yaml"
 
-# Seeded into workspace/plugins/ when missing (M16 review + M23 packs).
-_EXAMPLE_PACK_IDS = ("review", "docs-mcp", "research")
+# Seeded into workspace/plugins/ when missing (M16 review + M23 packs + M24).
+_EXAMPLE_PACK_IDS = ("review", "docs-mcp", "research", "shell-hooks")
 
 
 @dataclass
@@ -33,7 +33,7 @@ class PluginPack:
     name: str
     description: str
     slash_commands: dict[str, dict[str, Any]]
-    hooks: dict[str, list[str]]
+    hooks: dict[str, list[Any]]
     path: Path
     # M23: relative paths under ``path`` (skill dirs or SKILL.md files).
     skill_refs: list[str] = field(default_factory=list)
@@ -74,7 +74,7 @@ def load_plugin_manifest(path: Path) -> PluginPack:
     hooks_raw = data.get("hooks") or {}
     if hooks_raw and not isinstance(hooks_raw, dict):
         raise ValueError(f"hooks must be a mapping in {path}")
-    hooks = _normalize_hook_section(hooks_raw)
+    hooks = _normalize_hook_section(hooks_raw, plugin_dir=path.parent.resolve())
     slash_commands: dict[str, dict[str, Any]] = {}
     for cmd_name, spec in raw_slash.items():
         key = str(cmd_name).lstrip("/")
@@ -139,8 +139,13 @@ def _parse_mcp_section(raw: Any, *, path: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
-def _normalize_hook_section(hooks_raw: dict[str, Any]) -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {
+def _normalize_hook_section(
+    hooks_raw: dict[str, Any],
+    *,
+    plugin_dir: Path | None = None,
+) -> dict[str, list[Any]]:
+    """Normalize hook lists: string ids or shell/script objects (M24)."""
+    out: dict[str, list[Any]] = {
         "pre_tool_use": [],
         "post_tool_use": [],
         "stop": [],
@@ -149,7 +154,44 @@ def _normalize_hook_section(hooks_raw: dict[str, Any]) -> dict[str, list[str]]:
         items = hooks_raw.get(key) or []
         if not isinstance(items, list):
             raise ValueError(f"hooks.{key} must be a list")
-        out[key] = [str(i) for i in items]
+        normalized: list[Any] = []
+        for item in items:
+            if isinstance(item, str):
+                normalized.append(item)
+                continue
+            if not isinstance(item, dict):
+                raise ValueError(f"hooks.{key} entry must be string or mapping: {item!r}")
+            if "id" in item and "type" not in item:
+                normalized.append(str(item["id"]))
+                continue
+            typ = str(item.get("type") or "").strip().lower()
+            if typ not in ("script", "shell"):
+                raise ValueError(
+                    f"hooks.{key} unknown type {typ!r} (expected script|shell or id)"
+                )
+            entry = dict(item)
+            entry["type"] = typ
+            if typ == "script":
+                raw_path = entry.get("path")
+                if not raw_path:
+                    raise ValueError(f"hooks.{key} script requires path")
+                p = Path(str(raw_path))
+                if not p.is_absolute():
+                    if plugin_dir is None:
+                        raise ValueError(
+                            f"hooks.{key} relative script path needs plugin dir"
+                        )
+                    p = (plugin_dir / p).resolve()
+                    # jail
+                    try:
+                        p.relative_to(plugin_dir.resolve())
+                    except ValueError as exc:
+                        raise ValueError(
+                            f"hooks.{key} script escapes plugin dir: {raw_path}"
+                        ) from exc
+                entry["path"] = str(p.resolve())
+            normalized.append(entry)
+        out[key] = normalized
     return out
 
 
@@ -206,32 +248,47 @@ def resolve_plugins(
 def merge_hook_config_dicts(
     base: dict[str, Any] | None,
     plugins: list[PluginPack],
-) -> dict[str, list[str]]:
-    """Append plugin hook id lists after base; dedupe within each list (first wins)."""
-    merged: dict[str, list[str]] = {
+) -> dict[str, list[Any]]:
+    """Append plugin hook entries after base; dedupe (first wins)."""
+    merged: dict[str, list[Any]] = {
         "pre_tool_use": list((base or {}).get("pre_tool_use") or []),
         "post_tool_use": list((base or {}).get("post_tool_use") or []),
         "stop": list((base or {}).get("stop") or []),
     }
     for plugin in plugins:
-        for key in merged:
-            merged[key].extend(plugin.hooks.get(key) or [])
-    for key in merged:
+        for key, value in merged.items():
+            value.extend(plugin.hooks.get(key) or [])
+    for key, value in merged.items():
         seen: set[str] = set()
-        deduped: list[str] = []
-        for hid in merged[key]:
-            if hid in seen:
+        deduped: list[Any] = []
+        for entry in value:
+            token = _hook_entry_dedupe_key(entry)
+            if token in seen:
                 continue
-            seen.add(hid)
-            deduped.append(hid)
+            seen.add(token)
+            deduped.append(entry)
         merged[key] = deduped
     return merged
+
+
+def _hook_entry_dedupe_key(entry: Any) -> str:
+    if isinstance(entry, str):
+        return f"id:{entry}"
+    if isinstance(entry, dict):
+        if "type" in entry:
+            typ = entry.get("type")
+            if typ == "script":
+                return f"script:{entry.get('path')}"
+            return f"shell:{entry.get('command')}"
+        if "id" in entry:
+            return f"id:{entry['id']}"
+    return repr(entry)
 
 
 def _load_base_hooks_dict(
     settings: Settings,
     workspace_root: Path,
-) -> dict[str, list[str]] | None:
+) -> dict[str, list[Any]] | None:
     path_raw = settings.hooks_config_path.strip()
     if path_raw:
         data = yaml.safe_load(Path(path_raw).read_text(encoding="utf-8")) or {}
@@ -254,7 +311,7 @@ def resolve_merged_hooks_dict(
     *,
     workspace_root: Path | None = None,
     plugins: list[PluginPack] | None = None,
-) -> dict[str, list[str]] | None:
+) -> dict[str, list[Any]] | None:
     """Base hooks config + appended plugin hook sections."""
     settings = settings or get_settings()
     root = workspace_root or resolve_workspace_root(settings)

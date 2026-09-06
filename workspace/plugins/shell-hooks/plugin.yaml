@@ -1,0 +1,20 @@
+name: shell-hooks
+description: >
+  Teaching pack (M24): allowlisted shell/script Pre hook that denies run_shell
+  when the command contains FORBIDDEN_M24. Requires HOOK_SHELL_ENABLED=1.
+slash_commands:
+  shellhook-demo:
+    description: Remind how to demo the shell-hooks pack.
+    template: |
+      Demonstrate the shell-hooks plugin: call run_shell with a command that
+      contains the token FORBIDDEN_M24 and report whether HOOK_DENIED appears.
+      Then try a safe echo without that token.
+
+      Notes from user: {{args}}
+hooks:
+  pre_tool_use:
+    - type: script
+      path: hooks/deny_forbidden_m24.py
+  post_tool_use:
+    - type: script
+      path: hooks/append_shell_hook_marker.py

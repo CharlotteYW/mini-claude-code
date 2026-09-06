@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — M24: Plugin hooks & discovery
+
+- Shipped: `shell_hooks.py`; script/shell hook entries; `HOOK_SHELL_*`; pack `shell-hooks`; `/pick` picker; `./scripts/m24-demo.sh`.
+- Insight: Industry hooks are often **subprocess + JSON**, not only in-process ids — but must be **deny-by-default**.
+- See Concept Q&A index (M24); Results: [M24](docs/milestones/M24-plugin-hooks-discovery.md).
+
+---
+
 ## 2026-09-05 — M23: Plugin pack expansion
 
 - Shipped: `plugin.yaml` skills/mcp/subagents; merge into M13/M14/M12; packs `review`, `docs-mcp`, `research`; `./scripts/m23-demo.sh`.
@@ -250,7 +258,19 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ## Concept Q&A index (M0–M26 study guide)
 
-Study this before starting the next milestone (next: M24 parked industry hooks, or as planned).
+Study this before starting the next milestone (next: M25 plugin install & trust).
+
+### M24 — Plugin hooks & discovery
+
+- **Q: How are shell hooks different from M15 ids?**  
+  A: M15 handlers are **in-process Python** (`hook_demos`). M24 can also spawn a **script/command** with JSON stdin/stdout — portable pack policy without importing plugin Python into the agent.
+- **Q: Why deny-by-default?**  
+  A: Shell hooks are arbitrary code execution on the host. `HOOK_SHELL_ENABLED=0` skips them; when enabled, paths must be allowlisted or under `workspace/plugins/`.
+- **Q: Does /pick change the graph?**  
+  A: **No.** It is CLI discovery that expands to a normal HumanMessage (same as `/review`).
+- **Q: Wrap order still?**  
+  A: Unchanged: **Pre → permissions/HITL → body → Post** (shell Pre is just another Pre handler).
+- Link: [M24](docs/milestones/M24-plugin-hooks-discovery.md)
 
 ### M23 — Plugin pack expansion
 

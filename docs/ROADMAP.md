@@ -58,7 +58,7 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M21 | [Elasticsearch (local full-text)](milestones/M21-elasticsearch-fulltext.md) | **Done.** Compose ES; `search_keyword` BM25; triple-write ingest with M20 chunks. |
 | M22 | [Async agent runtime](milestones/M22-async-agent-runtime.md) | **Done.** Default `ainvoke`/`astream`; permission/hook coroutines; MCP sync shim demoted. |
 | M23 | [Plugin pack expansion (skills / MCP / subagents)](milestones/M23-plugin-pack-expansion.md) | **Done.** `plugin.yaml` declares skills/MCP/subagents; merge into M13/M14/M12; packs `review`, `docs-mcp`, `research`. |
-| M24 | Plugin hooks & discovery (industry) | **Parked (industry parity).** Shell/script hook runners (Claude Code–style); optional SessionStart-style lifecycle; interactive slash picker beyond list-only `/help`; reuse slash expand from M18 channels. |
+| M24 | [Plugin hooks & discovery (industry)](milestones/M24-plugin-hooks-discovery.md) | **Done.** Shell/script hook runners (deny-by-default + allowlist); `/pick` numbered slash picker; pack `shell-hooks`. |
 | M25 | Plugin install & trust (local-first) | **Parked (industry parity).** Install from path/git; versioned manifests; allowlist / deny-by-default for hook runners and MCP spawn; document gap vs signed marketplace — **simplification:** no npm store. |
 | M26 | [MCP tool content policy & safety](milestones/M26-mcp-content-policy.md) | **Done.** Content-aware deny for `no-ai` / CONFIDENTIAL; fake docs MCP; client wrap + server policy; contrast M9/M15. |
 

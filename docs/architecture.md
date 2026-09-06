@@ -59,7 +59,7 @@ flowchart TB
   subgraph plane [Policy and extension plane]
     Perm[Permissions plus Plan mode]
     HITL[interrupt HITL]
-    Hooks[Lifecycle hooks]
+    Hooks[Lifecycle hooks ids plus shell M24]
     Skills[Skills progressive disclosure]
     MCP[MCP tool merge]
     Plugins[Plugin pack merge M16/M23]
@@ -146,6 +146,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M20 Done** — [milestones/M20-doc-ingestion-memory-pipeline.md](milestones/M20-doc-ingestion-memory-pipeline.md)
 - **M21 Done** — [milestones/M21-elasticsearch-fulltext.md](milestones/M21-elasticsearch-fulltext.md)
 - **M22 Done** — [milestones/M22-async-agent-runtime.md](milestones/M22-async-agent-runtime.md)
-- **M23 Done** — [milestones/M23-plugin-pack-expansion.md](milestones/M23-plugin-pack-expansion.md) (M24–M25 parked; M26 Done earlier)
+- **M23 Done** — [milestones/M23-plugin-pack-expansion.md](milestones/M23-plugin-pack-expansion.md)
+- **M24 Done** — [milestones/M24-plugin-hooks-discovery.md](milestones/M24-plugin-hooks-discovery.md) (M25 parked; M26 Done earlier)
 - **M26 Done** — [milestones/M26-mcp-content-policy.md](milestones/M26-mcp-content-policy.md)
 - Full list: [ROADMAP.md](ROADMAP.md)
