@@ -62,23 +62,49 @@ Every milestone Plan must include **unit + integration** test cases; Done requir
 | M25 | [Plugin install & trust (local-first)](milestones/M25-plugin-install-trust.md) | **Done.** `mcc-plugins install/list/trust`; versioned manifests; `.trust.yaml` enable + MCP/shell capability flags. |
 | M26 | [MCP tool content policy & safety](milestones/M26-mcp-content-policy.md) | **Done.** Content-aware deny for `no-ai` / CONFIDENTIAL; fake docs MCP; client wrap + server policy; contrast M9/M15. |
 
-**M18 learning notes (when we get there):** the bot is an *interface*, not a new graph — same checkpointer sessions as CLI. **Slack OAuth v2** for workspace install (bot token per `team_id`); **GitHub via `GH_TOKEN`** only (no GitHub OAuth in M18). Socket Mode for local dev; dry-run PR default; deny-by-default until M9/M10. Always call through **M19** so channel-triggered ships cannot skip CI-like checks. Reuse M16 `dispatch_slash_input` for messages that start with `/`.
+## Tier 5 — Depth digs (post–M26)
 
-**M19 learning notes (when we get there):** this is an *agentic quality loop*, not “hope the human ran pytest.” Wire `./scripts/test.sh` (+ formatter, e.g. ruff/black once chosen) as tools or a single `ship_check` tool; treat red tests as recoverable errors in the ReAct loop. Cap iterations to avoid infinite spend. **Simplification:** local checks only first (no mandatory GitHub Actions wait); production would also require remote CI status. Owner-push is a policy switch (`SHIP_MODE=pr|push`) with HITL confirmation from M9/M10 — never silent force-push.
+Core loop + Tier-3 extensibility are in place. These milestones sharpen **agent/LLM-specific** gaps that production systems hit next — not generic app features. One at a time; Plan → approve → ship tests + Results + Learning Log Q&A.
 
-**M20 learning notes (when we get there):** “Neo4j does chunking” is a common mix-up — **chunking/cleaning is an ingestion pipeline**; Neo4j *stores* the resulting entities/chunks/edges. Pipeline should be store-agnostic enough to also feed pgvector (and later ES). Keep runnable on Docker Desktop; no cloud-only deps. Still a learning repo: label what real multi-tenant prod would still need (ACL, job queue, evals).
+| ID | Title | Goal |
+|---|---|---|
+| M27 | [Hybrid retrieval (ES → vector)](milestones/M27-hybrid-retrieval.md) | **Planned.** Keyword filter (or BM25 top-k) then pgvector re-rank on the same chunk ids; one `search_hybrid` tool; document when hybrid beats solo ES/vector. |
+| M28 | [Graph-neighbor expand (Neo4j NEXT)](milestones/M28-graph-neighbor-expand.md) | **Planned.** After a chunk hit, walk `NEXT` / `HAS_CHUNK` for ±N neighbors; cite path+index; contrast vector-only blind spots. |
+| M29 | [MCP HTTP transport & sticky session](milestones/M29-mcp-http-session.md) | **Planned.** Beyond stdio: Streamable HTTP (or SSE) MCP server + `client.session(...)` sticky connection; contrast cold `get_tools` per build. |
+| M30 | [LangGraph Store (cross-thread memory)](milestones/M30-langgraph-store.md) | **Planned.** Checkpointer = *thread* durability; Store = *user/project* key-value across threads; wire a small remember/recall via Store API beside Neo4j facts. |
+| M31 | [Time-travel & branch sessions](milestones/M31-time-travel-branch.md) | **Planned.** List checkpoints; fork `thread_id` / `checkpoint_id` resume; CLI `/rewind` or `--fork-from`; teach “edit past → new future” without mutating history. |
+| M32 | [Parallel tools & fan-out](milestones/M32-parallel-tools-fanout.md) | **Planned.** Concurrent tool execution when the model emits multiple `tool_calls`; optional map-reduce style gather node; measure latency vs serial ToolNode. |
+| M33 | [Structured outputs & forced tool choice](milestones/M33-structured-output-tool-choice.md) | **Planned.** `with_structured_output` / JSON schema path for “decide then act”; `tool_choice` force/forbid; when schema beats free-form ReAct chatter. |
+| M34 | [Observability traces (LangSmith / OTel)](milestones/M34-observability-traces.md) | **Planned.** Export runs as traces (LangSmith and/or OpenTelemetry); correlate tool spans + token usage; optional minimal web timeline (only if it teaches the trace model). |
+| M35 | [Multi-agent handoff (swarm-lite)](milestones/M35-multi-agent-handoff.md) | **Planned.** Beyond M12 parent→child `run_subagent`: peer handoff / supervisor pattern with explicit transfer tool and isolated message views; same checkpointer namespace rules. |
+| M36 | [RAG / agent eval quality](milestones/M36-rag-agent-eval-quality.md) | **Planned.** Extend M17 beyond smoke: retrieval hit@k, faithfulness/answer relevance (simple judges), regression fixtures for ingest+search+hybrid. |
+| M37 | [Prompt caching & budgeted compaction](milestones/M37-prompt-cache-budget.md) | **Planned.** Provider prompt-cache headers where available; make compaction trigger from *real* token estimates + soft budget; show cost delta in `--usage`. |
+| M38 | [Remote CI gate (GitHub Checks)](milestones/M38-remote-ci-gate.md) | **Planned.** After M19 local `ship_check`, optionally wait on GitHub Actions / Checks API before `open_pull_request` merge advice; timeout + HITL. |
 
-**M21 learning notes (when we get there):** ES complements, does not replace, Neo4j or pgvector — keyword/full-text at scale vs relations vs semantic similarity. Add as another Compose service (local). Agent gets search tools; document the three-way choice. Optional: hybrid later (ES filter + vector re-rank) as a dig after M20/M21.
+**M27 learning notes:** M20/M21 taught three stores alone. Hybrid is the industry default for “must contain token X *and* be semantically close.” Prefer **filter-then-embed** or **RRF** over a opaque “magic search” tool — the agent (and you) should see both stages. Simplification: same `chunk_id` space across ES and pgvector; no cross-encoder re-ranker yet.
 
-**M22 learning notes (when we get there):** M14 kept a **sync** ReAct/CLI path and wrapped MCP tools with `asyncio.run(ainvoke)` so ToolNode/permissions keep working. Production-shaped runtimes usually stay async end-to-end (`ainvoke` / `astream`, async tool execution, HITL resume without nested event loops). Goal: remove `wrap_mcp_tool_for_sync` as the default path; keep sync only as a thin compatibility shim if needed. Pair with optional digs: stateful `client.session(...)`, MCP HTTP transport. Do **not** replace MCP with plain local `@tool` demos — that drops the protocol lesson.
+**M28 learning notes:** Vector search returns islands; docs are sequences. `NEXT` expand is cheap structure RAG. Keep CONTAINS as emergency only. Do not pretend Neo4j “does chunking.”
 
-**M23 learning notes (when we get there):** M16 plugins = slash + hook **id** merge only. Industry packs often also ship **skills** (playbooks), **MCP** (stdio/HTTP entries), and **subagent** defs. Teach merge semantics: plugin declares → runtime registers into the same extension planes (skills catalog / `build_default_tools` MCP list / subagent loader) — not new parent nodes. Contrast: slash changes HumanMessage; skills change prompt view; MCP expands tool list; subagents add `run_subagent` targets. **Simplification:** local `workspace/plugins/<id>/` tree with co-located assets; no remote marketplace.
+**M29 learning notes:** Stdio MCP = spawn per process (fine for demos). HTTP + sticky session teaches connection lifecycle, auth headers, and why tool list can be stale. Keep a tiny in-repo HTTP MCP; label OAuth to third-party SaaS as out of scope unless opted in.
 
-**M24 learning notes (when we get there):** Industry hooks (e.g. Claude Code) often run **shell commands** with JSON stdin/stdout, not only in-process Python ids. Add opt-in runner behind M9/M10 (deny-by-default for mutating shell). Discovery beyond M16 **方案 A**: numbered picker or TUI — still CLI boundary, not graph nodes. Optional **SessionStart** / **UserPromptSubmit** hooks as extension-plane dig if they clarify lifecycle without graph bloat.
+**M30 learning notes:** Students often conflate checkpointer with “memory.” Store is the LangGraph-native cross-thread map; Neo4j facts remain the *semantic* long-term store. Teach when to use which.
 
-**M25 learning notes (when we get there):** Production plugins imply **trust**: signed packages, permission prompts, scoped MCP/network. Learning repo: `mcc plugins install ./path` or git clone into `workspace/plugins/`; manifest `version` + `requires`; block unknown hook runners until allowlisted. Label what a real marketplace still needs (signing, updates, org policy). Do not silently auto-load arbitrary Python from plugin paths (M16 deliberately avoided this).
+**M31 learning notes:** Production debuggers and “try that again from step 3” need checkpoint identity. Fork vs overwrite is the key design choice; never silent history rewrite.
 
-**M26 learning notes (when we get there):** M9 answers “may this *tool* run?” (auto/ask/deny). M15 hooks can audit/block by *name/args*. M26 teaches **content-aware policy**: after (or before) an MCP read, inspect title / first line / metadata for markers like `no-ai` / `CONFIDENTIAL` and return a deny string so the model never sees the body. Teaching demo: in-repo fake “docs” MCP (or fixture files) — **not** live Google Docs OAuth unless opted in. Contrast **server-enforced** policy (MCP server refuses) vs **client wrap** after `get_tools` (our agent cannot trust a hostile server). Prefer fail-closed; label that real Google Docs needs Drive API + shared labels/ACLs, not only a first-line convention.
+**M32 learning notes:** Many models already emit parallel `tool_calls`; serial execution leaves latency on the table. Fan-out must preserve permission/hook planes and error isolation (one tool fail ≠ kill all).
+
+**M33 learning notes:** ReAct free-form is flexible and sloppy. Structured output is for closed decision surfaces (route, grade, extract). Forced `tool_choice` is for “you must call X now.” Contrast both with skills (prompt) and subagents (context isolation).
+
+**M34 learning notes:** Without traces, agent failures are folklore. Prefer one export path that shows LLM → tool → LLM spans; UI is optional candy. Pair with M17 usage accumulator.
+
+**M35 learning notes:** M12 is hierarchical invoke. Handoff/swarm is *control transfer* between peers (or supervisor). Watch context leakage and infinite ping-pong — hard caps + explicit handoff tool.
+
+**M36 learning notes:** M17 proved the harness exists; quality eval asks “did retrieval help?” Use fixed corpora under `workspace/` and deterministic judges where possible; LLM-as-judge labeled as soft.
+
+**M37 learning notes:** Compaction today is size-heuristic. Budgets + cache-aware system prompts change cost curves. Provider differences (Anthropic cache_control vs OpenAI) are the lesson — abstract thinly.
+
+**M38 learning notes:** Local green ≠ CI green. Teaching the wait/poll/timeout loop without turning the agent into a full CD system. HITL on red remote checks.
+
 ## Status legend
 
-Milestone files use: `Planned` / `In Progress` / `Done`. Only M0 has a full Plan doc so far; later files are created when we enter that milestone.
+Milestone files use: `Planned` / `In Progress` / `Done`. Create the full Plan file when entering that milestone (approve before coding).

@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — Roadmap: Tier 5 planned (M27–M38)
+
+- **Q: After M0–M26, what is still worth learning?**  
+  A: Core agent surface is enough to *build*; Tier 5 digs **depth**: hybrid retrieval, graph expand, MCP HTTP/session, LangGraph Store vs checkpointer, time-travel forks, parallel tools, structured output, traces, handoff/swarm, RAG eval quality, prompt cache/budgets, remote CI gate. Listed in [ROADMAP](docs/ROADMAP.md); stub Plans under `docs/milestones/M27`–`M38`.
+- Next: skim M26 Q&A in Learning Log if needed; pick one (suggested start: **M27** or **M30**); say ready for a full Plan.
+
+---
+
 ## 2026-09-05 — Dig: REPL Chinese backspace leaves first glyph
 
 - **Q: In `chat.sh` REPL, why can I delete only 2 of 3 Chinese characters? English is fine.**  
