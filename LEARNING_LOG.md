@@ -13,6 +13,32 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-05 — Dig: fake_docs purpose + where content_policy runs
+
+- **Q: Is fake_docs mainly a demo?**  
+  A: **Yes — a teaching MCP**, not a product docs store. It gives a controllable `read_doc` so you can see **server-enforced** deny vs **client wrap**, without Google OAuth.
+- **Q: Does the agent’s content policy only run on the MCP server?**  
+  A: **No — two places.** (1) **Server:** `fake_docs.read_doc` imports helpers and denies before returning body. (2) **Client:** `apply_content_policy_wrap` in `build_default_tools` screens results after the tool returns (also `read_file`). Same helpers module; different trust boundary.
+- Link: `content_policy.py`, `mcp_servers/fake_docs.py`, `tools/default.py`
+
+---
+
+## 2026-09-05 — Dig: do we have a “real” MCP server?
+
+- **Q: Do we lack a real MCP server?**  
+  A: **No — protocol is real.** `echo_math` and `fake_docs` are FastMCP **stdio** servers; the agent loads them via `MultiServerMCPClient` / langchain-mcp-adapters (spawn process, MCP handshake, tools as `BaseTool`). **“Fake” = fake documents**, not fake MCP. What we skip (simplification): third-party marketplace servers, HTTP/SSE as default, long-lived `client.session(...)`, OAuth to Google Docs, etc. You can still point `MCP_CONFIG` at any real stdio/HTTP MCP if you want.
+- Link: `mcp_servers/echo_math.py`, `mcp_servers/fake_docs.py`, `tools/mcp_loader.py`
+
+---
+
+## 2026-09-05 — Dig: tool call chain (wrap onion)
+
+- **Q: What is our tool call chain?**  
+  A: **Graph:** `call_model` → (if `tool_calls`) `ToolNode` → back to `call_model`. **Build-time onion (outer→inner):** hooks → permissions/HITL → content policy → body (builtin or MCP stdio). **Runtime one call:** Pre hooks → permission auto/ask/deny → (shell may hit Docker sandbox inside body) → tool body → content-policy screens *result* → Post hooks → `ToolMessage` → model. M9/M15 gate *before* body; M26 mainly gates *returned text*. Topology stays two nodes.
+- Link: `agent/graph.py`, `permissions.py`, `hooks.py`, `content_policy.py`, `tools/default.py`
+
+---
+
 ## 2026-09-05 — M26: MCP content policy
 
 - Shipped: `content_policy.py`; `fake_docs` MCP + fixtures; client wrap on `read_*` / optional `read_file`; `MCP_USE_FAKE_DOCS`; `./scripts/m26-demo.sh`.
