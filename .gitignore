@@ -26,6 +26,9 @@ frontend/dist/
 .coverage
 htmlcov/
 
+# Slide / deck scratch (builders, previews, reference plates)
+tmp/
+
 # Agent workspace scratch (M3+); keep README + AGENT.md + example subagents
 workspace/*
 !workspace/README.md
