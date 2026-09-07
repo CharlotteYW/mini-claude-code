@@ -151,4 +151,6 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M24 Done** — [milestones/M24-plugin-hooks-discovery.md](milestones/M24-plugin-hooks-discovery.md)
 - **M25 Done** — [milestones/M25-plugin-install-trust.md](milestones/M25-plugin-install-trust.md) (plugin lane complete; M26 Done earlier)
 - **M26 Done** — [milestones/M26-mcp-content-policy.md](milestones/M26-mcp-content-policy.md)
+- **M27 Done** — [milestones/M27-hybrid-retrieval.md](milestones/M27-hybrid-retrieval.md)
+- **M28 Done** — [milestones/M28-graph-neighbor-expand.md](milestones/M28-graph-neighbor-expand.md)
 - Full list: [ROADMAP.md](ROADMAP.md)
