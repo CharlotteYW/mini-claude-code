@@ -194,6 +194,51 @@ def build_memory_tools(
             )
         return "\n".join(lines)
 
+    @tool
+    def expand_chunks_tool(
+        doc_id: str = "",
+        chunk_index: int = 0,
+        chunk_id: str = "",
+        radius: int = 1,
+    ) -> str:
+        """Expand ±N neighbors around an ingested chunk via Neo4j NEXT edges.
+
+        Use AFTER search_chunks / search_hybrid / search_keyword when you need
+        sequence context (prev/next paragraphs). Pass doc_id + chunk_index from
+        a hit cite, or chunk_id like 'doc:2'. Default radius=1 (clamped 1–3).
+        Not a replacement for vector/BM25 search — structure only. Citations
+        look like source_path#chunk_index.
+        """
+        from mini_claude_code.memory.expand import expand_chunks, format_expand_hits
+
+        cid = (chunk_id or "").strip()
+        did = (doc_id or "").strip()
+        try:
+            if cid:
+                hits = expand_chunks(
+                    chunk_id=cid, radius=radius, settings=settings
+                )
+            elif did:
+                hits = expand_chunks(
+                    doc_id=did,
+                    chunk_index=chunk_index,
+                    radius=radius,
+                    settings=settings,
+                )
+            else:
+                return (
+                    "ERROR expand_chunks: provide doc_id + chunk_index "
+                    "or chunk_id ('{doc_id}:{chunk_index}')"
+                )
+        except Exception as exc:  # noqa: BLE001
+            return f"ERROR expand_chunks: {exc}"
+        if not hits:
+            return (
+                "No chunks in expand window (missing center or empty graph). "
+                "Ingest with ingest_docs, then expand from a search hit."
+            )
+        return format_expand_hits(hits)
+
     remember_fact_tool.name = "remember_fact"
     recall_facts_tool.name = "recall_facts"
     remember_note_tool.name = "remember_note"
@@ -202,6 +247,7 @@ def build_memory_tools(
     search_chunks_tool.name = "search_chunks"
     search_keyword_tool.name = "search_keyword"
     search_hybrid_tool.name = "search_hybrid"
+    expand_chunks_tool.name = "expand_chunks"
     return [
         remember_fact_tool,
         recall_facts_tool,
@@ -211,4 +257,5 @@ def build_memory_tools(
         search_chunks_tool,
         search_keyword_tool,
         search_hybrid_tool,
+        expand_chunks_tool,
     ]

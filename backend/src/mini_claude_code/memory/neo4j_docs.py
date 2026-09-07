@@ -148,6 +148,74 @@ def write_document_chunks(
     return written
 
 
+def expand_chunks_via_next(
+    *,
+    doc_id: str,
+    chunk_index: int,
+    radius: int = 1,
+    settings: Settings | None = None,
+) -> list[GraphChunkHit]:
+    """Walk ``NEXT`` ±radius around a chunk; return ordered by ``chunk_index``.
+
+    Uses fixed ``*0..3`` path bound (radius is clamped to 1–3 by callers) then
+    filters with ``abs(index delta) <= radius``. Missing center → empty list.
+    Does not use CONTAINS; structure only.
+    """
+    settings = settings or get_settings()
+    doc_id = str(doc_id).strip()
+    chunk_index = int(chunk_index)
+    radius = max(1, min(int(radius), 3))
+    chunk_id = f"{doc_id}:{chunk_index}"
+
+    driver = _driver(settings)
+    try:
+        with driver.session() as session:
+            result = session.run(
+                """
+                MATCH (center:Chunk {id: $chunk_id})
+                CALL {
+                  WITH center
+                  MATCH (center)-[:NEXT*0..3]->(n:Chunk)
+                  RETURN n AS node
+                  UNION
+                  WITH center
+                  MATCH (n:Chunk)-[:NEXT*0..3]->(center)
+                  RETURN n AS node
+                  UNION
+                  WITH center
+                  RETURN center AS node
+                }
+                WITH center, node
+                WHERE node IS NOT NULL
+                  AND node.doc_id = center.doc_id
+                  AND abs(node.chunk_index - center.chunk_index) <= $radius
+                RETURN DISTINCT
+                       node.id AS id,
+                       node.doc_id AS doc_id,
+                       node.source_path AS source_path,
+                       node.chunk_index AS chunk_index,
+                       node.text AS text,
+                       node.title AS title
+                ORDER BY node.chunk_index ASC
+                """,
+                chunk_id=chunk_id,
+                radius=radius,
+            )
+            return [
+                GraphChunkHit(
+                    id=str(r["id"]),
+                    doc_id=str(r["doc_id"]),
+                    source_path=str(r["source_path"]),
+                    chunk_index=int(r["chunk_index"]),
+                    text=str(r["text"]),
+                    title=str(r["title"]) if r["title"] is not None else None,
+                )
+                for r in result
+            ]
+    finally:
+        driver.close()
+
+
 def search_chunks_keyword(
     query: str,
     *,

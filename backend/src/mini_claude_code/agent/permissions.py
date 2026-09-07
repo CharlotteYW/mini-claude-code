@@ -30,6 +30,7 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "search_chunks",
         "search_keyword",
         "search_hybrid",
+        "expand_chunks",
         # Demo / tests (M1) + M14 in-repo MCP echo_math demos
         "add",
         "echo",

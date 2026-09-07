@@ -13,6 +13,23 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-07 — M28: Graph-neighbor expand
+
+- Shipped: `expand_chunks` (Neo4j `NEXT` ±N); pure window helpers; `./scripts/m28-demo.sh`.
+- Insight: Search finds **islands**; expand supplies **sequence** — keep them separate tools.
+- Insight: **Tool plane only** — no new LangGraph node / forced LLM layer (same ReAct).
+- See Concept Q&A index (M28); Results: [M28](docs/milestones/M28-graph-neighbor-expand.md).
+
+---
+
+## 2026-09-07 — Dig: M28 = tool plane only?
+
+- **Q: Does M28 only add a tool, with no extra agent/LLM call layer?**  
+  A: **Yes (by design).** Same ReAct loop: `call_model` → ToolNode → `call_model`. `expand_chunks` is another **tool** the model may choose after a search hit — not a new LangGraph node, not a forced second LLM, not a subagent. Extra **LLM** turns happen only if the model decides to call expand (then another `call_model` after the tool result), same as any other tool. A dedicated “retrieve then expand” graph node would hide that choice and add a fixed pipeline stage — deferred; M28 teaches **structure RAG as an agent-visible action**.
+- Link: [M28](docs/milestones/M28-graph-neighbor-expand.md)
+
+---
+
 ## 2026-09-07 — M27: Hybrid retrieval
 
 - Shipped: `search_hybrid` (ES BM25 candidates → pgvector re-rank); `search_chunks_among`; `./scripts/m27-demo.sh`.
@@ -306,7 +323,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M27 study guide)
+## Concept Q&A index (M0–M28 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -347,6 +364,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M28 — Graph-neighbor expand
+
+- **Q: Tool only — no new agent call layer?**  
+  A: **Yes.** No new LangGraph node / forced LLM / subagent. Same `call_model` ↔ tools; expand is an optional tool step. Extra model turns = normal ReAct after tool results, not a pipeline “layer.”
+- **Q: Why not auto-expand inside `search_chunks`?**  
+  A: Hides the island vs sequence lesson and bloats every hit. Agent (and you) should choose when neighbors are worth the tokens.
+- **Q: Join / cite key?**  
+  A: Same as M20/M27: `(doc_id, chunk_index)` / `{doc_id}:{chunk_index}` → `source_path#index`. Not pgvector UUID.
+- **Q: NEXT vs CONTAINS?**  
+  A: Expand walks **NEXT** (structure). CONTAINS/`search_chunks_keyword` stays emergency keyword only.
+- Link: [M28](docs/milestones/M28-graph-neighbor-expand.md)
 
 ### M27 — Hybrid retrieval
 
