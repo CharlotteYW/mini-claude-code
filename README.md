@@ -4,7 +4,7 @@ A learning project: build a **mini Claude Code** with LangGraph — an agent tha
 
 The goal is not a production product. The goal is to understand **every component and middleware**: why it exists, what degrades without it, and what alternatives look like in the industry.
 
-**Status:** Milestones **M0–M26 Done**. Tier 5 depth digs (**M27–M38**) are Planned — see [docs/ROADMAP.md](docs/ROADMAP.md).
+**Status:** Milestones **M0–M27 Done**. Tier 5 continues (**M28–M38** Planned) — see [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Learning outcomes
 
@@ -99,6 +99,7 @@ cp .env.example .env          # or let setup create it
 ```bash
 ./scripts/m20-demo.sh         # doc ingest → pgvector + Neo4j
 ./scripts/m21-demo.sh         # Elasticsearch keyword search
+./scripts/m27-demo.sh         # hybrid ES → pgvector
 ./scripts/db-inspect.sh
 ./scripts/db-inspect.sh postgres --thread-id demo-1
 ```
@@ -156,7 +157,7 @@ cd backend && uv run pytest -m integration -v
 | Safety | `test_m9_permissions.py`, `test_m10_hitl.py`, `test_m11_sandbox.py` |
 | Extensibility | `test_m12_subagents.py` … `test_m16_plugins.py` |
 | Eval / Slack / ship | `test_m17_*`, `test_m18_*`, `test_m19_*` |
-| Ingest / ES / async | `test_m20_*`, `test_m21_*`, `test_m22_*` |
+| Ingest / ES / async / hybrid | `test_m20_*`, `test_m21_*`, `test_m22_*`, `test_m27_hybrid.py` |
 | Plugins / policy | `test_m23_*` … `test_m26_content_policy.py` |
 
 Integration twins live under `backend/tests/integration/` (`*_live.py`).

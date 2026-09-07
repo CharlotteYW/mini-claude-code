@@ -2,22 +2,22 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M19 complete  
+**Last updated:** M27 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M19)
+## Current status (M27)
 
 | Piece | Status |
 |---|---|
 | Core ReAct + tools + sessions + stream | M2–M6 |
 | Compact + memory + permissions + HITL + sandbox | M7–M11 |
-| Sub-agents / Skills / MCP / Hooks | M12–M15 |
-| Plugins & slash / eval / Slack | M16–M18 |
-| Pre-ship quality gate | **M19 Done** |
+| Sub-agents / Skills / MCP / Hooks / plugins | M12–M16, M23–M25 |
+| Eval / Slack / ship / ingest / ES / async / content policy | M17–M22, M26 |
+| Hybrid retrieval (`search_hybrid`) | **M27 Done** |
 
 Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
@@ -127,7 +127,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 | Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | Sync `PostgresSaver` via `open_checkpointer` (`--sync`); async `AsyncPostgresSaver` via `open_async_checkpointer` (default CLI `ainvoke`/`astream`); MemorySaver optional |
 | Vectors | `pgvector` + `memory_notes` + `memory_chunks` | M8-B notes; M20 ingest chunks (`doc_id`, path, index) via Ollama embed |
 | Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8 `Fact`; M20 `Document`/`Chunk` + `HAS_CHUNK`/`NEXT` |
-| Full-text | Elasticsearch (`mcc-elasticsearch`, `:9200`) | M21: `mcc_chunks` index + `search_keyword` (BM25) |
+| Full-text | Elasticsearch (`mcc-elasticsearch`, `:9200`) | M21: `search_keyword` (BM25); M27: `search_hybrid` (ES → pgvector re-rank on `(doc_id, chunk_index)`) |
 | Sandbox | Docker SDK ephemeral containers | M11; host subprocess until then (labeled insecure) |
 | Frontend | Deferred | Until streaming/trace visualization helps learning |
 

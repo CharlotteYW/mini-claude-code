@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-07 — M27: Hybrid retrieval
+
+- Shipped: `search_hybrid` (ES BM25 candidates → pgvector re-rank); `search_chunks_among`; `./scripts/m27-demo.sh`.
+- Insight: Join on **`(doc_id, chunk_index)`** — pgvector UUID `id` is not the shared key with ES `_id`.
+- Insight: Empty keyword stage → empty hybrid (no silent global vector fallback).
+- See Concept Q&A index (M27); Results: [M27](docs/milestones/M27-hybrid-retrieval.md).
+
+---
+
 ## 2026-09-05 — Roadmap: Tier 5 planned (M27–M38)
 
 - **Q: After M0–M26, what is still worth learning?**  
@@ -297,7 +306,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M26 study guide)
+## Concept Q&A index (M0–M27 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -338,6 +347,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M27 — Hybrid retrieval
+
+- **Q: Why not one “search everything” tool?**  
+  A: Solo ES / solo vector teach different failure modes. Hybrid is a **staged** choice the agent (and you) should see.
+- **Q: What is the join key?**  
+  A: **`(doc_id, chunk_index)`**. ES `_id` is `{doc_id}:{chunk_index}`; pgvector PK is a UUID — do not join on UUID.
+- **Q: Empty ES — fall back to `search_chunks`?**  
+  A: **No (default).** Empty keyword stage → empty hybrid, so the contract stays honest. Call `search_chunks` explicitly if you want paraphrase-only.
+- **Q: RRF or cross-encoder?**  
+  A: Deferred. M27 is filter-then-embed only.
+- Link: [M27](docs/milestones/M27-hybrid-retrieval.md)
 
 ### M26 — MCP content policy & safety
 

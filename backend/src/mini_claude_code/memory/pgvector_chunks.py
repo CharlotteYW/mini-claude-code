@@ -179,3 +179,79 @@ def search_chunks(
         )
         for r in rows
     ]
+
+
+def search_chunks_among(
+    query: str,
+    keys: Sequence[tuple[str, int]],
+    *,
+    limit: int = 5,
+    settings: Settings | None = None,
+    embedder: Embedder | None = None,
+) -> list[MemoryChunkHit]:
+    """Cosine search restricted to ``(doc_id, chunk_index)`` candidates (M27)."""
+    settings = settings or get_settings()
+    q = query.strip()
+    if not q:
+        raise ValueError("search query must be non-empty")
+    if not keys:
+        return []
+    limit = max(1, min(int(limit), 20))
+
+    # Dedupe while preserving order.
+    seen: set[tuple[str, int]] = set()
+    unique: list[tuple[str, int]] = []
+    for doc_id, chunk_index in keys:
+        key = (str(doc_id), int(chunk_index))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(key)
+
+    embedder = embedder or create_ollama_embedder(settings)
+    vector = embedder.embed_query(q)
+    if len(vector) != settings.embedding_dimensions:
+        raise ValueError(
+            f"embedding dim {len(vector)} != EMBEDDING_DIMENSIONS "
+            f"{settings.embedding_dimensions}"
+        )
+
+    ensure_chunks_schema(settings, dim=settings.embedding_dimensions)
+    import psycopg
+
+    lit = _vector_literal(vector)
+    # VALUES list for (doc_id, chunk_index) pairs.
+    values_sql = ",".join(["(%s,%s)"] * len(unique))
+    params: list[object] = [lit]
+    for doc_id, chunk_index in unique:
+        params.extend([doc_id, chunk_index])
+    params.extend([lit, limit])
+
+    with psycopg.connect(settings.database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT c.id::text, c.doc_id, c.source_path, c.chunk_index, c.title,
+                       c.text,
+                       (1 - (c.embedding <=> %s::vector))::float8 AS score
+                FROM memory_chunks c
+                INNER JOIN (VALUES {values_sql}) AS k(doc_id, chunk_index)
+                  ON c.doc_id = k.doc_id AND c.chunk_index = k.chunk_index::int
+                ORDER BY c.embedding <=> %s::vector
+                LIMIT %s
+                """,
+                params,
+            )
+            rows = cur.fetchall()
+    return [
+        MemoryChunkHit(
+            id=str(r[0]),
+            doc_id=str(r[1]),
+            source_path=str(r[2]),
+            chunk_index=int(r[3]),
+            title=str(r[4]) if r[4] is not None else None,
+            text=str(r[5]),
+            score=float(r[6]),
+        )
+        for r in rows
+    ]

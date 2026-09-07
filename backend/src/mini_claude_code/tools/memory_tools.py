@@ -8,6 +8,7 @@ from langchain_core.tools import tool
 
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.memory.elasticsearch_chunks import search_keyword
+from mini_claude_code.memory.hybrid import search_hybrid
 from mini_claude_code.memory.neo4j_docs import search_chunks_keyword
 from mini_claude_code.memory.neo4j_facts import recall_facts, remember_fact
 from mini_claude_code.memory.pgvector_chunks import search_chunks
@@ -165,6 +166,34 @@ def build_memory_tools(
             )
         return "\n".join(lines)
 
+    @tool
+    def search_hybrid_tool(query: str, limit: int = 5) -> str:
+        """Hybrid retrieval: Elasticsearch BM25 candidates, then pgvector re-rank.
+
+        Use when the query needs BOTH a must-contain token and semantic closeness.
+        Prefer search_keyword alone for pure exact-token lookup; prefer
+        search_chunks alone for paraphrase-only. Empty keyword stage returns no
+        hits (does not silently fall back to global vector search). Join key is
+        (doc_id, chunk_index). Requires ES + Postgres + prior ingest_docs.
+        """
+        try:
+            hits = search_hybrid(query, limit=limit, settings=settings)
+        except Exception as exc:  # noqa: BLE001
+            return f"ERROR search_hybrid: {exc}"
+        if not hits:
+            return (
+                "No hybrid hits (empty keyword stage or no pgvector overlap). "
+                "Try ingest_docs, or use search_keyword / search_chunks alone."
+            )
+        lines = []
+        for h in hits:
+            score = f" score={h.score:.3f}" if h.score is not None else ""
+            title = f" title={h.title!r}" if h.title else ""
+            lines.append(
+                f"- [{h.source_path}#{h.chunk_index}{title}{score}] {h.text}"
+            )
+        return "\n".join(lines)
+
     remember_fact_tool.name = "remember_fact"
     recall_facts_tool.name = "recall_facts"
     remember_note_tool.name = "remember_note"
@@ -172,6 +201,7 @@ def build_memory_tools(
     ingest_docs_tool.name = "ingest_docs"
     search_chunks_tool.name = "search_chunks"
     search_keyword_tool.name = "search_keyword"
+    search_hybrid_tool.name = "search_hybrid"
     return [
         remember_fact_tool,
         recall_facts_tool,
@@ -180,4 +210,5 @@ def build_memory_tools(
         ingest_docs_tool,
         search_chunks_tool,
         search_keyword_tool,
+        search_hybrid_tool,
     ]

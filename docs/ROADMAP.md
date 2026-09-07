@@ -68,7 +68,7 @@ Core loop + Tier-3 extensibility are in place. These milestones sharpen **agent/
 
 | ID | Title | Goal |
 |---|---|---|
-| M27 | [Hybrid retrieval (ES → vector)](milestones/M27-hybrid-retrieval.md) | **Planned.** Keyword filter (or BM25 top-k) then pgvector re-rank on the same chunk ids; one `search_hybrid` tool; document when hybrid beats solo ES/vector. |
+| M27 | [Hybrid retrieval (ES → vector)](milestones/M27-hybrid-retrieval.md) | **Done.** `search_hybrid`: ES BM25 candidates → pgvector re-rank on `(doc_id, chunk_index)`; solos kept. |
 | M28 | [Graph-neighbor expand (Neo4j NEXT)](milestones/M28-graph-neighbor-expand.md) | **Planned.** After a chunk hit, walk `NEXT` / `HAS_CHUNK` for ±N neighbors; cite path+index; contrast vector-only blind spots. |
 | M29 | [MCP HTTP transport & sticky session](milestones/M29-mcp-http-session.md) | **Planned.** Beyond stdio: Streamable HTTP (or SSE) MCP server + `client.session(...)` sticky connection; contrast cold `get_tools` per build. |
 | M30 | [LangGraph Store (cross-thread memory)](milestones/M30-langgraph-store.md) | **Planned.** Checkpointer = *thread* durability; Store = *user/project* key-value across threads; wire a small remember/recall via Store API beside Neo4j facts. |
