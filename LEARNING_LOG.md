@@ -13,6 +13,25 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-08 — M29: MCP HTTP & sticky session
+
+- Shipped: Streamable HTTP `http_counter`; sticky `client.session` runtime; cold stdio path kept; `./scripts/m29-demo.sh`.
+- Insight: Agent stays MCP **client**; HTTP demo is URL-reachable teaching server (localhost default).
+- Insight: Cold `get_tools` → new session per call (counter resets); sticky → accumulates.
+- See Concept Q&A index (M29); Results: [M29](docs/milestones/M29-mcp-http-session.md).
+
+---
+
+## 2026-09-08 — Dig: M29 “become a real server”?
+
+- **Q: Does M29 MCP hardening mean mini-claude-code becomes a real MCP server?**  
+  A: **Mostly no — we stay an MCP *client* (Claude Code shape).** M29 teaches (1) connecting over **HTTP** instead of only stdio spawn, and (2) a **sticky** `client.session(...)` so tool calls reuse one connection. The in-repo Streamable HTTP process is a **tiny demo server** we run so the client path is realistic (stateful counter, headers, lifecycle) — not “ship ourselves as a multi-tenant MCP product.” Stdio servers are already “real” MCP; HTTP makes them reachable like production remote servers. Exposing *our agent* as an MCP server others call would be a different product dig.
+- **Q: So our MCP server can be remotely reachable by others?**  
+  A: **At the transport level, yes** — Streamable HTTP is URL-addressable (`http(s)://host:port/...`), so *another* MCP client can point at that URL. Stdio is not: the client must spawn your process locally. M29 still defaults to **localhost teaching**; “open on the public internet + auth/OAuth” is deliberately out of scope (headers-only simplification). Remotely reachable ≠ production-hardened SaaS.
+- Link: [M29 Plan](docs/milestones/M29-mcp-http-session.md)
+
+---
+
 ## 2026-09-07 — M28: Graph-neighbor expand
 
 - Shipped: `expand_chunks` (Neo4j `NEXT` ±N); pure window helpers; `./scripts/m28-demo.sh`.
@@ -323,7 +342,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M28 study guide)
+## Concept Q&A index (M0–M29 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -364,6 +383,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M29 — MCP HTTP & sticky session
+
+- **Q: So we become a real MCP server?**  
+  A: **Agent stays the client.** M29 = HTTP transport + sticky session on the **client** path, plus a **tiny in-repo demo HTTP server** for teaching. Not “productize ourselves as MCP SaaS.”
+- **Q: Remotely reachable by others?**  
+  A: **Protocol yes** (URL vs local spawn). M29 demo is **localhost** by default; public bind + OAuth = later / out of scope.
+- **Q: Sticky vs cold `get_tools`?**  
+  A: Cold = new session per tool call (counter resets). Sticky = one `client.session(...)` reused (counter accumulates). Stdio demos stay on cold path for contrast.
+- **Q: Why a dedicated sticky loop/thread?**  
+  A: Graph build is often sync; MCP `ClientSession` is loop-affine. Bridging tool calls onto a sticky loop keeps session alive across sync and async CLI paths.
+- Link: [M29](docs/milestones/M29-mcp-http-session.md)
 
 ### M28 — Graph-neighbor expand
 

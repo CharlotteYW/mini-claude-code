@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M28 complete  
+**Last updated:** M29 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M28)
+## Current status (M29)
 
 | Piece | Status |
 |---|---|
@@ -19,6 +19,7 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Eval / Slack / ship / ingest / ES / async / content policy | M17–M22, M26 |
 | Hybrid retrieval (`search_hybrid`) | **M27 Done** |
 | Graph-neighbor expand (`expand_chunks`) | **M28 Done** |
+| MCP HTTP + sticky session | **M29 Done** |
 
 Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
@@ -96,7 +97,7 @@ Note: Content policy also runs **inside** MCP servers that enforce it (e.g. `fak
 | Layer | Responsibility | Without it |
 |---|---|---|
 | Core ReAct loop | Cognition: model ↔ tools | Manual `while` loops that cannot checkpoint/interrupt cleanly |
-| Policy / extension plane | Permissions, hooks, skills, MCP, plugins, content policy, compaction, memory, sandbox, ship gate | Every concern becomes another graph node; graph becomes a god-object |
+| Policy / extension plane | Permissions, hooks, skills, MCP (stdio cold + HTTP sticky M29), plugins, content policy, compaction, memory, sandbox, ship gate | Every concern becomes another graph node; graph becomes a god-object |
 
 Rejected alternatives:
 
@@ -153,4 +154,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M26 Done** — [milestones/M26-mcp-content-policy.md](milestones/M26-mcp-content-policy.md)
 - **M27 Done** — [milestones/M27-hybrid-retrieval.md](milestones/M27-hybrid-retrieval.md)
 - **M28 Done** — [milestones/M28-graph-neighbor-expand.md](milestones/M28-graph-neighbor-expand.md)
+- **M29 Done** — [milestones/M29-mcp-http-session.md](milestones/M29-mcp-http-session.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

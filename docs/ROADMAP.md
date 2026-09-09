@@ -70,7 +70,7 @@ Core loop + Tier-3 extensibility are in place. These milestones sharpen **agent/
 |---|---|---|
 | M27 | [Hybrid retrieval (ES → vector)](milestones/M27-hybrid-retrieval.md) | **Done.** `search_hybrid`: ES BM25 candidates → pgvector re-rank on `(doc_id, chunk_index)`; solos kept. |
 | M28 | [Graph-neighbor expand (Neo4j NEXT)](milestones/M28-graph-neighbor-expand.md) | **Done.** `expand_chunks`: Neo4j `NEXT` ±N window with `source_path#index` cites; search tools stay island finders. |
-| M29 | [MCP HTTP transport & sticky session](milestones/M29-mcp-http-session.md) | **Planned.** Beyond stdio: Streamable HTTP (or SSE) MCP server + `client.session(...)` sticky connection; contrast cold `get_tools` per build. |
+| M29 | [MCP HTTP transport & sticky session](milestones/M29-mcp-http-session.md) | **Done.** Streamable HTTP `http_counter` + sticky `client.session`; stdio cold `get_tools` kept for contrast. |
 | M30 | [LangGraph Store (cross-thread memory)](milestones/M30-langgraph-store.md) | **Planned.** Checkpointer = *thread* durability; Store = *user/project* key-value across threads; wire a small remember/recall via Store API beside Neo4j facts. |
 | M31 | [Time-travel & branch sessions](milestones/M31-time-travel-branch.md) | **Planned.** List checkpoints; fork `thread_id` / `checkpoint_id` resume; CLI `/rewind` or `--fork-from`; teach “edit past → new future” without mutating history. |
 | M32 | [Parallel tools & fan-out](milestones/M32-parallel-tools-fanout.md) | **Planned.** Concurrent tool execution when the model emits multiple `tool_calls`; optional map-reduce style gather node; measure latency vs serial ToolNode. |

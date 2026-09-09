@@ -1,4 +1,4 @@
-"""MCP client → LangChain tools (M14 / M22).
+"""MCP client → LangChain tools (M14 / M22 / M29).
 
 Call chain (teaching):
   MCP_CONFIG / path / demo → MultiServerMCPClient → adapter BaseTool list
@@ -8,8 +8,11 @@ Call chain (teaching):
 ``ainvoke`` (no nested ``asyncio.run``). Sync ``invoke`` still works via an
 optional ``func`` shim on prepared MCP tools.
 
-Adapter default for ``get_tools()`` is often **stateless per call** (new stdio
-session each invoke) — fine for echo/add; stateful MCP sessions are a later dig.
+**M14 cold path:** ``get_tools()`` often opens a **new session per tool call**
+(stdio spawn) — fine for echo/add.
+
+**M29 sticky path:** Streamable HTTP connections use ``client.session(...)``
+on a dedicated loop so stateful tools (counter) accumulate across calls.
 """
 
 from __future__ import annotations
@@ -38,6 +41,11 @@ def fake_docs_server_script() -> Path:
     return Path(__file__).resolve().parents[1] / "mcp_servers" / "fake_docs.py"
 
 
+def http_counter_server_script() -> Path:
+    """Absolute path to the M29 Streamable HTTP counter server."""
+    return Path(__file__).resolve().parents[1] / "mcp_servers" / "http_counter.py"
+
+
 def default_demo_connections() -> dict[str, dict[str, Any]]:
     """Stdio connection dict for the packaged echo_math server."""
     return {
@@ -56,6 +64,22 @@ def fake_docs_connections() -> dict[str, dict[str, Any]]:
             "transport": "stdio",
             "command": sys.executable,
             "args": [str(fake_docs_server_script())],
+        }
+    }
+
+
+def default_http_demo_connections(
+    settings: Settings | None = None,
+) -> dict[str, dict[str, Any]]:
+    """HTTP connection for the in-repo http_counter server (must already be up)."""
+    settings = settings or get_settings()
+    url = settings.mcp_http_demo_url.strip() or "http://127.0.0.1:8765/mcp"
+    headers = {"X-MCC-Demo": "http-counter"}
+    return {
+        "http_counter": {
+            "transport": "streamable_http",
+            "url": url,
+            "headers": headers,
         }
     }
 
@@ -90,7 +114,8 @@ def resolve_mcp_connections(
     """Resolve opt-in MCP servers from settings, then merge plugin MCP (M23).
 
     Priority for *base*: ``MCP_CONFIG_PATH`` > ``MCP_CONFIG`` > demo flags.
-    Demo flags: ``MCP_USE_DEMO`` (echo_math) and/or ``MCP_USE_FAKE_DOCS`` (M26).
+    Demo flags: ``MCP_USE_DEMO`` (echo_math), ``MCP_USE_FAKE_DOCS`` (M26),
+    and/or ``MCP_USE_HTTP_DEMO`` (M29 http_counter — server must be running).
     Plugin ``mcp:`` entries are unioned afterward; duplicate server name → error.
     Empty / all off / no plugins → {} (no MCP tools).
     """
@@ -108,6 +133,8 @@ def resolve_mcp_connections(
                 base.update(default_demo_connections())
             if settings.mcp_use_fake_docs:
                 base.update(fake_docs_connections())
+            if settings.mcp_use_http_demo:
+                base.update(default_http_demo_connections(settings))
 
     if not plugins:
         return base
@@ -221,18 +248,34 @@ async def load_mcp_tools_async(
 ) -> list[BaseTool]:
     """Discover tools from MCP servers via langchain-mcp-adapters.
 
-    ``sync_shim=True`` (default): also attach ``func`` via ``asyncio.run`` for
-    sync ``invoke``. ``sync_shim=False``: coroutine-only (async graph path).
+    Stdio (and non-HTTP) → cold ``get_tools()``.
+    HTTP → sticky ``client.session`` (M29).
     """
     if not connections:
         return []
-    from langchain_mcp_adapters.client import MultiServerMCPClient
+    from mini_claude_code.tools.mcp_sticky import (
+        load_sticky_http_tools,
+        partition_mcp_connections,
+    )
 
-    client = MultiServerMCPClient(connections)
-    raw = list(await client.get_tools())
-    if sync_shim:
-        return [wrap_mcp_tool_for_sync(t) for t in raw]
-    return [prepare_mcp_tool_async_only(t) for t in raw]
+    cold, sticky = partition_mcp_connections(connections)
+    loaded: list[BaseTool] = []
+
+    if cold:
+        from langchain_mcp_adapters.client import MultiServerMCPClient
+
+        client = MultiServerMCPClient(cold)
+        raw = list(await client.get_tools())
+        if sync_shim:
+            loaded.extend(wrap_mcp_tool_for_sync(t) for t in raw)
+        else:
+            loaded.extend(prepare_mcp_tool_async_only(t) for t in raw)
+
+    if sticky:
+        # Sticky runtime owns its loop/thread; start is sync-safe.
+        loaded.extend(load_sticky_http_tools(sticky, sync_shim=sync_shim))
+
+    return loaded
 
 
 def load_mcp_tools_sync(

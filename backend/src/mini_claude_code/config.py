@@ -103,6 +103,11 @@ class Settings(BaseSettings):
     mcp_use_demo: bool = Field(default=False, alias="MCP_USE_DEMO")
     # M26: in-repo fake docs MCP (list_docs / read_doc + server content policy).
     mcp_use_fake_docs: bool = Field(default=False, alias="MCP_USE_FAKE_DOCS")
+    # M29: Streamable HTTP counter demo (server must already be listening).
+    mcp_use_http_demo: bool = Field(default=False, alias="MCP_USE_HTTP_DEMO")
+    mcp_http_demo_url: str = Field(
+        default="http://127.0.0.1:8765/mcp", alias="MCP_HTTP_DEMO_URL"
+    )
 
     # Content policy (M26): screen read results for no-ai / CONFIDENTIAL markers.
     content_policy_enabled: bool = Field(default=True, alias="CONTENT_POLICY_ENABLED")
