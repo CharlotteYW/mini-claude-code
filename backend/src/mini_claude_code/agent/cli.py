@@ -37,6 +37,15 @@ from mini_claude_code.agent.stream_render import (
     consume_agent_astream,
     consume_agent_stream,
 )
+from mini_claude_code.agent.time_travel import (
+    afork_from_checkpoint,
+    alist_checkpoints,
+    fork_from_checkpoint,
+    format_checkpoint_table,
+    list_checkpoints,
+    parse_rewind_args,
+    resolve_checkpoint_ref,
+)
 from mini_claude_code.agent.tty_input import read_tty_line
 from mini_claude_code.agent.usage import USAGE_ACCUMULATOR_KEY, UsageAccumulator
 from mini_claude_code.config import get_settings, resolve_workspace_root
@@ -52,6 +61,133 @@ def _load_dotenv_from_repo_root() -> None:
     env_path = repo_root / ".env"
     if env_path.is_file():
         load_dotenv(env_path, override=False)
+
+
+def _aresolve_fork_checkpoint_id_sync_list(
+    graph,
+    thread_id: str,
+    ref: str,
+    *,
+    completed_only: bool,
+) -> str:
+    raw = ref.strip()
+    if raw.isdigit():
+        rows = list_checkpoints(graph, thread_id, completed_only=completed_only)
+        return resolve_checkpoint_ref(rows, raw).checkpoint_id
+    return raw
+
+
+async def _aresolve_fork_checkpoint_id(
+    graph,
+    thread_id: str,
+    ref: str,
+    *,
+    completed_only: bool,
+) -> str:
+    raw = ref.strip()
+    if raw.isdigit():
+        rows = await alist_checkpoints(
+            graph, thread_id, completed_only=completed_only
+        )
+        return resolve_checkpoint_ref(rows, raw).checkpoint_id
+    return raw
+
+
+def _apply_fork_config(config: dict, fork_cfg: dict) -> None:
+    """Switch session to the forked thread tip (do not pin a stale checkpoint_id)."""
+    cfg = config.setdefault("configurable", {})
+    fcfg = fork_cfg.get("configurable") or {}
+    cfg["thread_id"] = fcfg["thread_id"]
+    # update_state already wrote the tip for this thread; pinning the fork
+    # checkpoint_id would make later get_state/invoke look at a frozen snapshot.
+    cfg.pop("checkpoint_id", None)
+    if "checkpoint_ns" in fcfg:
+        cfg["checkpoint_ns"] = fcfg["checkpoint_ns"]
+
+
+def _handle_rewind_sync(
+    graph,
+    config: dict,
+    line: str,
+    *,
+    completed_only: bool,
+) -> int:
+    """Process ``/rewind`` in sync REPL. Returns 0 on handled."""
+    ref = parse_rewind_args(line)
+    assert ref is not None
+    thread_id = str((config.get("configurable") or {}).get("thread_id") or "")
+    if not thread_id:
+        print("ERROR: /rewind requires a thread_id session", file=sys.stderr)
+        return 1
+    try:
+        rows = list_checkpoints(graph, thread_id, completed_only=completed_only)
+        if ref == "":
+            print(format_checkpoint_table(rows))
+            print(
+                "Usage: /rewind <index|checkpoint_id>  (forks a NEW thread_id)"
+            )
+            return 0
+        cid = (
+            resolve_checkpoint_ref(rows, ref).checkpoint_id
+            if ref.isdigit()
+            else ref
+        )
+        fork_cfg = fork_from_checkpoint(
+            graph,
+            source_thread_id=thread_id,
+            checkpoint_id=cid,
+        )
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    _apply_fork_config(config, fork_cfg)
+    new_tid = config["configurable"]["thread_id"]
+    short = cid if len(cid) <= 13 else cid[:13] + "…"
+    print(f"Forked from {short} → thread_id={new_tid} (source tip unchanged)")
+    return 0
+
+
+async def _handle_rewind_async(
+    graph,
+    config: dict,
+    line: str,
+    *,
+    completed_only: bool,
+) -> int:
+    ref = parse_rewind_args(line)
+    assert ref is not None
+    thread_id = str((config.get("configurable") or {}).get("thread_id") or "")
+    if not thread_id:
+        print("ERROR: /rewind requires a thread_id session", file=sys.stderr)
+        return 1
+    try:
+        rows = await alist_checkpoints(
+            graph, thread_id, completed_only=completed_only
+        )
+        if ref == "":
+            print(format_checkpoint_table(rows))
+            print(
+                "Usage: /rewind <index|checkpoint_id>  (forks a NEW thread_id)"
+            )
+            return 0
+        cid = (
+            resolve_checkpoint_ref(rows, ref).checkpoint_id
+            if ref.isdigit()
+            else ref
+        )
+        fork_cfg = await afork_from_checkpoint(
+            graph,
+            source_thread_id=thread_id,
+            checkpoint_id=cid,
+        )
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    _apply_fork_config(config, fork_cfg)
+    new_tid = config["configurable"]["thread_id"]
+    short = cid if len(cid) <= 13 else cid[:13] + "…"
+    print(f"Forked from {short} → thread_id={new_tid} (source tip unchanged)")
+    return 0
 
 
 def _format_message(message: object) -> str:
@@ -217,9 +353,10 @@ def _run_repl(
     plugins: list[PluginPack],
     usage_acc: UsageAccumulator | None,
     use_sync: bool,
+    completed_only: bool = True,
 ) -> int:
     """REPL for sync checkpointer (``--sync``); each turn uses ``asyncio.run``."""
-    print("REPL mode — empty line or Ctrl-D to exit.")
+    print("REPL mode — empty line or Ctrl-D to exit. Meta: /rewind")
     while True:
         try:
             line = read_tty_line("you> ").strip()
@@ -228,6 +365,13 @@ def _run_repl(
             break
         if not line:
             break
+        if parse_rewind_args(line) is not None:
+            code = _handle_rewind_sync(
+                graph, config, line, completed_only=completed_only
+            )
+            if code != 0:
+                return code
+            continue
         code = _run_once(
             graph,
             line,
@@ -254,9 +398,10 @@ async def _run_repl_async(
     plugins: list[PluginPack],
     usage_acc: UsageAccumulator | None,
     use_sync: bool,
+    completed_only: bool = True,
 ) -> int:
     """REPL inside one event loop (holds AsyncPostgresSaver for the session)."""
-    print("REPL mode — empty line or Ctrl-D to exit.")
+    print("REPL mode — empty line or Ctrl-D to exit. Meta: /rewind")
     while True:
         try:
             line = read_tty_line("you> ").strip()
@@ -265,6 +410,13 @@ async def _run_repl_async(
             break
         if not line:
             break
+        if parse_rewind_args(line) is not None:
+            code = await _handle_rewind_async(
+                graph, config, line, completed_only=completed_only
+            )
+            if code != 0:
+                return code
+            continue
         code = await _run_once_async(
             graph,
             line,
@@ -332,6 +484,27 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Use sync graph.invoke/stream (compat shim). Default is async ainvoke/astream (M22).",
     )
+    parser.add_argument(
+        "--list-checkpoints",
+        action="store_true",
+        help="List checkpoint history for --thread-id and exit (M31).",
+    )
+    parser.add_argument(
+        "--fork-from",
+        default=None,
+        metavar="REF",
+        help="Fork from checkpoint index or id onto a new thread_id (M31).",
+    )
+    parser.add_argument(
+        "--fork-thread-id",
+        default=None,
+        help="Optional target thread_id for --fork-from (default: random UUID).",
+    )
+    parser.add_argument(
+        "--all-checkpoints",
+        action="store_true",
+        help="Include in-progress snapshots when listing (default: completed/idle only).",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -340,8 +513,14 @@ def main(argv: list[str] | None = None) -> int:
 
     plan_mode = bool(args.plan or settings.agent_plan_mode)
     use_sync = bool(args.sync)
+    completed_only = not bool(args.all_checkpoints)
 
-    if not args.repl and not args.prompt:
+    if (
+        not args.repl
+        and not args.prompt
+        and not args.list_checkpoints
+        and not args.fork_from
+    ):
         args.prompt = (
             "Use write_file to create demo.txt with contents hello, then read_file it."
         )
@@ -404,8 +583,21 @@ def main(argv: list[str] | None = None) -> int:
         thread_id = str(uuid4())
         print(f"Allocated thread_id={thread_id} for REPL")
 
+    if (args.list_checkpoints or args.fork_from) and not thread_id:
+        print(
+            "ERROR: --list-checkpoints / --fork-from require --thread-id "
+            "(source session).",
+            file=sys.stderr,
+        )
+        return 1
+
     # Ask/HITL needs a checkpointer. Auto-allocate a thread when not in Plan Mode.
-    if not plan_mode and not thread_id:
+    if (
+        not plan_mode
+        and not thread_id
+        and not args.list_checkpoints
+        and not args.fork_from
+    ):
         thread_id = str(uuid4())
         print(
             f"HITL ask requires a session; allocated thread_id={thread_id}",
@@ -415,6 +607,9 @@ def main(argv: list[str] | None = None) -> int:
     use_checkpoint = bool(thread_id)
     if args.repl and not use_checkpoint:
         print("ERROR: --repl requires a thread id", file=sys.stderr)
+        return 1
+    if (args.list_checkpoints or args.fork_from) and not use_checkpoint:
+        print("ERROR: time-travel requires a checkpointer session", file=sys.stderr)
         return 1
 
     backend: CheckpointBackend | None = (
@@ -449,7 +644,11 @@ def main(argv: list[str] | None = None) -> int:
         print("  session:      off")
     store_kind = resolve_store_backend(settings)
     print(f"  store:        {store_kind} ns={store_namespace(settings)!r}")
-    if not args.repl:
+    if args.fork_from:
+        print(f"  fork_from:    {args.fork_from}")
+    if args.list_checkpoints:
+        print("  action:       list-checkpoints")
+    if not args.repl and args.prompt:
         print(f"  prompt:       {args.prompt}")
     print(f"  plugins:      {len(plugins)} pack(s)")
     if slash_registry:
@@ -488,6 +687,36 @@ def main(argv: list[str] | None = None) -> int:
                 ) as checkpointer:
                     async with open_async_store(settings, setup=True) as store:
                         graph = _build(checkpointer, store)
+                        assert thread_id is not None
+                        if args.list_checkpoints:
+                            rows = await alist_checkpoints(
+                                graph,
+                                thread_id,
+                                completed_only=completed_only,
+                            )
+                            print(format_checkpoint_table(rows))
+                            return 0
+                        if args.fork_from:
+                            cid = await _aresolve_fork_checkpoint_id(
+                                graph,
+                                thread_id,
+                                args.fork_from,
+                                completed_only=completed_only,
+                            )
+                            fork_cfg = await afork_from_checkpoint(
+                                graph,
+                                source_thread_id=thread_id,
+                                checkpoint_id=cid,
+                                target_thread_id=args.fork_thread_id,
+                            )
+                            _apply_fork_config(config, fork_cfg)
+                            print(
+                                f"Forked → thread_id="
+                                f"{config['configurable']['thread_id']} "
+                                f"(from {cid[:13]}…; source tip unchanged)"
+                            )
+                            if not args.repl and not args.prompt:
+                                return 0
                         if args.repl:
                             return await _run_repl_async(
                                 graph,
@@ -498,6 +727,7 @@ def main(argv: list[str] | None = None) -> int:
                                 plugins=plugins,
                                 usage_acc=usage_acc,
                                 use_sync=False,
+                                completed_only=completed_only,
                             )
                         return await _run_once_async(
                             graph,
@@ -519,6 +749,36 @@ def main(argv: list[str] | None = None) -> int:
             ) as checkpointer:
                 with open_store(settings, setup=True) as store:
                     graph = _build(checkpointer, store)
+                    assert thread_id is not None
+                    if args.list_checkpoints:
+                        rows = list_checkpoints(
+                            graph,
+                            thread_id,
+                            completed_only=completed_only,
+                        )
+                        print(format_checkpoint_table(rows))
+                        return 0
+                    if args.fork_from:
+                        cid = _aresolve_fork_checkpoint_id_sync_list(
+                            graph,
+                            thread_id,
+                            args.fork_from,
+                            completed_only=completed_only,
+                        )
+                        fork_cfg = fork_from_checkpoint(
+                            graph,
+                            source_thread_id=thread_id,
+                            checkpoint_id=cid,
+                            target_thread_id=args.fork_thread_id,
+                        )
+                        _apply_fork_config(config, fork_cfg)
+                        print(
+                            f"Forked → thread_id="
+                            f"{config['configurable']['thread_id']} "
+                            f"(from {cid[:13]}…; source tip unchanged)"
+                        )
+                        if not args.repl and not args.prompt:
+                            return 0
                     if args.repl:
                         return _run_repl(
                             graph,
@@ -529,6 +789,7 @@ def main(argv: list[str] | None = None) -> int:
                             plugins=plugins,
                             usage_acc=usage_acc,
                             use_sync=True,
+                            completed_only=completed_only,
                         )
                     return _run_once(
                         graph,

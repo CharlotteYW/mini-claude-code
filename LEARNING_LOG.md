@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-10 — M31: Time-travel & branch sessions
+
+- Shipped: `time_travel.py`; `--list-checkpoints` / `--fork-from`; REPL `/rewind`; fork = new `thread_id` + copy values.
+- Insight: M5 resume = tip only; fork grows a **new** future without rewriting history.
+- Insight: Do not keep a pinned `checkpoint_id` after fork — `get_state` would freeze on that snapshot.
+- See Concept Q&A index (M31); Results: [M31](docs/milestones/M31-time-travel-branch.md).
+
+---
+
 ## 2026-09-09 — M30: LangGraph Store
 
 - Shipped: `store_put`/`store_get`; `open_store` / `open_async_store`; `compile(store=…)`; `./scripts/m30-demo.sh`.
@@ -414,7 +423,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M30 study guide)
+## Concept Q&A index (M0–M31 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -455,6 +464,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M31 — Time-travel & branch sessions
+
+- **Q: Resume vs time-travel?**  
+  A: M5 resume always continues the **tip** of a `thread_id`. Time-travel picks a past **`checkpoint_id`** and **forks** a new future.
+- **Q: Fork vs overwrite?**  
+  A: M31 forks onto a **new `thread_id`** (copy snapshot values). Source tip stays. Silent tip rewrite is the anti-pattern.
+- **Q: Why clear `checkpoint_id` after fork?**  
+  A: Config with a pinned id makes `get_state` return that frozen snapshot even after newer turns on the thread.
+- **Q: Store (M30) vs rewind?**  
+  A: Store = cross-thread **KV**. Rewind = **chat transcript** checkpoints. Different jobs.
+- Link: [M31](docs/milestones/M31-time-travel-branch.md)
 
 ### M30 — LangGraph Store
 

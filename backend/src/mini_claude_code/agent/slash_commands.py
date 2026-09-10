@@ -83,6 +83,7 @@ def format_slash_list(
     lines.append("")
     lines.append("Type a command to run it, e.g. /review")
     lines.append("Meta: /help, /plugins (list); /pick (numbered picker)")
+    lines.append("REPL time-travel: /rewind [index|checkpoint_id] (M31)")
     return "\n".join(lines)
 
 
