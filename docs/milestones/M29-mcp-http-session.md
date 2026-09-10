@@ -125,6 +125,7 @@ Sticky sessions run on a **dedicated thread/loop** (not only the CLI loop) so sy
 - Process-global counters hide the sticky lesson — must key by session.
 - `MCP_USE_HTTP_DEMO` expects the HTTP server **already listening** (tests spawn it).
 - Tool list is captured at sticky open; server tool changes mid-run stay stale until restart.
+- **anyio cancel scope:** sticky open/close must share one asyncio Task (owner + stop event). Closing the stack from a different `run_until_complete` raises `Attempted to exit cancel scope in a different task` (fixed 2026-09-09).
 
 ### Testing results
 

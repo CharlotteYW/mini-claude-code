@@ -5,6 +5,11 @@ For Streamable HTTP demos we keep one ``client.session(...)`` alive on a
 dedicated asyncio loop/thread so stateful tools (e.g. bump_counter) accumulate.
 
 Stdio connections stay on the cold ``get_tools`` path (M14 teaching baseline).
+
+Lifecycle note: MCP streamable-http uses anyio cancel scopes that **must** exit
+in the same Task they were entered. We therefore own open→wait→close inside one
+long-lived ``async`` task (not ``run_until_complete(open)`` then later
+``run_until_complete(aclose)`` on a different task).
 """
 
 from __future__ import annotations
@@ -74,7 +79,8 @@ class StickyHttpMcpRuntime:
     def __init__(self) -> None:
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._stack: AsyncExitStack | None = None
+        self._stop: asyncio.Event | None = None
+        self._owner_task: asyncio.Task[None] | None = None
         self._ready = threading.Event()
         self._error: BaseException | None = None
         self._tools: list[BaseTool] = []
@@ -101,27 +107,59 @@ class StickyHttpMcpRuntime:
         self._error = None
         self._closed = False
         self._tools = []
+        self._stop = None
+        self._owner_task = None
 
         def runner() -> None:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             self._loop = loop
-            try:
-                self._tools = loop.run_until_complete(
-                    self._async_open(connections, sync_shim=sync_shim)
-                )
-                self._ready.set()
-                loop.run_forever()
-            except BaseException as exc:  # noqa: BLE001
-                self._error = exc
-                self._ready.set()
-            finally:
+
+            async def owner() -> None:
+                stop = asyncio.Event()
+                self._stop = stop
                 try:
-                    if self._stack is not None:
-                        loop.run_until_complete(self._stack.aclose())
-                except Exception:  # noqa: BLE001
-                    logger.exception("sticky MCP stack close failed")
-                self._stack = None
+                    async with AsyncExitStack() as stack:
+                        from langchain_mcp_adapters.client import MultiServerMCPClient
+                        from langchain_mcp_adapters.tools import load_mcp_tools
+
+                        client = MultiServerMCPClient(connections)
+                        loaded: list[BaseTool] = []
+                        for server_name in connections:
+                            session = await stack.enter_async_context(
+                                client.session(server_name)
+                            )
+                            raw = await load_mcp_tools(
+                                session, server_name=server_name
+                            )
+                            for tool in raw:
+                                loaded.append(
+                                    self._bridge_tool(tool, sync_shim=sync_shim)
+                                )
+                        self._tools = loaded
+                        self._ready.set()
+                        await stop.wait()
+                    # AsyncExitStack exits here in the *same* Task (anyio-safe).
+                except BaseException as exc:  # noqa: BLE001
+                    self._error = exc
+                    self._ready.set()
+                finally:
+                    # End run_forever once the owning task unwinds.
+                    loop.stop()
+
+            self._owner_task = loop.create_task(owner(), name="mcc-mcp-sticky-owner")
+            try:
+                loop.run_forever()
+            finally:
+                task = self._owner_task
+                if task is not None and not task.done():
+                    task.cancel()
+                    try:
+                        loop.run_until_complete(task)
+                    except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                        pass
+                self._owner_task = None
+                self._stop = None
                 loop.close()
                 if self._loop is loop:
                     self._loop = None
@@ -140,27 +178,6 @@ class StickyHttpMcpRuntime:
             self.close()
             raise RuntimeError(f"sticky MCP HTTP session failed: {err}") from err
         return list(self._tools)
-
-    async def _async_open(
-        self,
-        connections: dict[str, dict[str, Any]],
-        *,
-        sync_shim: bool,
-    ) -> list[BaseTool]:
-        from langchain_mcp_adapters.client import MultiServerMCPClient
-        from langchain_mcp_adapters.tools import load_mcp_tools
-
-        stack = AsyncExitStack()
-        await stack.__aenter__()
-        self._stack = stack
-        client = MultiServerMCPClient(connections)
-        loaded: list[BaseTool] = []
-        for server_name in connections:
-            session = await stack.enter_async_context(client.session(server_name))
-            raw = await load_mcp_tools(session, server_name=server_name)
-            for tool in raw:
-                loaded.append(self._bridge_tool(tool, sync_shim=sync_shim))
-        return loaded
 
     def _bridge_tool(self, tool: BaseTool, *, sync_shim: bool) -> BaseTool:
         """Ensure every invoke runs on the sticky loop (session affinity)."""
@@ -210,11 +227,14 @@ class StickyHttpMcpRuntime:
             return
         self._closed = True
         loop = self._loop
-        if loop is not None and loop.is_running():
+        stop = self._stop
+        if loop is not None and loop.is_running() and stop is not None:
+            loop.call_soon_threadsafe(stop.set)
+        elif loop is not None and loop.is_running():
             loop.call_soon_threadsafe(loop.stop)
         thread = self._thread
         if thread is not None and thread.is_alive():
-            thread.join(timeout=10)
+            thread.join(timeout=15)
         self._thread = None
         self._tools = []
 
@@ -252,7 +272,6 @@ def load_sticky_http_tools(
     return runtime.start(normalized, sync_shim=sync_shim)
 
 
-# Re-export helpers used by tests that patch loaders.
 __all__ = [
     "StickyHttpMcpRuntime",
     "get_sticky_http_runtime",

@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-09 — Fix: sticky MCP close anyio cancel-scope
+
+- **Q: Why did `./scripts/m29-demo.sh` show a scary traceback on teardown?**  
+  A: Streamable HTTP MCP uses **anyio cancel scopes** that must exit in the **same Task** they entered. Old sticky runtime did `run_until_complete(open)` then later `run_until_complete(stack.aclose())` on a different task → `Attempted to exit cancel scope in a different task...`. Fix: one long-lived owner task does open → `await stop` → exit stack, then stops the loop.
+- Link: `tools/mcp_sticky.py`
+
+---
+
 ## 2026-09-08 — M29: MCP HTTP & sticky session
 
 - Shipped: Streamable HTTP `http_counter`; sticky `client.session` runtime; cold stdio path kept; `./scripts/m29-demo.sh`.
@@ -394,6 +402,8 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
   A: Cold = new session per tool call (counter resets). Sticky = one `client.session(...)` reused (counter accumulates). Stdio demos stay on cold path for contrast.
 - **Q: Why a dedicated sticky loop/thread?**  
   A: Graph build is often sync; MCP `ClientSession` is loop-affine. Bridging tool calls onto a sticky loop keeps session alive across sync and async CLI paths.
+- **Q: Teardown traceback / cancel scope error?**  
+  A: Open and close the HTTP session in the **same** asyncio Task (owner task + stop event). Splitting open/close across `run_until_complete` calls breaks anyio.
 - Link: [M29](docs/milestones/M29-mcp-http-session.md)
 
 ### M28 — Graph-neighbor expand
