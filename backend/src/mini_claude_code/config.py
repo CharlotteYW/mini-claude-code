@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     # Session durability (M5): postgres (default) or memory
     checkpoint_backend: str = Field(default="postgres", alias="CHECKPOINT_BACKEND")
 
+    # LangGraph Store (M30): cross-thread KV (not the chat transcript).
+    # Default memory for offline; set STORE_BACKEND=postgres to share across processes.
+    store_backend: str = Field(default="memory", alias="STORE_BACKEND")
+    store_project_id: str = Field(default="default", alias="STORE_PROJECT_ID")
+
     # Context compaction (M7). threshold<=0 disables. Tokens ≈ chars/4.
     context_compact_threshold: int = Field(
         default=6000, alias="CONTEXT_COMPACT_THRESHOLD"

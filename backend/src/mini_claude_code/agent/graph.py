@@ -30,6 +30,7 @@ from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
+from langgraph.store.base import BaseStore
 
 from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
 from mini_claude_code.agent.hooks import (
@@ -98,6 +99,7 @@ def build_agent_graph(
     llm: BaseChatModel | None = None,
     tools: Sequence[BaseTool] | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
+    store: BaseStore | None = None,
     plan_mode: bool | None = None,
     ask_callback: AskCallback | None = None,
     apply_tool_permissions: bool = True,
@@ -109,6 +111,7 @@ def build_agent_graph(
 
     Pass `llm` / `tools` to inject fakes in unit tests (no network).
     Pass a checkpointer (MemorySaver or PostgresSaver) for multi-turn sessions.
+    Pass ``store`` (M30) for cross-thread KV tools + ``compile(store=…)``.
     `plan_mode` defaults to Settings.agent_plan_mode. Set
     `apply_tool_permissions=False` only for low-level tests that need bare tools.
 
@@ -130,6 +133,7 @@ def build_agent_graph(
             settings=settings,
             llm=model,
             plan_mode=effective_plan,
+            store=store,
         )
     )
     if apply_tool_permissions:
@@ -210,4 +214,4 @@ def build_agent_graph(
     graph.add_conditional_edges("call_model", route_after_model)
     graph.add_edge("tools", "call_model")
 
-    return graph.compile(checkpointer=checkpointer)
+    return graph.compile(checkpointer=checkpointer, store=store)

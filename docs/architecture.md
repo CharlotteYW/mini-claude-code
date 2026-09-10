@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M29 complete  
+**Last updated:** M30 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M29)
+## Current status (M30)
 
 | Piece | Status |
 |---|---|
@@ -20,6 +20,7 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Hybrid retrieval (`search_hybrid`) | **M27 Done** |
 | Graph-neighbor expand (`expand_chunks`) | **M28 Done** |
 | MCP HTTP + sticky session | **M29 Done** |
+| LangGraph Store (cross-thread KV) | **M30 Done** |
 
 Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
@@ -127,6 +128,7 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 |---|---|---|
 | Python | `uv` + `pyproject.toml` under `backend/` | `uv sync` via `setup.sh` |
 | Sessions / checkpoints | PostgreSQL (`mcc-postgres`) | Sync `PostgresSaver` via `open_checkpointer` (`--sync`); async `AsyncPostgresSaver` via `open_async_checkpointer` (default CLI `ainvoke`/`astream`); MemorySaver optional |
+| Cross-thread KV | LangGraph Store (M30) | `InMemoryStore` or Postgres `store` table via `open_store` / `open_async_store`; tools `store_put` / `store_get`; namespace `("mcc","project",id)` — not `thread_id` |
 | Vectors | `pgvector` + `memory_notes` + `memory_chunks` | M8-B notes; M20 ingest chunks (`doc_id`, path, index) via Ollama embed |
 | Graph memory | Neo4j Community (`mcc-neo4j`, Browser `:7474`) | M8 `Fact`; M20 `Document`/`Chunk` + `HAS_CHUNK`/`NEXT`; M28 `expand_chunks` (NEXT ±N) |
 | Full-text | Elasticsearch (`mcc-elasticsearch`, `:9200`) | M21: `search_keyword` (BM25); M27: `search_hybrid` (ES → pgvector re-rank on `(doc_id, chunk_index)`) |
@@ -155,4 +157,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M27 Done** — [milestones/M27-hybrid-retrieval.md](milestones/M27-hybrid-retrieval.md)
 - **M28 Done** — [milestones/M28-graph-neighbor-expand.md](milestones/M28-graph-neighbor-expand.md)
 - **M29 Done** — [milestones/M29-mcp-http-session.md](milestones/M29-mcp-http-session.md)
+- **M30 Done** — [milestones/M30-langgraph-store.md](milestones/M30-langgraph-store.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

@@ -1,10 +1,11 @@
-"""LangChain tools for Neo4j facts + pgvector notes + doc ingest (M8/M20/M21)."""
+"""LangChain tools for Neo4j facts + pgvector notes + doc ingest (M8/M20/M21) + Store (M30)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from langchain_core.tools import tool
+from langgraph.store.base import BaseStore
 
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.memory.elasticsearch_chunks import search_keyword
@@ -20,8 +21,9 @@ def build_memory_tools(
     settings: Settings | None = None,
     *,
     workspace_root: Path | None = None,
+    store: BaseStore | None = None,
 ) -> list:
-    """Neo4j fact tools + pgvector notes + ingest/search (semantic + keyword)."""
+    """Neo4j fact tools + pgvector notes + ingest/search + optional LangGraph Store."""
     settings = settings or get_settings()
     from mini_claude_code.config import resolve_workspace_root
 
@@ -239,16 +241,7 @@ def build_memory_tools(
             )
         return format_expand_hits(hits)
 
-    remember_fact_tool.name = "remember_fact"
-    recall_facts_tool.name = "recall_facts"
-    remember_note_tool.name = "remember_note"
-    recall_notes_tool.name = "recall_notes"
-    ingest_docs_tool.name = "ingest_docs"
-    search_chunks_tool.name = "search_chunks"
-    search_keyword_tool.name = "search_keyword"
-    search_hybrid_tool.name = "search_hybrid"
-    expand_chunks_tool.name = "expand_chunks"
-    return [
+    tools = [
         remember_fact_tool,
         recall_facts_tool,
         remember_note_tool,
@@ -259,3 +252,58 @@ def build_memory_tools(
         search_hybrid_tool,
         expand_chunks_tool,
     ]
+
+    if store is not None:
+        from mini_claude_code.agent.store import (
+            store_get_value,
+            store_namespace,
+            store_put_value,
+        )
+
+        ns = store_namespace(settings)
+
+        @tool
+        def store_put_tool(key: str, value: str) -> str:
+            """Save an exact key/value into LangGraph Store (cross-thread KV).
+
+            Survives new thread_id — unlike the chat checkpointer. Use for small
+            structured prefs (e.g. key=package_manager, value=uv). Prefer
+            remember_fact for crisp project beliefs you may substring-search;
+            prefer remember_note for fuzzy prose. Not a second chat log.
+            """
+            try:
+                store_put_value(store, key, value, settings=settings)
+            except Exception as exc:  # noqa: BLE001
+                return f"ERROR store_put: {exc}"
+            return f"stored key={key.strip()!r} in namespace={ns!r}"
+
+        @tool
+        def store_get_tool(key: str) -> str:
+            """Read an exact key from LangGraph Store (cross-thread KV).
+
+            Same project namespace is shared across threads. Empty/missing key
+            returns a clear miss — this is not semantic search (use recall_notes
+            / recall_facts / search_chunks for meaning).
+            """
+            try:
+                text = store_get_value(store, key, settings=settings)
+            except Exception as exc:  # noqa: BLE001
+                return f"ERROR store_get: {exc}"
+            if text is None:
+                return f"No store entry for key={key.strip()!r} namespace={ns!r}"
+            return f"{key.strip()}={text}"
+
+        store_put_tool.name = "store_put"
+        store_get_tool.name = "store_get"
+        tools.extend([store_put_tool, store_get_tool])
+
+    remember_fact_tool.name = "remember_fact"
+    recall_facts_tool.name = "recall_facts"
+    remember_note_tool.name = "remember_note"
+    recall_notes_tool.name = "recall_notes"
+    ingest_docs_tool.name = "ingest_docs"
+    search_chunks_tool.name = "search_chunks"
+    search_keyword_tool.name = "search_keyword"
+    search_hybrid_tool.name = "search_hybrid"
+    expand_chunks_tool.name = "expand_chunks"
+    return tools

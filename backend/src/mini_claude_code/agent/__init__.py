@@ -16,6 +16,12 @@ from mini_claude_code.agent.graph import (
     build_agent_graph,
     route_after_model,
 )
+from mini_claude_code.agent.store import (
+    open_async_store,
+    open_store,
+    resolve_store_backend,
+    store_namespace,
+)
 from mini_claude_code.agent.stream_render import consume_agent_stream
 
 __all__ = [
@@ -26,8 +32,12 @@ __all__ = [
     "estimate_tokens",
     "maybe_compact_messages",
     "open_async_checkpointer",
+    "open_async_store",
     "open_checkpointer",
+    "open_store",
     "resolve_checkpoint_backend",
+    "resolve_store_backend",
     "route_after_model",
     "safe_prefix_end",
+    "store_namespace",
 ]

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.store.base import BaseStore
 
 from mini_claude_code.config import Settings, get_settings
 from mini_claude_code.tools.fs import build_coding_tools
@@ -28,11 +29,13 @@ def build_default_tools(
     settings: Settings | None = None,
     llm: BaseChatModel | None = None,
     plan_mode: bool = False,
+    store: BaseStore | None = None,
 ) -> list[BaseTool]:
     """Full default toolset including M12–M14 (+ M23 plugin plane merges).
 
     Agent imports are lazy so ``import mini_claude_code.tools`` does not cycle
     through ``agent.graph`` → ``tools`` while the tools package is still loading.
+    Pass ``store`` (M30) to enable ``store_put`` / ``store_get``.
     """
     # Lazy: agent.skills / subagents / plugins pull agent.__init__ → graph → tools.
     from mini_claude_code.agent.plugins import (
@@ -66,7 +69,7 @@ def build_default_tools(
         *build_git_tools(root),
         *ship_tools,
         *pr_tools,
-        *build_memory_tools(settings, workspace_root=root),
+        *build_memory_tools(settings, workspace_root=root, store=store),
         *build_subagent_tools(
             root,
             settings=settings,

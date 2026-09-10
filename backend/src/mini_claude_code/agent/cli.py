@@ -27,6 +27,12 @@ from mini_claude_code.agent.slash_commands import (
     resolve_pick_selection,
     slash_registry_from_plugins,
 )
+from mini_claude_code.agent.store import (
+    open_async_store,
+    open_store,
+    resolve_store_backend,
+    store_namespace,
+)
 from mini_claude_code.agent.stream_render import (
     consume_agent_astream,
     consume_agent_stream,
@@ -441,6 +447,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  checkpointer: {kind}")
     else:
         print("  session:      off")
+    store_kind = resolve_store_backend(settings)
+    print(f"  store:        {store_kind} ns={store_namespace(settings)!r}")
     if not args.repl:
         print(f"  prompt:       {args.prompt}")
     print(f"  plugins:      {len(plugins)} pack(s)")
@@ -458,10 +466,11 @@ def main(argv: list[str] | None = None) -> int:
     if usage_acc is not None:
         config.setdefault("configurable", {})[USAGE_ACCUMULATOR_KEY] = usage_acc
 
-    def _build(checkpointer=None):
+    def _build(checkpointer=None, store=None):
         return build_agent_graph(
             settings=settings,
             checkpointer=checkpointer,
+            store=store,
             plan_mode=plan_mode,
             # Production path: interrupt inside wrap (no stdin ask_callback).
             ask_callback=None,
@@ -477,10 +486,22 @@ def main(argv: list[str] | None = None) -> int:
                 async with open_async_checkpointer(
                     settings, backend=backend, setup=True
                 ) as checkpointer:
-                    graph = _build(checkpointer)
-                    if args.repl:
-                        return await _run_repl_async(
+                    async with open_async_store(settings, setup=True) as store:
+                        graph = _build(checkpointer, store)
+                        if args.repl:
+                            return await _run_repl_async(
+                                graph,
+                                config,
+                                stream=stream,
+                                plan_mode=plan_mode,
+                                slash_registry=slash_registry,
+                                plugins=plugins,
+                                usage_acc=usage_acc,
+                                use_sync=False,
+                            )
+                        return await _run_once_async(
                             graph,
+                            args.prompt or "",
                             config,
                             stream=stream,
                             plan_mode=plan_mode,
@@ -489,7 +510,27 @@ def main(argv: list[str] | None = None) -> int:
                             usage_acc=usage_acc,
                             use_sync=False,
                         )
-                    return await _run_once_async(
+
+            return asyncio.run(_async_session())
+
+        if use_checkpoint:
+            with open_checkpointer(
+                settings, backend=backend, setup=True
+            ) as checkpointer:
+                with open_store(settings, setup=True) as store:
+                    graph = _build(checkpointer, store)
+                    if args.repl:
+                        return _run_repl(
+                            graph,
+                            config,
+                            stream=stream,
+                            plan_mode=plan_mode,
+                            slash_registry=slash_registry,
+                            plugins=plugins,
+                            usage_acc=usage_acc,
+                            use_sync=True,
+                        )
+                    return _run_once(
                         graph,
                         args.prompt or "",
                         config,
@@ -498,16 +539,12 @@ def main(argv: list[str] | None = None) -> int:
                         slash_registry=slash_registry,
                         plugins=plugins,
                         usage_acc=usage_acc,
-                        use_sync=False,
+                        use_sync=True,
                     )
 
-            return asyncio.run(_async_session())
-
-        if use_checkpoint:
-            with open_checkpointer(
-                settings, backend=backend, setup=True
-            ) as checkpointer:
-                graph = _build(checkpointer)
+        if use_sync:
+            with open_store(settings, setup=True) as store:
+                graph = _build(None, store)
                 if args.repl:
                     return _run_repl(
                         graph,
@@ -530,35 +567,24 @@ def main(argv: list[str] | None = None) -> int:
                     usage_acc=usage_acc,
                     use_sync=True,
                 )
-        graph = _build(None)
-        if use_sync:
-            if args.repl:
-                return _run_repl(
-                    graph,
-                    config,
-                    stream=stream,
-                    plan_mode=plan_mode,
-                    slash_registry=slash_registry,
-                    plugins=plugins,
-                    usage_acc=usage_acc,
-                    use_sync=True,
-                )
-            return _run_once(
-                graph,
-                args.prompt or "",
-                config,
-                stream=stream,
-                plan_mode=plan_mode,
-                slash_registry=slash_registry,
-                plugins=plugins,
-                usage_acc=usage_acc,
-                use_sync=True,
-            )
 
         async def _async_no_checkpoint() -> int:
-            if args.repl:
-                return await _run_repl_async(
+            async with open_async_store(settings, setup=True) as store:
+                graph = _build(None, store)
+                if args.repl:
+                    return await _run_repl_async(
+                        graph,
+                        config,
+                        stream=stream,
+                        plan_mode=plan_mode,
+                        slash_registry=slash_registry,
+                        plugins=plugins,
+                        usage_acc=usage_acc,
+                        use_sync=False,
+                    )
+                return await _run_once_async(
                     graph,
+                    args.prompt or "",
                     config,
                     stream=stream,
                     plan_mode=plan_mode,
@@ -567,17 +593,6 @@ def main(argv: list[str] | None = None) -> int:
                     usage_acc=usage_acc,
                     use_sync=False,
                 )
-            return await _run_once_async(
-                graph,
-                args.prompt or "",
-                config,
-                stream=stream,
-                plan_mode=plan_mode,
-                slash_registry=slash_registry,
-                plugins=plugins,
-                usage_acc=usage_acc,
-                use_sync=False,
-            )
 
         return asyncio.run(_async_no_checkpoint())
     except ValueError as exc:

@@ -13,6 +13,70 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-09 — M30: LangGraph Store
+
+- Shipped: `store_put`/`store_get`; `open_store` / `open_async_store`; `compile(store=…)`; `./scripts/m30-demo.sh`.
+- Insight: Checkpointer = per-`thread_id` chat; Store = cross-thread KV (`store` table / InMemory); Neo4j/pgvector stay semantic.
+- Insight: Namespace `("mcc","project",id)` must not include `thread_id`.
+- See Concept Q&A index (M30); Results: [M30](docs/milestones/M30-langgraph-store.md).
+
+---
+
+## 2026-09-09 — Dig: how cross-session memory sits in the DB
+
+- **Q: How is cross-session memory stored in the database (details)?**  
+  A: Several physical stores — same Postgres URL may hold *different* tables for different jobs:
+  - **Checkpointer (not cross-thread):** LangGraph tables like `checkpoints` / blobs — keyed by **`thread_id`**. Resume same thread only.
+  - **Store (M30):** LangGraph `store` table: `PRIMARY KEY (prefix, key)`, `value jsonb`. `prefix` = joined namespace tuple (e.g. `mcc.project.default`); **no `thread_id` column** — that is why any thread can read. Optional `store_vectors` if indexed search enabled (we plan simple put/get first).
+  - **pgvector notes (M8):** our `memory_notes (id, text, embedding vector, created_at)` — cosine search; no thread key.
+  - **pgvector chunks (M20):** `memory_chunks` with `doc_id` / `source_path` / `chunk_index` + embedding.
+  - **Neo4j Fact (M8):** nodes `(:Fact {id, text, kind, created_at})` — graph DB, not SQL.
+  - **AGENT.md:** workspace **file**, not DB.
+  Mental model: **thread chat → checkpointer tables; exact KV across threads → `store`; meaning → vectors/graph/file.**
+- Link: [M30 Plan](docs/milestones/M30-langgraph-store.md); LangGraph `PostgresStore.setup`
+
+---
+
+## 2026-09-09 — Dig: tell agent to remember → cross-session?
+
+- **Q: If I tell the agent to save something, does that make it cross-session?**  
+  A: **Yes — that’s the intended UX**, if the agent actually calls a **durable** write tool:
+  - M30: `store_put` → exact KV in Store namespace (any later thread can `store_get`).
+  - Already today: `remember_fact` → Neo4j; `remember_note` → pgvector; or you edit `AGENT.md`.
+  - **Not** enough: only saying it in chat — checkpointer keeps that only for **this** `thread_id`. New thread won’t see it unless a durable tool (or file) was written.
+  Caveats: model must choose the right tool; Plan Mode / deny can block writes; ask-mode may need your approval.
+- Link: [M30 Plan](docs/milestones/M30-langgraph-store.md)
+
+---
+
+## 2026-09-09 — Dig: who controls cross-session memory?
+
+- **Q: Who controls how / what gets stored across sessions?**  
+  A: **Several controllers, different layers** — not one magic brain:
+  1. **You (developer):** choose which primitives exist (checkpointer / Store / Neo4j / pgvector / AGENT.md), namespaces, backends, and whether memory is **tool-visible** vs auto-injected.
+  2. **Policy plane (M9/M10):** permissions / Plan Mode / HITL decide if `store_put` / `remember_fact` may run (auto / ask / deny).
+  3. **LLM agent (default M30 shape):** *when* to put/get — model chooses tools from descriptions; no silent “save everything.”
+  4. **Optional later:** hooks, skills, or a fixed “write memory” graph node (more deterministic, less agent choice).
+  5. **Human user:** can instruct “remember X”, approve ask-mode puts, or edit `AGENT.md` directly.
+  Teaching default for M30: **dev owns the Store API + namespace; agent owns moment-to-moment put/get; policy can gate writes.**
+- Link: [M30 Plan](docs/milestones/M30-langgraph-store.md)
+
+---
+
+## 2026-09-09 — Dig: M30 what crosses sessions?
+
+- **Q: What information is stored across sessions?**  
+  A: Depends which layer — they are not the same “memory”:
+  - **Checkpointer (M5):** only that **`thread_id`’s transcript** (messages/graph state). New thread → empty chat, even on same Postgres.
+  - **Store (M30 Plan):** small **exact KV** under a **project/user namespace** — e.g. prefs, flags, “last chosen package manager”, short structured notes you `store_put`. Visible via `store_get` from **any** thread sharing that namespace. Not a second chat log.
+  - **Neo4j Fact (M8):** crisp **project beliefs** you `remember_fact` (ownership, conventions) — semantic/substring recall across threads.
+  - **pgvector notes / chunks:** **fuzzy** prose and ingested docs — meaning search across threads.
+  - **`AGENT.md`:** always-on **project norms** file — every thread sees it.
+  Store does **not** replace the others; it teaches LangGraph’s native cross-thread map for exact keys.
+- Link: [M30 Plan](docs/milestones/M30-langgraph-store.md)
+
+---
+
 ## 2026-09-09 — Fix: sticky MCP close anyio cancel-scope
 
 - **Q: Why did `./scripts/m29-demo.sh` show a scary traceback on teardown?**  
@@ -350,7 +414,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M29 study guide)
+## Concept Q&A index (M0–M30 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -391,6 +455,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M30 — LangGraph Store
+
+- **Q: What crosses sessions / threads?**  
+  A: **Checkpointer** = one thread’s chat only. **Store** = exact KV in a project namespace (any thread). **Neo4j / pgvector / AGENT.md** = existing semantic/fuzzy/always-on long-term — kept beside Store.
+- **Q: Who controls what gets stored?**  
+  A: **Dev** = which memory systems + namespace/schema. **Policy** = may the write tool run. **LLM** = when to `store_put`/`store_get` (tool choice). **User** = prompts, HITL, edit `AGENT.md`. M30 default is not “auto-save the whole chat.”
+- **Q: DB layout for cross-session?**  
+  A: Store → SQL `store(prefix, key, value jsonb)`; notes/chunks → `memory_notes` / `memory_chunks` + vectors; facts → Neo4j `:Fact`; chat → checkpointer `thread_id` tables (not shared across threads).
+- **Q: Tell the agent to remember → cross-session?**  
+  A: Yes if it calls `store_put` / `remember_fact` / `remember_note` (or you edit `AGENT.md`). Chat-only text stays in that thread’s checkpointer.
+- Link: [M30](docs/milestones/M30-langgraph-store.md)
 
 ### M29 — MCP HTTP & sticky session
 
