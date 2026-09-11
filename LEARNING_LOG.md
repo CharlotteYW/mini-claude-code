@@ -13,6 +13,23 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-11 — M32: Parallel tools & fan-out
+
+- Shipped: `PolicyToolNode` (`tool_fanout.py`); `TOOL_PARALLEL` / `--serial-tools`; ask-batch → serial; error isolation.
+- Insight: LangGraph `ToolNode` already gathered; M32 owns **policy** (measure + HITL safety), not a new executor.
+- Insight: Unknown tool names resolve to `ask` → that batch serializes even when parallel is on.
+- See Concept Q&A index (M32); Results: [M32](docs/milestones/M32-parallel-tools-fanout.md).
+
+---
+
+## 2026-09-11 — Dig: what “tools fan-out” means
+
+- **Q: What does tools fan-out mean / what does it do?**  
+  A: One model turn can emit **several** `tool_calls` on a single `AIMessage` (e.g. read two files at once). **Fan-out** = the runtime **starts those tool bodies concurrently** (async gather / thread pool), then **gathers** the results into multiple `ToolMessage`s before the next `call_model`. Without fan-out (serial), wall time ≈ sum of each tool; with it, wall time ≈ max of independent tools. It is **scheduling inside the `tools` node**, not a new graph topology and not a new product feature. Permissions/hooks still wrap **each** call. Caveat: concurrent **`ask`/HITL** can race — M32 plans to force serial for that batch. Framework note: LangGraph `ToolNode` already fans out; M32 teaches/controls it.
+- Link: [M32 Plan](docs/milestones/M32-parallel-tools-fanout.md)
+
+---
+
 ## 2026-09-10 — M31: Time-travel & branch sessions
 
 - Shipped: `time_travel.py`; `--list-checkpoints` / `--fork-from`; REPL `/rewind`; fork = new `thread_id` + copy values.
@@ -423,7 +440,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M31 study guide)
+## Concept Q&A index (M0–M32 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -464,6 +481,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M32 — Parallel tools & fan-out
+
+- **Q: What does tools fan-out mean?**  
+  A: One `AIMessage` with N `tool_calls` → runtime runs those tools **concurrently**, then gathers `ToolMessage`s. Scheduling inside the `tools` node — not a new graph edge.
+- **Q: Was ToolNode serial before M32?**  
+  A: **No.** LangGraph already used gather / thread pool. M32 adds **policy**: serial A/B, ask-batch serial, concurrency cap, explicit error isolation.
+- **Q: Why serialize when any tool is ask?**  
+  A: Concurrent `interrupt()` races HITL resume. Safer: that tools step runs one call at a time.
+- **Q: Does fan-out bypass permissions/hooks?**  
+  A: **No.** Wrap onion still runs **per call** (Pre → permissions/HITL → body → content policy → Post).
+- Link: [M32](docs/milestones/M32-parallel-tools-fanout.md)
 
 ### M31 — Time-travel & branch sessions
 

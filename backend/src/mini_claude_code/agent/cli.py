@@ -505,6 +505,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Include in-progress snapshots when listing (default: completed/idle only).",
     )
+    parser.add_argument(
+        "--serial-tools",
+        action="store_true",
+        help="Force serial tool execution (M32 A/B). Default: parallel fan-out; ask batches always serial.",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -512,6 +517,7 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
 
     plan_mode = bool(args.plan or settings.agent_plan_mode)
+    tool_parallel = bool(settings.tool_parallel) and not bool(args.serial_tools)
     use_sync = bool(args.sync)
     completed_only = not bool(args.all_checkpoints)
 
@@ -629,6 +635,15 @@ def main(argv: list[str] | None = None) -> int:
         f"  plan_mode:    {'on (mutating tools denied)' if plan_mode else 'off'}"
     )
     print(
+        f"  tool_fanout:  {'parallel' if tool_parallel else 'serial'}"
+        + (
+            f" (max_concurrency={settings.tool_max_concurrency})"
+            if settings.tool_max_concurrency
+            else ""
+        )
+        + (" [ask batches always serial]" if tool_parallel else "")
+    )
+    print(
         "  hitl:         "
         + (
             "off (plan mode)"
@@ -671,6 +686,7 @@ def main(argv: list[str] | None = None) -> int:
             checkpointer=checkpointer,
             store=store,
             plan_mode=plan_mode,
+            tool_parallel=tool_parallel,
             # Production path: interrupt inside wrap (no stdin ask_callback).
             ask_callback=None,
             usage_accumulator=usage_acc,

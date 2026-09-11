@@ -14,6 +14,7 @@ MCP (M14): optional adapter tools merged into the same ToolNode (opt-in config).
 Hooks (M15): Pre/Post around tools; Stop on final model message without tool_calls.
 Plugins (M16/M23): slash + hook merge; packs also contribute skills/MCP/subagents.
 Retry/usage (M17): transient LLM retry at invoke; optional token accounting footer.
+Fan-out (M32): PolicyToolNode — parallel by default; serial if --serial-tools or ask batch.
 """
 
 from __future__ import annotations
@@ -29,7 +30,6 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 
 from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
@@ -43,6 +43,7 @@ from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
 from mini_claude_code.agent.retry import invoke_with_retry
 from mini_claude_code.agent.skills import inject_skills_view
+from mini_claude_code.agent.tool_fanout import make_tools_node
 from mini_claude_code.agent.usage import (
     UsageAccumulator,
     get_usage_accumulator,
@@ -106,6 +107,7 @@ def build_agent_graph(
     hook_registry: HookRegistry | None = None,
     apply_tool_hooks: bool = True,
     usage_accumulator: UsageAccumulator | None = None,
+    tool_parallel: bool | None = None,
 ) -> CompiledStateGraph:
     """Compile call_model ↔ tools ReAct graph.
 
@@ -114,6 +116,7 @@ def build_agent_graph(
     Pass ``store`` (M30) for cross-thread KV tools + ``compile(store=…)``.
     `plan_mode` defaults to Settings.agent_plan_mode. Set
     `apply_tool_permissions=False` only for low-level tests that need bare tools.
+    ``tool_parallel`` defaults to Settings.tool_parallel (M32); False forces serial.
 
     Tool wrap order: **permissions first (inner), hooks outer** so runtime is
     Pre → permissions/HITL → body → Post.
@@ -124,6 +127,10 @@ def build_agent_graph(
     effective_plan = (
         settings.agent_plan_mode if plan_mode is None else plan_mode
     )
+    effective_parallel = (
+        settings.tool_parallel if tool_parallel is None else tool_parallel
+    )
+    max_conc = settings.tool_max_concurrency or None
     tool_list: list[BaseTool] = (
         list(tools)
         if tools is not None
@@ -209,7 +216,15 @@ def build_agent_graph(
 
     graph = StateGraph(MessagesState)
     graph.add_node("call_model", call_model)
-    graph.add_node("tools", ToolNode(tool_list))
+    graph.add_node(
+        "tools",
+        make_tools_node(
+            tool_list,
+            parallel=effective_parallel,
+            plan_mode=effective_plan,
+            max_concurrency=max_conc,
+        ),
+    )
     graph.add_edge(START, "call_model")
     graph.add_conditional_edges("call_model", route_after_model)
     graph.add_edge("tools", "call_model")

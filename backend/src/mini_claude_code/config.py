@@ -101,6 +101,12 @@ class Settings(BaseSettings):
     # Plan Mode (M9): read-only policy override for mutating tools.
     agent_plan_mode: bool = Field(default=False, alias="AGENT_PLAN_MODE")
 
+    # Tools fan-out (M32). Default parallel (ToolNode gather); false = serial A/B.
+    # Batches that include any ask tool are always serialized (HITL safety).
+    tool_parallel: bool = Field(default=True, alias="TOOL_PARALLEL")
+    # Optional cap (sync thread pool / async semaphore). None/0 = unbounded.
+    tool_max_concurrency: int = Field(default=0, alias="TOOL_MAX_CONCURRENCY")
+
     # MCP client (M14). Empty config + demo off → no MCP tools.
     # Priority: MCP_CONFIG_PATH > MCP_CONFIG (JSON) > MCP_USE_DEMO.
     mcp_config: str = Field(default="", alias="MCP_CONFIG")
