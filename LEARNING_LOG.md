@@ -13,6 +13,30 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-11 — Dig: did M32 change graph topology?
+
+- **Q: Did PolicyToolNode change the graph topology vs before?**  
+  A: **No.** Still `START → call_model ⇄ tools → (END)`. Only the **implementation** of the `"tools"` node changed (`ToolNode` → `PolicyToolNode` subclass). Same node name, same edges, same ReAct loop. Fan-out is **inside** the tools node, not a new node/edge.
+- Link: [M32](docs/milestones/M32-parallel-tools-fanout.md)
+
+---
+
+## 2026-09-11 — Dig: PolicyToolNode is the graph tools node
+
+- **Q: Is PolicyToolNode a ToolNode? How is it invoked when a message arrives?**  
+  A: **Yes — subclass of LangGraph `ToolNode`**, registered as the graph’s `"tools"` node. Flow: user `HumanMessage` → `call_model` → if last `AIMessage` has `tool_calls`, router sends state into `"tools"` → `PolicyToolNode` fans out/serializes those calls → returns `ToolMessage`s (gathered) → edge back to `call_model`. It is **not** itself a model-callable tool; it is the **executor node** that runs the tools the model asked for.
+- Link: [M32](docs/milestones/M32-parallel-tools-fanout.md)
+
+---
+
+## 2026-09-11 — Dig: where parallel runs vs what wraps each tool
+
+- **Q: Is parallelism in tool_fanout? Does it wrap every tool?**  
+  A: **Yes, scheduling is in `PolicyToolNode` (`tool_fanout.py`)** — the graph’s single `"tools"` node. It does **not** wrap each tool’s policy; it **holds the already-wrapped tool list** and runs N `tool_calls` via `executor.map` (sync) or `asyncio.gather` (async). Per-tool wraps (permissions → hooks → content policy) happen **earlier** in `build_agent_graph` / `build_default_tools`. Fan-out = *when* calls run; wraps = *what happens inside each call*.
+- Link: [M32](docs/milestones/M32-parallel-tools-fanout.md)
+
+---
+
 ## 2026-09-11 — M32: Parallel tools & fan-out
 
 - Shipped: `PolicyToolNode` (`tool_fanout.py`); `TOOL_PARALLEL` / `--serial-tools`; ask-batch → serial; error isolation.
