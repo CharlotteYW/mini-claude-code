@@ -17,6 +17,7 @@ Hooks (M15): Pre/Post around tools; Stop on final model message without tool_cal
 Plugins (M16/M23): slash + hook merge; packs also contribute skills/MCP/subagents.
 Retry/usage (M17): transient LLM retry at invoke; optional token accounting footer.
 Fan-out (M32): PolicyToolNode — parallel by default; serial if --serial-tools or ask batch.
+Observation budget (M39): after tools combine, head+tail truncate / optional summarize.
 """
 
 from __future__ import annotations
@@ -46,6 +47,7 @@ from mini_claude_code.agent.hooks import (
     resolve_hook_registry,
     run_stop_hooks,
 )
+from mini_claude_code.agent.observation_budget import default_observation_summarizer
 from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
 from mini_claude_code.agent.prompt_cache import (
@@ -254,6 +256,14 @@ def build_agent_graph(
             parallel=effective_parallel,
             plan_mode=effective_plan,
             max_concurrency=max_conc,
+            observation_max_chars=settings.tool_observation_max_chars,
+            observation_summarize=settings.tool_observation_summarize,
+            observation_head_ratio=settings.tool_observation_head_ratio,
+            observation_summarizer=(
+                default_observation_summarizer(model)
+                if settings.tool_observation_summarize
+                else None
+            ),
         ),
     )
     graph.add_edge(START, "call_model")

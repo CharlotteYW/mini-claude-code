@@ -111,6 +111,16 @@ class Settings(BaseSettings):
     tool_parallel: bool = Field(default=True, alias="TOOL_PARALLEL")
     # Optional cap (sync thread pool / async semaphore). None/0 = unbounded.
     tool_max_concurrency: int = Field(default=0, alias="TOOL_MAX_CONCURRENCY")
+    # Observation budget (M39). <=0 disables. Unified ceiling after each tool.
+    tool_observation_max_chars: int = Field(
+        default=32_000, alias="TOOL_OBSERVATION_MAX_CHARS"
+    )
+    tool_observation_summarize: bool = Field(
+        default=False, alias="TOOL_OBSERVATION_SUMMARIZE"
+    )
+    tool_observation_head_ratio: float = Field(
+        default=0.6, alias="TOOL_OBSERVATION_HEAD_RATIO"
+    )
 
     # MCP client (M14). Empty config + demo off → no MCP tools.
     # Priority: MCP_CONFIG_PATH > MCP_CONFIG (JSON) > MCP_USE_DEMO.

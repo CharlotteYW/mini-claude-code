@@ -1,4 +1,4 @@
-"""Tools fan-out policy (M32): parallel ToolNode vs serial / ask-safe path.
+"""Tools fan-out policy (M32) + observation budgets (M39).
 
 LangGraph ``ToolNode`` already fans out multi-``tool_calls`` (async gather /
 sync thread pool). This module **owns the policy**:
@@ -7,8 +7,10 @@ sync thread pool). This module **owns the policy**:
 - ``TOOL_PARALLEL=false`` / ``--serial-tools``: force serial A/B baseline
 - any ``ask`` tool in the batch → **serial** that step (HITL must not race)
 - explicit ``handle_tool_errors`` so one failure still yields sibling ToolMessages
+- M39: after combine, enforce ``TOOL_OBSERVATION_MAX_CHARS`` (head+tail / optional summarize)
 
-Wrap onion (permissions / hooks / content policy) is unchanged — still per call.
+Wrap onion (permissions / hooks / content policy) is unchanged — still per call;
+observation budget runs on the **combined ToolMessages** entering graph state.
 """
 
 from __future__ import annotations
@@ -23,6 +25,10 @@ from langgraph.prebuilt.tool_node import ToolRuntime, get_executor_for_config
 from langgraph.runtime import Runtime
 from pydantic import BaseModel
 
+from mini_claude_code.agent.observation_budget import (
+    Summarizer,
+    apply_budget_to_tool_outputs,
+)
 from mini_claude_code.agent.permissions import resolve_permission
 
 FanoutMode = Literal["parallel", "serial"]
@@ -45,7 +51,7 @@ def batch_needs_serial(
 
 
 class PolicyToolNode(ToolNode):
-    """ToolNode with explicit fan-out policy + observable ``last_mode``."""
+    """ToolNode with fan-out policy + observation budget + ``last_mode``."""
 
     def __init__(
         self,
@@ -54,6 +60,10 @@ class PolicyToolNode(ToolNode):
         parallel: bool = True,
         plan_mode: bool = False,
         max_concurrency: int | None = None,
+        observation_max_chars: int = 0,
+        observation_summarize: bool = False,
+        observation_head_ratio: float = 0.6,
+        observation_summarizer: Summarizer | None = None,
         **kwargs: Any,
     ) -> None:
         kwargs.setdefault("handle_tool_errors", True)
@@ -63,8 +73,26 @@ class PolicyToolNode(ToolNode):
         self._max_concurrency = (
             int(max_concurrency) if max_concurrency and max_concurrency > 0 else None
         )
+        self._observation_max_chars = int(observation_max_chars)
+        self._observation_summarize = bool(observation_summarize)
+        self._observation_head_ratio = float(observation_head_ratio)
+        self._observation_summarizer = observation_summarizer
         self.last_mode: FanoutMode | None = None
         super().__init__(tools, **kwargs)
+
+    def _apply_observation_budget(self, outputs: Any) -> Any:
+        return apply_budget_to_tool_outputs(
+            outputs,
+            max_chars=self._observation_max_chars,
+            head_ratio=self._observation_head_ratio,
+            summarize=self._observation_summarize,
+            summarizer=self._observation_summarizer,
+            messages_key=getattr(self, "_messages_key", "messages"),
+        )
+
+    def _combine_tool_outputs(self, outputs: Any, input_type: Any) -> Any:
+        combined = super()._combine_tool_outputs(outputs, input_type)
+        return self._apply_observation_budget(combined)
 
     def _inject_concurrency(self, config: RunnableConfig) -> RunnableConfig:
         if self._max_concurrency is None:
@@ -179,6 +207,10 @@ def make_tools_node(
     parallel: bool = True,
     plan_mode: bool = False,
     max_concurrency: int | None = None,
+    observation_max_chars: int = 0,
+    observation_summarize: bool = False,
+    observation_head_ratio: float = 0.6,
+    observation_summarizer: Summarizer | None = None,
 ) -> PolicyToolNode:
     """Factory used by ``build_agent_graph`` (keeps import site tidy)."""
     return PolicyToolNode(
@@ -186,4 +218,8 @@ def make_tools_node(
         parallel=parallel,
         plan_mode=plan_mode,
         max_concurrency=max_concurrency,
+        observation_max_chars=observation_max_chars,
+        observation_summarize=observation_summarize,
+        observation_head_ratio=observation_head_ratio,
+        observation_summarizer=observation_summarizer,
     )

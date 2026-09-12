@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M39: Tool observation budgets
+
+- Shipped: `observation_budget.py`; `PolicyToolNode` post-combine gate; `TOOL_OBSERVATION_*` settings.
+- Insight: M7/M37 manage **history / prefix cost**; M39 caps **this ToolMessage** before it joins state.
+- Insight: Head+tail beats head-only; summarize only when ≥ 2× budget (cost gate).
+- See Concept Q&A index (M39); Results: [M39](docs/milestones/M39-tool-observation-budget.md).
+
+---
+
 ## 2026-09-12 — Dig: does this repo auto-run tests on push/PR?
 
 - **Q: After push/PR, do tests run automatically? Do we have Jenkins?**  
@@ -665,9 +674,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M38 study guide)
+## Concept Q&A index (M0–M39 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
+
+### M39 — Tool observation budgets
+
+- **Q: How is this different from M7 compaction / M37 budget?**  
+  A: **M7** rewrites older *messages* when the transcript is large. **M37** soft-triggers that compact + prompt-cache. **M39** shrinks a **single ToolMessage** right after the tool runs — before it can blow the next `call_model`.
+- **Q: Why not rely on shell/fs MAX_* alone?**  
+  A: Those are inner defenses and easy to forget for MCP/new tools. A **unified policy-plane ceiling** on `PolicyToolNode` covers every tool the same way.
+- **Q: Why head+tail?**  
+  A: Errors/headers usually sit at the start; final results at the end; the middle of a huge dump is often noise.
+- **Q: When does summarize fire?**  
+  A: Only if `TOOL_OBSERVATION_SUMMARIZE=1` **and** size ≥ **2×** budget — avoids paying an LLM call for mild overruns. Labeled simplification (same chat model).
+- Link: [M39](docs/milestones/M39-tool-observation-budget.md)
 
 ### M38 — Remote CI gate (GitHub Checks)
 

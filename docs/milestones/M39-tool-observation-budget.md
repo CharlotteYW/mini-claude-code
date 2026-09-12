@@ -2,79 +2,109 @@
 
 ## Status
 
-Plan ready — waiting for approval
+Done
 
 ## Goal
 
-Add a **policy-plane observation budget**: after each tool runs, enforce a unified max size on `ToolMessage` content (head+tail keep, clear truncation marker), optional **summarize-when-huge** for oversized dumps, and a small CLI/stderr signal when truncation fires. Product ReAct topology stays `call_model` ↔ `tools`. Complements M7/M37 (history compact / token budget) which do **not** stop a single `run_shell` / `read_file` from flooding the next prompt.
+Add a **policy-plane observation budget**: after each tool runs, enforce a unified max size on `ToolMessage` content (head+tail keep, clear truncation marker), optional **summarize-when-huge** for oversized dumps, and a stderr `[obs-budget]` signal when truncation fires. Topology unchanged. Complements M7/M37.
 
 ## Why this milestone
 
-Today truncation is **scattered** (shell/git/fs each have their own `MAX_*` chars). That teaches little about the agent runtime concern: **observations are the #1 context bomber** in coding agents. Industry systems (Claude Code–style) enforce a central ceiling so one bad `cat`/`find` cannot erase the budget you just paid for with compaction and prompt cache.
-
-Without M39: M7/M37 clean history while a single tool result still blows the next `call_model` window.
+Scattered per-tool `MAX_*` constants do not teach the runtime concern: **observations are the #1 context bomber**. A central ceiling protects the next `call_model` after compaction/prompt-cache work.
 
 ## Concepts introduced
 
-- **Observation vs transcript** — tool outputs are the hot path into the next LLM call
-- **Unified budget** — one policy wrap beats N ad-hoc `MAX_OUTPUT` constants
-- **Head+tail truncation** — keep start (errors/headers) + end (results); middle is usually noise
-- **Summarize-when-huge** (optional) — lossy second stage when still over budget (**simplification**: same model, no tools)
-- Contrast: **M7 compact** = rewrite older *messages*; **M39** = shrink *this* ToolMessage before it joins state
+- Observation vs transcript
+- Unified budget vs per-tool MAX_*
+- Head+tail truncation
+- Optional summarize-when-huge (≥ 2× budget)
+- Contrast M7 compact vs M39 observation shrink
 
 ## Design decisions & alternatives considered
 
 | Decision | Choice | Alternatives |
 |---|---|---|
-| Where | Policy wrap around ToolNode results (PostToolUse-shaped helper) / thin wrap in `PolicyToolNode` or tool wrappers | New graph node; trust each tool forever |
-| Default | Char/token estimate budget via env (`TOOL_OBSERVATION_MAX_CHARS`) | Only per-tool constants (status quo) |
-| Truncation shape | Head + tail + marker | Head-only; drop entire result |
-| Summarize | Opt-in when over 2× budget (`TOOL_OBSERVATION_SUMMARIZE=1`) | Always summarize (slow/costly) |
-| Scope | All tools after execute (including MCP) | Shell-only |
-| Topology | Unchanged | Dedicated `truncate` node |
+| Where | `PolicyToolNode._combine_tool_outputs` post-process | New graph node; tool-only constants |
+| Default | `TOOL_OBSERVATION_MAX_CHARS=32000` | Disable by default |
+| Summarize | Opt-in `TOOL_OBSERVATION_SUMMARIZE` when ≥ 2× | Always summarize |
+| Scope | All tools after combine (incl. MCP) | Shell-only |
 
-## Architecture graph (planned)
+## Architecture graph (planned / as-built)
 
 ```mermaid
 flowchart LR
   Tools[PolicyToolNode] --> Obs[observation budget]
   Obs -->|under budget| State[ToolMessage as-is]
   Obs -->|over budget| Trim[head+tail truncate]
-  Trim -->|still huge and summarize on| Sum[optional summarize]
+  Trim -->|>=2x and summarize on| Sum[optional summarize]
   Trim --> State
   Sum --> State
   State --> Model[call_model]
 ```
 
-Freeze after approval: topology **unchanged**; observation budget is policy-plane like permissions/hooks/M37 cache.
-
 ## Testing (planned)
 
 ### Unit
 
-- Under budget → unchanged content; no marker.
-- Over budget → head+tail present; truncation marker; length ≤ budget (+ marker overhead bound).
-- Summarize path: fake summarizer called only when enabled and over threshold; result shorter.
-- Wrap applies to a fake tool result string (helper pure functions + one PolicyToolNode / wrap integration-style unit with fakes).
+- [x] Under/over budget; summarize 2× gate; PolicyToolNode apply; settings defaults
 
 ### Integration
 
-- Real `run_shell` or `read_file` producing oversized output under tiny budget → truncated ToolMessage visible in graph state (skip if no workspace; use tmp workspace). No live LLM required if we inject a deterministic long tool; optional Ollama path skip without model.
+- [x] Fake-LLM graph: huge tool → truncated ToolMessage in state
 
 ## Tasks
 
-- [ ] `agent/observation_budget.py` (or `tools/observation.py`) helpers + settings
-- [ ] Wire into tool execution path (wrap ToolMessages after tools / PolicyToolNode)
-- [ ] Optional summarize hook; stderr/`[obs-budget]` notice
-- [ ] Unit + integration tests; `./scripts/m39-demo.sh`
-- [ ] Results + LEARNING_LOG + architecture + ROADMAP; commit + push
+- [x] Helpers + PolicyToolNode wire + tests + docs; commit + push
 
 ## Demo / acceptance criteria
 
-1. With a tiny `TOOL_OBSERVATION_MAX_CHARS`, a huge tool dump is truncated before the next model call (marker visible).
-2. Docs contrast M7/M37 vs M39 clearly; label summarize-when-huge as simplification.
-3. Existing per-tool MAX_* can remain as inner defense; policy plane is the teaching ceiling.
+1. Tiny budget truncates huge dump before next model call — **met**.
+2. M7/M37 vs M39 contrast documented — **met**.
+3. Per-tool MAX_* remain inner defense — **met**.
 
 ## Results
 
-_(fill after implementation)_
+### What we did
+
+- **`agent/observation_budget.py`**: head+tail, summarize-when-huge, ToolMessage/output helpers
+- **`PolicyToolNode`**: apply budget after `_combine_tool_outputs`
+- Settings: `TOOL_OBSERVATION_MAX_CHARS`, `TOOL_OBSERVATION_SUMMARIZE`, `TOOL_OBSERVATION_HEAD_RATIO`
+- **`./scripts/m39-demo.sh`**
+
+### Commands & how to reproduce
+
+```bash
+./scripts/test.sh tests/unit/test_m39_observation_budget.py -v
+./scripts/test.sh tests/integration/test_m39_observation_budget_live.py -v
+./scripts/m39-demo.sh
+```
+
+### As-built graph + delta
+
+Topology **unchanged**. Delta = policy plane on tool outputs only.
+
+### Why this approach
+
+Teach a single observation ceiling beside history compact / token budget without a new node.
+
+### Deviations
+
+- Summarize uses same chat model when enabled (labeled simplification).
+- Marker may slightly exceed `max_chars` by a few dozen characters (documented bound in tests).
+
+### Pitfalls
+
+- `TOOL_OBSERVATION_MAX_CHARS<=0` disables the gate (inner tool MAX_* still apply).
+- Summarize only fires at ≥ 2× budget to avoid paying an LLM call for mild overruns.
+
+### Testing results
+
+```
+9 passed (unit)
+1 passed (integration)
+M32 fan-out regression: green
+```
+
+### Open questions / next dig
+
+- GitHub Actions for this repo (so M38 has real Checks); worktree isolation; provider failover.

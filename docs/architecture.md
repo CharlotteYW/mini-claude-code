@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M38 complete  
+**Last updated:** M39 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M38)
+## Current status (M39)
 
 | Piece | Status |
 |---|---|
@@ -29,6 +29,7 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | RAG / agent eval quality (hit@k) | **M36 Done** |
 | Prompt cache + budgeted compaction | **M37 Done** |
 | Remote CI gate (GitHub Checks) | **M38 Done** |
+| Tool observation budgets | **M39 Done** |
 
 Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
@@ -78,6 +79,7 @@ flowchart TB
     Compact[Context compact plus soft budget M37]
     Memory[Memory inject]
     PromptCache[Prompt cache Anthropic M37]
+    ObsBudget[Observation budget M39]
     Retry[LLM retry backoff]
     Usage[Token usage plus cache footer]
     Ship[ship_check gate plus remote CI M38]
@@ -97,7 +99,8 @@ flowchart TB
   Perm --> HITL
   HITL -->|approved| Sandbox[Docker sandbox]
   Sandbox -->|results| ContentPolicy
-  ContentPolicy -->|screened ToolMessage| Tools
+  ContentPolicy -->|screened| ObsBudget
+  ObsBudget -->|budgeted ToolMessage| Tools
   Ship -.->|before PR| Tools
 ```
 
@@ -176,4 +179,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M36 Done** — [milestones/M36-rag-agent-eval-quality.md](milestones/M36-rag-agent-eval-quality.md)
 - **M37 Done** — [milestones/M37-prompt-cache-budget.md](milestones/M37-prompt-cache-budget.md)
 - **M38 Done** — [milestones/M38-remote-ci-gate.md](milestones/M38-remote-ci-gate.md)
+- **M39 Done** — [milestones/M39-tool-observation-budget.md](milestones/M39-tool-observation-budget.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

@@ -30,6 +30,11 @@ def clean_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
         "CONTEXT_KEEP_RECENT",
         "CONTEXT_TOKEN_BUDGET",
         "PROMPT_CACHE_ENABLED",
+        "TOOL_PARALLEL",
+        "TOOL_MAX_CONCURRENCY",
+        "TOOL_OBSERVATION_MAX_CHARS",
+        "TOOL_OBSERVATION_SUMMARIZE",
+        "TOOL_OBSERVATION_HEAD_RATIO",
         "EMBEDDING_MODEL",
         "EMBEDDING_DIMENSIONS",
     ):
