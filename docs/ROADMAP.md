@@ -79,7 +79,7 @@ Core loop + Tier-3 extensibility are in place. These milestones sharpen **agent/
 | M35 | [Multi-agent handoff (swarm-lite)](milestones/M35-multi-agent-handoff.md) | **Done.** Sidecar supervisor star; `handoff_to`/`finish` + Command; isolation + bounce cap; `--handoff-demo`. |
 | M36 | [RAG / agent eval quality](milestones/M36-rag-agent-eval-quality.md) | **Done.** Golden corpus + hit@k; faithfulness helper; `mcc-eval --retrieval`; M17 smoke unchanged. |
 | M37 | [Prompt caching & budgeted compaction](milestones/M37-prompt-cache-budget.md) | **Done.** Soft `CONTEXT_TOKEN_BUDGET`; Anthropic `cache_control` helpers; `--usage` cache/budget lines. |
-| M38 | [Remote CI gate (GitHub Checks)](milestones/M38-remote-ci-gate.md) | **Planned.** After M19 local `ship_check`, optionally wait on GitHub Actions / Checks API before `open_pull_request` merge advice; timeout + HITL. |
+| M38 | [Remote CI gate (GitHub Checks)](milestones/M38-remote-ci-gate.md) | **Done.** Opt-in `SHIP_REMOTE_CI` poll after PR; timeout + HITL on red; `wait_for_checks`. |
 
 **M27 learning notes:** M20/M21 taught three stores alone. Hybrid is the industry default for “must contain token X *and* be semantically close.” Prefer **filter-then-embed** or **RRF** over a opaque “magic search” tool — the agent (and you) should see both stages. Simplification: same `chunk_id` space across ES and pgvector; no cross-encoder re-ranker yet.
 

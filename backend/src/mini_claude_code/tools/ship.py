@@ -1,6 +1,7 @@
 """Pre-ship quality gate (M19): ship_check + gate open_pull_request / optional push.
 
-Simplification: local ruff + pytest only — no GitHub Actions wait.
+Local ruff + pytest by default. Optional remote Checks wait is M38
+(``SHIP_REMOTE_CI`` + ``wait_for_checks`` / wrap after open_pull_request).
 Ship checks run against the **repo root** (this learning project), not the
 agent workspace jail (workspace/ is for coding demos).
 """
@@ -139,12 +140,14 @@ def ship_check_impl(
     format_runner: CheckRunner | None = None,
     test_runner: CheckRunner | None = None,
     skip_format: bool = False,
+    settings: Settings | None = None,
 ) -> str:
     """Run format + unit tests; update gate; return JSON-ish summary for the model."""
     root = (project_root or repo_root()).expanduser().resolve()
     gate = gate or ShipGate()
     format_runner = format_runner or default_format_runner
     test_runner = test_runner or default_test_runner
+    settings = settings or get_settings()
 
     logs: list[str] = []
     passed = True
@@ -186,7 +189,7 @@ def ship_check_impl(
             f"Fails so far this streak: {gate.consecutive_fails}/{gate.max_fix_iters}."
         )
     else:
-        payload["advice"] = (
+        advice = (
             "Green. You may call open_pull_request (still respects PR_DRY_RUN). "
             + (
                 "SHIP_MODE=push also allows git_push after HITL ask."
@@ -194,6 +197,12 @@ def ship_check_impl(
                 else "SHIP_MODE=pr — do not git push."
             )
         )
+        if settings.ship_remote_ci:
+            advice += (
+                " SHIP_REMOTE_CI=1: after a live PR, Checks are polled "
+                "(or call wait_for_checks)."
+            )
+        payload["advice"] = advice
 
     return json.dumps(payload, indent=2) + "\n\n" + body
 
@@ -295,6 +304,7 @@ def build_ship_tools(
             gate=gate,
             format_runner=format_runner,
             test_runner=test_runner,
+            settings=settings,
         )
 
     tools: list[BaseTool] = [

@@ -179,6 +179,15 @@ class Settings(BaseSettings):
     ship_require_green: bool = Field(default=True, alias="SHIP_REQUIRE_GREEN")
     ship_max_fix_iters: int = Field(default=3, alias="SHIP_MAX_FIX_ITERS")
     ship_mode: str = Field(default="pr", alias="SHIP_MODE")
+    # Remote CI wait (M38). Off by default — local green ≠ Actions green.
+    ship_remote_ci: bool = Field(default=False, alias="SHIP_REMOTE_CI")
+    ship_remote_ci_timeout_sec: float = Field(
+        default=300.0, alias="SHIP_REMOTE_CI_TIMEOUT_SEC"
+    )
+    ship_remote_ci_poll_sec: float = Field(
+        default=5.0, alias="SHIP_REMOTE_CI_POLL_SEC"
+    )
+    ship_remote_ci_hitl: bool = Field(default=True, alias="SHIP_REMOTE_CI_HITL")
 
 
 def repo_root() -> Path:

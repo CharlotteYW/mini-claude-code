@@ -20,6 +20,10 @@ from mini_claude_code.tools.mcp_loader import (
 from mini_claude_code.tools.memory_tools import build_memory_tools
 from mini_claude_code.tools.shell import build_shell_tools
 from mini_claude_code.tools.ship import apply_ship_gate_to_tools, build_ship_tools
+from mini_claude_code.tools.remote_ci import (
+    build_remote_ci_tools,
+    wrap_open_pr_with_remote_ci,
+)
 
 
 def build_default_tools(
@@ -57,6 +61,11 @@ def build_default_tools(
         build_github_pr_tools(root, settings=settings),
         ship_gate,
     )
+    pr_tools = [
+        wrap_open_pr_with_remote_ci(t, workspace_root=root, settings=settings)
+        for t in pr_tools
+    ]
+    remote_ci_tools = build_remote_ci_tools(root, settings=settings)
     builtin: list[BaseTool] = [
         *build_coding_tools(root),
         *build_shell_tools(
@@ -69,6 +78,7 @@ def build_default_tools(
         *build_git_tools(root),
         *ship_tools,
         *pr_tools,
+        *remote_ci_tools,
         *build_memory_tools(settings, workspace_root=root, store=store),
         *build_subagent_tools(
             root,

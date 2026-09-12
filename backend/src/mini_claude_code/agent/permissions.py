@@ -48,6 +48,8 @@ READ_SAFE_TOOLS: frozenset[str] = frozenset(
         "load_skill",
         # M19: local format + tests (read-only side effects on CI logs only).
         "ship_check",
+        # M38: poll GitHub Checks (HITL interrupt lives inside on red/timeout).
+        "wait_for_checks",
     }
 )
 

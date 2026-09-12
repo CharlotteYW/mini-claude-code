@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M38: Remote CI gate (GitHub Checks)
+
+- Shipped: `tools/remote_ci.py` (`wait_for_checks` + wrap after `open_pull_request`); HITL on red/timeout; opt-in `SHIP_REMOTE_CI`.
+- Insight: **Local green ≠ CI green** — M19 gates laptop checks; M38 polls remote Checks with timeout.
+- Insight: Red/timeout must not silently succeed — structured JSON + optional `interrupt` override.
+- See Concept Q&A index (M38); Results: [M38](docs/milestones/M38-remote-ci-gate.md).
+
+---
+
 ## 2026-09-12 — M37: Prompt caching & budgeted compaction
 
 - Shipped: `prompt_cache.py`; `effective_compact_threshold` + `CONTEXT_TOKEN_BUDGET`; usage cache/budget footer; Anthropic invoke kwargs.
@@ -648,9 +657,21 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M37 study guide)
+## Concept Q&A index (M0–M38 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
+
+### M38 — Remote CI gate (GitHub Checks)
+
+- **Q: How is M38 different from M19 ship_check?**  
+  A: **M19** = local ruff + unit tests before opening a PR. **M38** = optional poll of **GitHub Checks/Actions** after a live PR. Laptop green does not imply Actions green.
+- **Q: What states can remote wait return?**  
+  A: `pending` (still running / no checks yet) → `green` | `red` | `timed_out`; plus `skipped` when `SHIP_REMOTE_CI=0`, dry-run, or missing token/PR.
+- **Q: What happens on red or timeout?**  
+  A: Tool returns structured failure JSON. If `SHIP_REMOTE_CI_HITL=1`, LangGraph `interrupt` asks the human to proceed anyway (override does **not** rewrite state to green).
+- **Q: Why opt-in instead of always wait?**  
+  A: Demos and dry-run PRs have no remote checks; always-wait would hang teaching loops. Production bots turn it on when shipping for real.
+- Link: [M38](docs/milestones/M38-remote-ci-gate.md)
 
 ### M25 — Plugin install & trust
 
