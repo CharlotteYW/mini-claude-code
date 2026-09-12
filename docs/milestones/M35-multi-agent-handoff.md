@@ -78,6 +78,7 @@ flowchart TB
 ./scripts/test.sh tests/integration/test_m35_handoff_live.py -v
 ./scripts/m35-demo.sh
 # mcc-agent --handoff-demo 'Research then draft a one-line summary'
+# mcc-agent --handoff-demo --handoff-into-react '…'   # bridge into main ReAct
 ```
 
 ### As-built graph + delta
@@ -91,12 +92,14 @@ Same sidecar teaching style as M33/M34; control-transfer is the new concept.
 ### Deviations
 
 Specialists have no FS tools (reason from task/scratchpad) — keeps demo focused on control flow.
+Optional **`--handoff-into-react`**: after sidecar finishes, bridge summary into main ReAct as a new prompt (two graphs, not shared state).
 
 ### Pitfalls
 
 - `Command` from tools must include matching `ToolMessage` for the `tool_call_id`.
 - Star only: researcher cannot hand off directly to writer.
 - Plain text without `finish` ends the demo (avoid free-chat loops).
+- Bridge is **prompt handoff**, not merging checkpointer threads of the two graphs.
 
 ### Testing results
 

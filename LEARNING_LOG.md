@@ -13,6 +13,46 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — Dig: optional bridge handoff → main ReAct
+
+- **Q: Can handoff results return to the main graph?**  
+  A: **Yes, opt-in:** `--handoff-demo --handoff-into-react`. After the sidecar finishes, `bridge_prompt_from_handoff` builds a new user prompt (finish summary + scratchpad + original task) and the CLI **falls through** into normal `build_agent_graph`. Still **two graphs** (not shared state/checkpointer); bridge = prompt relay.
+- Link: [M35](docs/milestones/M35-multi-agent-handoff.md)
+
+---
+
+## 2026-09-12 — Dig: handoff demo does not return into main graph
+
+- **Q: After `--handoff-demo`, does the result return to the main ReAct graph?**  
+  A: **Default no** (sidecar exit). **Opt-in yes:** `--handoff-into-react` bridges finish/scratchpad into a new main-ReAct prompt (two graphs, prompt relay — not shared thread state).
+- Link: [M35](docs/milestones/M35-multi-agent-handoff.md)
+
+---
+
+## 2026-09-12 — Dig: handoff is LLM-decided; demo uses a different graph
+
+- **Q: Is handoff LLM-decided? Does `--handoff-demo` change topology?**  
+  A: **Yes, LLM decides** which `handoff_to` / `finish` to call (inside the demo). **`--handoff-demo` does not mutate the product ReAct graph** — it **skips** that graph and runs a **separate** handoff StateGraph. So topology “changes” only in the sense that you are on another map for that command; default `mcc-agent` without the flag still uses `call_model` ⇄ `PolicyToolNode` unchanged.
+- Link: [M35](docs/milestones/M35-multi-agent-handoff.md)
+
+---
+
+## 2026-09-12 — Dig: when does handoff actually run
+
+- **Q: When does handoff happen?**  
+  A: **Only in the M35 sidecar** — you must run `--handoff-demo` (or call `run_handoff_demo` / the handoff graph in code). Default `mcc-agent` ReAct **never** handoffs. Inside that demo graph, transfer happens when the **current** `active_agent` model emits `handoff_to(...)` (or `finish` to end). Not automatic routing on every user message.
+- Link: [M35](docs/milestones/M35-multi-agent-handoff.md)
+
+---
+
+## 2026-09-12 — Dig: topology after M35 + when run_subagent fires
+
+- **Q: Did topology change? When is the subagent called?**  
+  A: **Main product graph unchanged** — still `call_model` ⇄ `PolicyToolNode`. M35 is a **separate** sidecar (`--handoff-demo`), not new edges on the product graph. **`run_subagent` (M12)** is a normal tool on the main ToolNode: the model calls it when it decides to (and the tool is in the bound list — workspace `subagents/*.yaml` / plugins). Parent stays in control; child is nested `invoke`, then summary returns. Handoff demo does **not** use `run_subagent`.
+- Link: [M12](docs/milestones/M12-sub-agents.md), [M35](docs/milestones/M35-multi-agent-handoff.md)
+
+---
+
 ## 2026-09-12 — M35: Multi-agent handoff (swarm-lite)
 
 - Shipped: `handoff.py` supervisor star; `handoff_to`/`finish` via `Command`; `--handoff-demo`; bounce cap + message filters.

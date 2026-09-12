@@ -54,6 +54,7 @@ from mini_claude_code.agent.structured import (
     invoke_structured,
 )
 from mini_claude_code.agent.handoff import (
+    bridge_prompt_from_handoff,
     contrast_blurb as handoff_contrast_blurb,
     run_handoff_demo,
 )
@@ -551,6 +552,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="M35 sidecar: supervisor↔specialist handoff graph (not main ReAct).",
     )
+    parser.add_argument(
+        "--handoff-into-react",
+        action="store_true",
+        help="With --handoff-demo: after handoff, bridge finish summary into main ReAct.",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -622,13 +628,24 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: M33 sidecar failed: {exc}", file=sys.stderr)
             return 1
 
-    # M35 handoff sidecar (swarm-lite) — not the product ReAct graph.
+    # M35 handoff sidecar (swarm-lite). Optional bridge into main ReAct.
+    if args.handoff_into_react and not args.handoff_demo:
+        print(
+            "ERROR: --handoff-into-react requires --handoff-demo",
+            file=sys.stderr,
+        )
+        return 1
+
     if args.handoff_demo:
         prompt = (args.prompt or "").strip()
         if not prompt:
             print("ERROR: --handoff-demo requires a prompt", file=sys.stderr)
             return 1
-        print("mini-claude-code M35 handoff demo (main ReAct graph not used)")
+        bridging = bool(args.handoff_into_react)
+        print(
+            "mini-claude-code M35 handoff demo"
+            + (" → then main ReAct" if bridging else " (sidecar only)")
+        )
         print(f"  provider:  {settings.llm_provider}")
         print(f"  model:     {settings.llm_model}")
         print(f"  contrast:  {handoff_contrast_blurb()}")
@@ -651,7 +668,15 @@ def main(argv: list[str] | None = None) -> int:
             role = type(m).__name__
             content = getattr(m, "content", "")
             print(f"  [{role}] {content!r}")
-        return 0
+        if not bridging:
+            return 0
+        args.prompt = bridge_prompt_from_handoff(out, original_task=prompt)
+        print()
+        print("=== bridging handoff summary into main ReAct ===")
+        print(args.prompt)
+        print("=== end bridge prompt ===")
+        print()
+        # Fall through into normal product graph path below.
 
     workspace = resolve_workspace_root(settings)
     plugins = resolve_plugins(settings, workspace_root=workspace)

@@ -67,4 +67,5 @@ PY
   echo
   echo "==> 4) Optional live CLI"
   echo "    uv run mcc-agent --handoff-demo 'Research then draft a one-line summary of LangGraph handoff'"
+  echo "    uv run mcc-agent --handoff-demo --handoff-into-react 'Draft a one-line summary then continue in main agent'"
 )

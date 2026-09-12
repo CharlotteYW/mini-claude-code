@@ -182,6 +182,22 @@ def test_graph_handoff_and_finish_with_fake_llm() -> None:
     assert finals and "all good" in finals[-1]
 
 
+def test_bridge_prompt_includes_finish_and_scratchpad() -> None:
+    from mini_claude_code.agent.handoff import bridge_prompt_from_handoff
+
+    state = initial_handoff_state("Ship a blurb")
+    state["status"] = "done"
+    state["handoff_count"] = 2
+    state["active_agent"] = "supervisor"
+    state["scratchpad"] = "tone=short"
+    state["messages"] = [AIMessage(content="[finish] shipped draft")]
+    prompt = bridge_prompt_from_handoff(state, original_task="Ship a blurb")
+    assert "Ship a blurb" in prompt
+    assert "shipped draft" in prompt
+    assert "tone=short" in prompt
+    assert "main coding agent" in prompt.lower() or "Continue as the main" in prompt
+
+
 def test_graph_unknown_handoff_returns_error_tool_message() -> None:
     llm = _ScriptedLLM(
         [

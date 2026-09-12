@@ -285,8 +285,55 @@ def contrast_blurb() -> str:
     return (
         "M12 run_subagent=parent keeps control (nested invoke). "
         "M35 handoff=active_agent transfers; bounce cap stops ping-pong; "
-        "specialists see turn-local messages + scratchpad, not peer tool soup."
+        "specialists see turn-local messages + scratchpad, not peer tool soup. "
+        "Optional --handoff-into-react bridges the finish summary into main ReAct."
     )
+
+
+def finish_summary_from_state(state: HandoffState) -> str | None:
+    """Extract ``[finish] …`` text from the handoff transcript, if any."""
+    for m in reversed(list(state.get("messages") or [])):
+        if isinstance(m, AIMessage):
+            text = str(m.content or "")
+            if text.startswith("[finish]"):
+                return text[len("[finish]") :].strip() or None
+    return None
+
+
+def bridge_prompt_from_handoff(
+    state: HandoffState,
+    *,
+    original_task: str,
+) -> str:
+    """Build a HumanMessage body that feeds handoff results into main ReAct.
+
+    Sidecar stays separate graphs; this is an explicit **bridge**, not shared state.
+    """
+    summary = finish_summary_from_state(state)
+    pad = (state.get("scratchpad") or "").strip()
+    parts = [
+        "Continue as the main coding agent after a swarm-lite handoff demo.",
+        f"Original user task:\n{original_task.strip()}",
+        (
+            f"Handoff status: {state.get('status')} "
+            f"(handoffs={state.get('handoff_count')}, "
+            f"last_active={state.get('active_agent')})"
+        ),
+    ]
+    if summary:
+        parts.append(f"Handoff finish summary:\n{summary}")
+    else:
+        parts.append(
+            "Handoff finished without an explicit finish() summary "
+            "(plain-text end or cap)."
+        )
+    if pad:
+        parts.append(f"Shared scratchpad:\n{pad}")
+    parts.append(
+        "Use tools only if remaining work is needed; otherwise briefly confirm "
+        "the handoff outcome to the user."
+    )
+    return "\n\n".join(parts)
 
 
 def run_handoff_demo(
@@ -310,10 +357,12 @@ __all__ = [
     "HandoffError",
     "HandoffState",
     "apply_handoff",
+    "bridge_prompt_from_handoff",
     "build_handoff_graph",
     "build_handoff_tools",
     "contrast_blurb",
     "filter_messages_for_agent",
+    "finish_summary_from_state",
     "initial_handoff_state",
     "run_handoff_demo",
 ]
