@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — Dig: how structured.py is invoked
+
+- **Q: How is `structured.py` called?**  
+  A: **Not from the ReAct graph.** Sidecar only: (1) CLI `--structured-route` / `--force-tool` early-exit in `cli.py` → `invoke_structured` / `invoke_forced_tool`; (2) tests + `m33-demo.sh` import helpers directly. Default `call_model` ⇄ `PolicyToolNode` never imports it.
+- Link: [M33](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
 ## 2026-09-12 — M33: Structured outputs & forced tool choice
 
 - Shipped: `structured.py` (`RouteDecision`, `invoke_structured`, `invoke_forced_tool`); CLI `--structured-route` / `--force-tool`; main ReAct unchanged.
