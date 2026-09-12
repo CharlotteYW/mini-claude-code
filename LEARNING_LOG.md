@@ -13,6 +13,16 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — Dig: how “did retrieval help?” is judged
+
+- **Q: How do we know retrieval helped?**  
+  A: Not by vibes. **Golden corpus** = fixed docs + distractors; **qrels** name the correct `source_path#chunk_index` per query. **hit@k** = 1 iff that cite appears in the top-k ranked list (else 0). **Deterministic faithfulness** = every `required_span` must be a substring of joined evidence texts (no LLM judge). Pass = ranking found the right chunk *and* evidence contains the markers you claimed matter.
+- **Q: Golden corpus + hit@k + deterministic faithfulness — what each piece does?**  
+  A: Corpus = controllable world (marker doc vs distractor). hit@k = ranking quality metric on cite keys. Faithfulness = grounding check on evidence text (spans ⊆ blob), orthogonal to “was the chunk #1?” Soft LLM judge is optional and flaky — not the CI gate.
+- Link: [M36](docs/milestones/M36-rag-agent-eval-quality.md)
+
+---
+
 ## 2026-09-12 — M36: RAG / agent eval quality
 
 - Shipped: `eval/metrics.py` + `faithfulness.py` + `retrieval.py`; golden corpus/qrels; `mcc-eval --retrieval`.
@@ -675,10 +685,14 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 
 - **Q: Smoke eval vs quality eval?**  
   A: **M17** checks scripted agent paths didn’t crash / expected strings. **M36** asks whether the **right chunk** ranked (hit@k) and whether answers are **grounded** in evidence.
+- **Q: How do we know retrieval “helped”?**  
+  A: Fixed world (golden corpus + distractors) + labeled answers (qrels cites). Success = **hit@k=1** for that query (correct cite in top-k). Faithfulness is a second gate: markers must live in evidence text. Together: “right doc retrieved” + “evidence actually contains the claim tokens.”
+- **Q: What is a golden corpus / qrels?**  
+  A: Golden corpus = tiny fixture docs we control (`exact_token.md`, `semantic_pref.md`, `distractor.md`). Qrels = per-query expected cites (`docs/exact_token.md#0`) + optional `required_spans`. Without labels you only get “something returned.”
 - **Q: What is hit@k?**  
-  A: 1 if any golden cite (`source_path#chunk_index`) appears in the top-k ranked results; else 0. Average across queries for a suite score.
+  A: 1 if any golden cite (`source_path#chunk_index`) appears in the top-k ranked results; else 0. Average across queries for a suite score. MRR is softer: `1/rank` of first relevant hit.
 - **Q: Deterministic faithfulness vs soft judge?**  
-  A: Deterministic = required spans must appear in retrieved texts (CI-stable). Soft = optional `GradeResult` LLM judge (flaky; skip without key).
+  A: Deterministic = required spans must appear as substrings in joined evidence (CI-stable). Soft = optional `GradeResult` LLM judge (flaky; skip without key). Teaching simplification: substring ≠ full NLI.
 - Link: [M36](docs/milestones/M36-rag-agent-eval-quality.md)
 
 ### M35 — Multi-agent handoff (swarm-lite)
