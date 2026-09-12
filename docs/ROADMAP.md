@@ -80,6 +80,7 @@ Core loop + Tier-3 extensibility are in place. These milestones sharpen **agent/
 | M36 | [RAG / agent eval quality](milestones/M36-rag-agent-eval-quality.md) | **Done.** Golden corpus + hit@k; faithfulness helper; `mcc-eval --retrieval`; M17 smoke unchanged. |
 | M37 | [Prompt caching & budgeted compaction](milestones/M37-prompt-cache-budget.md) | **Done.** Soft `CONTEXT_TOKEN_BUDGET`; Anthropic `cache_control` helpers; `--usage` cache/budget lines. |
 | M38 | [Remote CI gate (GitHub Checks)](milestones/M38-remote-ci-gate.md) | **Done.** Opt-in `SHIP_REMOTE_CI` poll after PR; timeout + HITL on red; `wait_for_checks`. |
+| M39 | [Tool observation budgets](milestones/M39-tool-observation-budget.md) | **Planned.** Unified post-tool size budget (head+tail); optional summarize-when-huge; complements M7/M37. |
 
 **M27 learning notes:** M20/M21 taught three stores alone. Hybrid is the industry default for “must contain token X *and* be semantically close.” Prefer **filter-then-embed** or **RRF** over a opaque “magic search” tool — the agent (and you) should see both stages. Simplification: same `chunk_id` space across ES and pgvector; no cross-encoder re-ranker yet.
 
@@ -104,6 +105,8 @@ Core loop + Tier-3 extensibility are in place. These milestones sharpen **agent/
 **M37 learning notes:** Compaction today is size-heuristic. Budgets + cache-aware system prompts change cost curves. Provider differences (Anthropic cache_control vs OpenAI) are the lesson — abstract thinly.
 
 **M38 learning notes:** Local green ≠ CI green. Teaching the wait/poll/timeout loop without turning the agent into a full CD system. HITL on red remote checks.
+
+**M39 learning notes:** Compaction and prompt cache manage *history* and *stable prefixes*. A single tool dump can still nuke the next turn. Central observation budgets teach the hot path; per-tool MAX_* are inner defense only.
 
 ## Status legend
 

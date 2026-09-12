@@ -13,6 +13,14 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — Dig: does this repo auto-run tests on push/PR?
+
+- **Q: After push/PR, do tests run automatically? Do we have Jenkins?**  
+  A: **No.** No `.github/workflows`, no Jenkins/Circle/Travis. Quality is **local**: `./scripts/test.sh`, M19 `ship_check`. M38 can *poll* GitHub Checks when they exist, but this learning repo currently has **zero** Actions workflows — remote wait would see empty/pending until CI is added.
+- Link: [M38](docs/milestones/M38-remote-ci-gate.md), [M19](docs/milestones/M19-pre-ship-quality-gate.md)
+
+---
+
 ## 2026-09-12 — M38: Remote CI gate (GitHub Checks)
 
 - Shipped: `tools/remote_ci.py` (`wait_for_checks` + wrap after `open_pull_request`); HITL on red/timeout; opt-in `SHIP_REMOTE_CI`.
