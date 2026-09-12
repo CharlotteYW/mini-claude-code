@@ -1,7 +1,7 @@
-"""Eval harness for agent regression cases (M17).
+"""Eval harness (M17 agent cases + M36 retrieval quality).
 
-Runs outside the LangGraph topology: load YAML cases, inject scripted fake LLMs,
-invoke ``build_agent_graph``, assert on transcripts.
+Runs outside the LangGraph topology: YAML agent cases with fake LLMs, and
+optional golden-corpus retrieval hit@k (``mcc-eval --retrieval``).
 """
 
 from __future__ import annotations

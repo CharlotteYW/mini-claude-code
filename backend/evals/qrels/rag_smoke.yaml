@@ -1,0 +1,23 @@
+# Golden qrels for M36 retrieval eval (hit@k).
+# source_path is relative to workspace/docs after staging the corpus.
+
+cases:
+  - id: keyword_exact_marker
+    query: "M36_MARKER_PURPLE_ORBIT"
+    mode: keyword
+    k: 3
+    relevant:
+      - source_path: docs/exact_token.md
+        chunk_index: 0
+    required_spans:
+      - M36_MARKER_PURPLE_ORBIT
+
+  - id: hybrid_preferred_semantic
+    query: "preferred topic PREFERRED_SEMANTIC"
+    mode: hybrid
+    k: 3
+    relevant:
+      - source_path: docs/semantic_pref.md
+        chunk_index: 0
+    required_spans:
+      - PREFERRED_SEMANTIC

@@ -2,62 +2,104 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
-Extend M17 beyond smoke: retrieval **hit@k**, simple faithfulness / answer-relevance checks, regression fixtures for ingest + search (+ hybrid if M27 done).
+Extend M17 beyond smoke: golden corpus **hit@k**, deterministic faithfulness, `mcc-eval --retrieval`. Product ReAct unchanged.
 
 ## Why this milestone
 
-A harness that only checks “did not crash” does not teach quality. Agent builders need retrieval and answer regressions.
+Quality eval asks “did retrieval help?” Fixed corpora + metrics beat folklore.
 
 ## Concepts introduced
 
-- hit@k / MRR-style metrics on fixed corpus
-- LLM-as-judge (labeled soft) vs deterministic string checks
-- Golden fixtures under `workspace/`
+- hit@k / MRR on cite keys
+- qrels / golden fixtures
+- Deterministic faithfulness vs soft judge
+- Smoke (M17) vs quality (M36)
 
 ## Design decisions & alternatives considered
 
-| Decision | Tentative choice | Alternatives |
+| Decision | Choice | Alternatives |
 |---|---|---|
-| Judges | Deterministic first; optional soft LLM judge | Judge-only (flaky) |
-| Scope | Retrieval + one QA case set | Full SWE-bench (out of scope) |
+| Surface | `mcc-eval --retrieval` | New graph node |
+| Judges | Deterministic first | Judge-only |
+| Soft judge | Helper stub (`optional_soft_grade`) | Always-on live |
 
-## Architecture graph (planned)
+## Architecture graph (planned / as-built)
 
 ```mermaid
 flowchart LR
-  Fix[fixtures] --> Ingest[ingest]
-  Ingest --> Ret[retrieve]
-  Ret --> Metric[hit@k]
-  Ret --> Ans[agent answer]
-  Ans --> Judge[check / soft judge]
+  Fix[evals/corpus + qrels] --> Ingest[ingest_paths]
+  Ingest --> Ret[keyword / vector / hybrid]
+  Ret --> Hit[hit@k]
+  Hit --> Report[mcc-eval --retrieval]
 ```
 
 ## Testing (planned)
 
 ### Unit
 
-- [ ] Metric helpers
-- [ ] Fixture loader
+- [x] Metrics / faithfulness / qrels loader
 
 ### Integration
 
-- [ ] Eval run on local corpus (skip without DB/ES as needed)
+- [x] Golden hit@k keyword + hybrid (bias embedder)
 
 ## Tasks
 
-- [ ] Plan detail + approve
-- [ ] Cases + runner extensions
-- [ ] Tests; Results + LEARNING_LOG; commit + push
+- [x] Corpus + helpers + CLI + tests + docs; commit + push
 
 ## Demo / acceptance criteria
 
-1. `mcc-eval` (or extension) reports hit@k on golden docs.
-2. Regression fails when ingest breaks citations.
+1. hit@k reported — **met**.
+2. Regression fails when cites break — **met** (failed case surfaces).
+3. Learning Log contrast — **met**.
 
 ## Results
 
-_(fill after implementation)_
+### What we did
+
+- **`eval/metrics.py`**, **`faithfulness.py`**, **`retrieval.py`**
+- Golden **`backend/evals/corpus/`** + **`qrels/rag_smoke.yaml`**
+- **`mcc-eval --retrieval [--skip-agent-cases]`**
+- **`./scripts/m36-demo.sh`**
+
+### Commands & how to reproduce
+
+```bash
+./scripts/test.sh tests/unit/test_m36_rag_eval.py -v
+./scripts/test.sh tests/integration/test_m36_rag_eval_live.py -v
+./scripts/m36-demo.sh
+uv run mcc-eval --retrieval --skip-agent-cases
+```
+
+### As-built graph + delta
+
+Product topology **unchanged**. Delta = eval sidecar only.
+
+### Why this approach
+
+Teach retrieval quality beside M17 smoke without RAGAS sprawl.
+
+### Deviations
+
+Soft LLM judge is a reusable helper only (not a default CI case). Hybrid integration uses bias embedder (no Ollama required).
+
+### Pitfalls
+
+- Shared ES/pgvector may show leftover docs from other demos; hit@k still keys on golden cites.
+- chunk_index `0` assumes short one-chunk files (our corpus is sized for that).
+
+### Testing results
+
+```
+4 passed (unit)
+1 passed (integration) — 2026-09-12
+mcc-eval --retrieval: 2 passed (keyword + hybrid)
+```
+
+### Open questions / next dig
+
+- M37+ per ROADMAP; expand soft-judge CI case if desired.

@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M36: RAG / agent eval quality
+
+- Shipped: `eval/metrics.py` + `faithfulness.py` + `retrieval.py`; golden corpus/qrels; `mcc-eval --retrieval`.
+- Insight: M17 = smoke harness; M36 = **did retrieval help?** (hit@k on fixed cites).
+- Insight: Deterministic faithfulness = required spans ⊆ evidence; soft judge optional/flaky.
+- See Concept Q&A index (M36); Results: [M36](docs/milestones/M36-rag-agent-eval-quality.md).
+
+---
+
 ## 2026-09-12 — Dig: optional bridge handoff → main ReAct
 
 - **Q: Can handoff results return to the main graph?**  
@@ -620,7 +629,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M35 study guide)
+## Concept Q&A index (M0–M36 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -661,6 +670,16 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M36 — RAG / agent eval quality
+
+- **Q: Smoke eval vs quality eval?**  
+  A: **M17** checks scripted agent paths didn’t crash / expected strings. **M36** asks whether the **right chunk** ranked (hit@k) and whether answers are **grounded** in evidence.
+- **Q: What is hit@k?**  
+  A: 1 if any golden cite (`source_path#chunk_index`) appears in the top-k ranked results; else 0. Average across queries for a suite score.
+- **Q: Deterministic faithfulness vs soft judge?**  
+  A: Deterministic = required spans must appear in retrieved texts (CI-stable). Soft = optional `GradeResult` LLM judge (flaky; skip without key).
+- Link: [M36](docs/milestones/M36-rag-agent-eval-quality.md)
 
 ### M35 — Multi-agent handoff (swarm-lite)
 
