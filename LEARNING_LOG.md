@@ -13,6 +13,88 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M33: Structured outputs & forced tool choice
+
+- Shipped: `structured.py` (`RouteDecision`, `invoke_structured`, `invoke_forced_tool`); CLI `--structured-route` / `--force-tool`; main ReAct unchanged.
+- Insight: Structured out = schema-shaped **data** + Pydantic gate; `tool_choice` = must emit named **tool_call**. Neither removes the model.
+- Insight: LangChain orchestrates request/extract then calls Pydantic; retry is optional caller policy.
+- See Concept Q&A index (M33); Results: [M33](docs/milestones/M33-structured-output-tool-choice.md).
+
+---
+
+## 2026-09-12 — Dig: BaseModel is Pydantic, not LangChain
+
+- **Q: Is `BaseModel` from LangChain? Why inherit it if Pydantic is its own package?**  
+  A: **`BaseModel` is Pydantic’s** (`from pydantic import BaseModel`), not LangChain’s. You subclass it to declare a data model; that’s normal Pydantic usage and works with **zero** LangChain. LangChain *optionally consumes* your Pydantic class (e.g. `with_structured_output(RouteDecision)`). Inheritance is “use Pydantic’s API,” not “depend on LangChain.”
+- Docs: [Pydantic Models](https://docs.pydantic.dev/latest/concepts/models/), [Validation](https://docs.pydantic.dev/latest/concepts/models/#validating-data), [JSON Schema](https://docs.pydantic.dev/latest/concepts/json_schema/)
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: what Pydantic is (package vs standard)
+
+- **Q: Is Pydantic a Python package, a function, or an industry standard?**  
+  A: **A widely used Python library** (`pip`/`uv` package), not a formal industry standard and not a single function. You define classes subclassing `BaseModel`; methods like `model_validate` run validation. Cross-language “standard” nearby is often **JSON Schema**; Pydantic can emit/consume schema-shaped data. In agents, LangChain/FastAPI etc. commonly use it as the typed gate for structured LLM output and API bodies.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: what Pydantic validation is
+
+- **Q: What is Pydantic validation?**  
+  A: Pydantic turns a raw dict/JSON into a typed object **only if** it matches the model’s field types and constraints (`Literal`, required fields, `ge`/`le`, etc.). `model_validate(data)` either returns e.g. `RouteDecision(...)` or raises `ValidationError`. It is **local deterministic checking**, not an LLM call — the gate after structured-output extract.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: who calls model_validate
+
+- **Q: Does LangChain run `RouteDecision.model_validate(data)` after extract?**  
+  A: **Yes, when you pass a Pydantic class to `with_structured_output`:** get model reply → extract structured payload → **LangChain invokes Pydantic validation** (conceptually `model_validate`) → return instance or raise. Pydantic still *performs* the check; LangChain *calls* it as the last step of that runnable.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: Pydantic gate vs LangChain orchestration
+
+- **Q: How does Pydantic gate `RouteDecision`? Is LangChain just validate + retry?**  
+  A: **Pydantic** = after you have a dict/JSON, `RouteDecision.model_validate(data)` (or parse) checks types, `Literal`s, `Field` bounds; mismatch → `ValidationError` — no object handed to you. **LangChain** does more than validate/retry: pick provider method (json_schema / function-calling / json mode), shape the request, call the model, extract structured payload, then run that Pydantic parse. **Retry is optional** (you or a wrapper may re-invoke on `ValidationError`); it is not “LangChain = only retry.” Default mental model: orchestrate request → parse → validate; retry is a policy you add when you want it.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: who enforces RouteDecision shape — LLM or LangChain?
+
+- **Q: How is output guaranteed to match `RouteDecision` — LLM or LangChain?**  
+  A: **Both layers, neither alone is magic.** (1) **Provider/LLM API** (when supported): `response_format` / JSON schema / constrained decoding, or a forced schema-tool — biases or constrains tokens toward that shape. (2) **LangChain `with_structured_output`**: picks a method per provider, parses the reply into Pydantic. (3) **Pydantic validation** locally: accept or raise — this is the hard check in *your* process. If the provider path is weak, you get best-effort + validate/retry, not a mathematical guarantee. Reliability = API constraint + parse/validate (+ optional retry), orchestrated by LangChain, enforced at the boundary by schema validation.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: structured output ≠ function/tool call
+
+- **Q: Does structured output mean the model directly outputs a function call?**  
+  A: **Conceptually no.** Structured output = the model’s reply is constrained to a **data schema** (Pydantic/JSON fields like `score`, `mode`). You get a validated **object**, not a ReAct `tool_calls` → ToolNode loop. **Implementation note:** some providers/LangChain paths *internally* use a schema tool / function-calling trick to force JSON — but that is plumbing; your code treats it as `GradeResult(...)`, not “run tool X.” Contrast: **`tool_choice`** = real/agent-visible **must call tool X** with args.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: how structured output / tool_choice make calls more reliable
+
+- **Q: Model normally says “call tool with args abc” — how do we make that more reliable (M33)?**  
+  A: Today’s ReAct = `bind_tools(list)` with **default** choice: model *may* chat or call any tool (prompt “please call X” is soft). **Harder contracts:** (1) **`tool_choice="add"`** (or required/any/none) — provider API constrains the *next* completion so it *must* emit that `tool_call` (still model fills args). (2) **`with_structured_output(Schema)`** — next completion must match a JSON/Pydantic shape for decide/grade/extract; often implemented via native `response_format` / json_schema, or *internally* a schema tool — you get a validated object, not a free-form ReAct tool loop. Reliability = API constraint + parse/validate (+ optional retry), not hoping the prompt alone.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
+## 2026-09-12 — Dig: what M33 is (not “all structure via tools”)
+
+- **Q: Is M33 “future structured output won’t depend on the model; everything comes from tools”?**  
+  A: **No.** M33 still depends on the model. It teaches two *closed contracts* beside free ReAct: (1) **`with_structured_output`** — model reply *is* validated Pydantic/JSON (no tool soup); (2) **`tool_choice`** — model *must* emit a named `tool_call` (still the model choosing args / calling). Tool arg schemas already structure *inputs*; M33 structures *outputs* or *forces which tool*. Default ReAct graph stays; sidecar demos only.
+- Link: [M33 Plan](docs/milestones/M33-structured-output-tool-choice.md)
+
+---
+
 ## 2026-09-11 — Dig: did M32 change graph topology?
 
 - **Q: Did PolicyToolNode change the graph topology vs before?**  
@@ -464,7 +546,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M32 study guide)
+## Concept Q&A index (M0–M33 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -505,6 +587,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M33 — Structured outputs & forced tool choice
+
+- **Q: Is structured output “don’t use the model / only tools”?**  
+  A: **No.** Still model-driven. Schema constrains **reply shape**; `tool_choice` constrains **which tool_call**.
+- **Q: Structured output vs function/tool call?**  
+  A: Structured = validated **data object** (route/grade). Tool call = execute a tool. Some providers implement schema via internal tools — plumbing only.
+- **Q: Who enforces `RouteDecision` — LLM or LangChain?**  
+  A: Provider may constrain generation; LangChain orchestrates extract; **Pydantic** is the local gate (`model_validate`). Retry optional.
+- **Q: Is `BaseModel` from LangChain?**  
+  A: **No** — from **Pydantic**. LangChain optionally consumes your class.
+- Link: [M33](docs/milestones/M33-structured-output-tool-choice.md)
 
 ### M32 — Parallel tools & fan-out
 

@@ -46,9 +46,18 @@ from mini_claude_code.agent.time_travel import (
     parse_rewind_args,
     resolve_checkpoint_ref,
 )
+from mini_claude_code.agent.structured import (
+    RouteDecision,
+    contrast_blurb,
+    first_tool_call_name,
+    invoke_forced_tool,
+    invoke_structured,
+)
 from mini_claude_code.agent.tty_input import read_tty_line
 from mini_claude_code.agent.usage import USAGE_ACCUMULATOR_KEY, UsageAccumulator
 from mini_claude_code.config import get_settings, resolve_workspace_root
+from mini_claude_code.llm import create_chat_model
+from mini_claude_code.tools import demo_tools
 
 
 def _load_dotenv_from_repo_root() -> None:
@@ -510,6 +519,17 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Force serial tool execution (M32 A/B). Default: parallel fan-out; ask batches always serial.",
     )
+    parser.add_argument(
+        "--structured-route",
+        action="store_true",
+        help="M33 sidecar: with_structured_output(RouteDecision) on prompt; print JSON and exit.",
+    )
+    parser.add_argument(
+        "--force-tool",
+        default=None,
+        metavar="NAME",
+        help="M33 sidecar: bind_tools tool_choice=NAME (or none|any); print tool_calls and exit.",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -526,10 +546,53 @@ def main(argv: list[str] | None = None) -> int:
         and not args.prompt
         and not args.list_checkpoints
         and not args.fork_from
+        and not args.structured_route
+        and not args.force_tool
     ):
         args.prompt = (
             "Use write_file to create demo.txt with contents hello, then read_file it."
         )
+
+    # M33 sidecars: no ReAct graph / checkpointer.
+    if args.structured_route or args.force_tool:
+        if args.structured_route and args.force_tool:
+            print(
+                "ERROR: use only one of --structured-route / --force-tool",
+                file=sys.stderr,
+            )
+            return 1
+        prompt = (args.prompt or "").strip()
+        if not prompt:
+            print(
+                "ERROR: --structured-route / --force-tool require a prompt",
+                file=sys.stderr,
+            )
+            return 1
+        print("mini-claude-code M33 sidecar (main ReAct graph not used)")
+        print(f"  provider:  {settings.llm_provider}")
+        print(f"  model:     {settings.llm_model}")
+        print(f"  contrast:  {contrast_blurb()}")
+        print()
+        llm = create_chat_model(settings)
+        try:
+            if args.structured_route:
+                decision = invoke_structured(llm, RouteDecision, prompt)
+                print(decision.model_dump_json(indent=2))
+                return 0
+            assert args.force_tool is not None
+            msg = invoke_forced_tool(
+                llm, demo_tools(), args.force_tool, prompt
+            )
+            name = first_tool_call_name(msg)
+            print(f"tool_choice forced: {args.force_tool!r}")
+            print(f"first tool_call:    {name!r}")
+            print(f"all tool_calls:     {msg.tool_calls!r}")
+            if msg.content:
+                print(f"content:            {msg.content!r}")
+            return 0
+        except Exception as exc:  # noqa: BLE001 — CLI surfaces provider errors
+            print(f"ERROR: M33 sidecar failed: {exc}", file=sys.stderr)
+            return 1
 
     workspace = resolve_workspace_root(settings)
     plugins = resolve_plugins(settings, workspace_root=workspace)
