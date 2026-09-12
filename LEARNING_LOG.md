@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M37: Prompt caching & budgeted compaction
+
+- Shipped: `prompt_cache.py`; `effective_compact_threshold` + `CONTEXT_TOKEN_BUDGET`; usage cache/budget footer; Anthropic invoke kwargs.
+- Insight: Soft budget **tightens** M7 threshold (`min`); prompt cache is **provider-asymmetric** (Anthropic yes, Ollama no-op).
+- Insight: Mark the **last leading SystemMessage** (stable prefix), not the whole transcript.
+- See Concept Q&A index (M37); Results: [M37](docs/milestones/M37-prompt-cache-budget.md).
+
+---
+
 ## 2026-09-12 — Dig: how “did retrieval help?” is judged
 
 - **Q: How do we know retrieval helped?**  
@@ -639,7 +648,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M36 study guide)
+## Concept Q&A index (M0–M37 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -680,6 +689,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M37 — Prompt caching & budgeted compaction
+
+- **Q: Soft budget vs compact threshold?**  
+  A: Threshold (M7) is the legacy trigger. Soft budget (`CONTEXT_TOKEN_BUDGET`) is an optional cost target. When both > 0, fire at **`min(threshold, budget)`** so budget can tighten but not raise. Either alone works; both ≤ 0 disables.
+- **Q: What does prompt caching actually cache?**  
+  A: A **stable prefix** (system / tools / long docs) hashed by the provider. We mark the last leading `SystemMessage` + pass Anthropic invoke `cache_control`. Volatile chat turns should sit *after* the breakpoint.
+- **Q: Why not one `enable_cache=True` for all providers?**  
+  A: Wire formats differ (Anthropic `cache_control` vs OpenAI-era APIs vs Ollama). Teaching value is the asymmetry — thin helpers, labeled no-ops elsewhere.
+- **Q: Cache hit vs usage estimate?**  
+  A: `--usage` prefers provider `usage_metadata` (`input_token_details.cache_read` / `cache_creation`). First short call may show `cache: n/a`; hits need a warm prefix.
+- Link: [M37](docs/milestones/M37-prompt-cache-budget.md)
 
 ### M36 — RAG / agent eval quality
 

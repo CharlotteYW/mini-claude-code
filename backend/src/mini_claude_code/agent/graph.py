@@ -6,6 +6,8 @@ host subprocess remains an opt-in backend.
 
 Streaming (M6): pass RunnableConfig into `bound.invoke(..., config)`.
 Compaction (M7) then project/fact inject (M8) before invoke (policy plane).
+M37: soft token budget tightens compact trigger; Anthropic prompt-cache
+breakpoints on the stable system prefix (+ invoke cache_control kwarg).
 Permissions / Plan Mode (M9) wrap tools before ToolNode — not new graph nodes.
 Ask uses LangGraph interrupt (M10); resume with Command(resume=bool).
 Sub-agents (M12): ``run_subagent`` tool nests a child graph with isolated messages.
@@ -32,7 +34,12 @@ from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 
-from mini_claude_code.agent.compact import default_summarizer, maybe_compact_messages
+from mini_claude_code.agent.compact import (
+    default_summarizer,
+    effective_compact_threshold,
+    estimate_tokens,
+    maybe_compact_messages,
+)
 from mini_claude_code.agent.hooks import (
     HookRegistry,
     apply_hooks,
@@ -41,6 +48,10 @@ from mini_claude_code.agent.hooks import (
 )
 from mini_claude_code.agent.permissions import AskCallback, apply_permissions
 from mini_claude_code.agent.project_memory import inject_project_memory
+from mini_claude_code.agent.prompt_cache import (
+    invoke_kwargs_for_prompt_cache,
+    mark_stable_prefix_for_cache,
+)
 from mini_claude_code.agent.retry import invoke_with_retry
 from mini_claude_code.agent.skills import inject_skills_view
 from mini_claude_code.agent.tool_fanout import make_tools_node
@@ -177,9 +188,13 @@ def build_agent_graph(
         state: MessagesState, config: RunnableConfig
     ) -> dict[str, list[Any]]:
         messages = list(state["messages"])
+        compact_at = effective_compact_threshold(
+            settings.context_compact_threshold,
+            settings.context_token_budget,
+        )
         compacted, did_compact = maybe_compact_messages(
             messages,
-            threshold_tokens=settings.context_compact_threshold,
+            threshold_tokens=compact_at,
             keep_recent=settings.context_keep_recent,
             summarizer=summarizer,
         )
@@ -188,10 +203,26 @@ def build_agent_graph(
         prompt_messages = _inject_memory_view(
             compacted, workspace_root=workspace, settings=settings
         )
+        prompt_messages = mark_stable_prefix_for_cache(
+            prompt_messages,
+            provider=settings.llm_provider,
+            enabled=settings.prompt_cache_enabled,
+        )
+        acc = usage_accumulator or get_usage_accumulator(config)
+        if acc is not None:
+            acc.note_prompt_stats(
+                prompt_estimate=estimate_tokens(prompt_messages),
+                soft_budget=settings.context_token_budget,
+                effective_compact_at=compact_at,
+            )
+        cache_kwargs = invoke_kwargs_for_prompt_cache(
+            settings.llm_provider,
+            enabled=settings.prompt_cache_enabled,
+        )
         # Keep call_model sync so graph.invoke (tests / --sync) still works.
         # M22 async win is ToolNode → tool.ainvoke (permission/hook coroutines).
         response = invoke_with_retry(
-            lambda: bound.invoke(prompt_messages, config),
+            lambda: bound.invoke(prompt_messages, config, **cache_kwargs),
             settings=settings,
         )
         _record_usage(response, config)

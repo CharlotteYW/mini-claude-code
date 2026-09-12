@@ -28,6 +28,8 @@ def clean_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
         "CHECKPOINT_BACKEND",
         "CONTEXT_COMPACT_THRESHOLD",
         "CONTEXT_KEEP_RECENT",
+        "CONTEXT_TOKEN_BUDGET",
+        "PROMPT_CACHE_ENABLED",
         "EMBEDDING_MODEL",
         "EMBEDDING_DIMENSIONS",
     ):

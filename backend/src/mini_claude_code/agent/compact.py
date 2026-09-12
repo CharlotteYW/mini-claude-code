@@ -37,6 +37,24 @@ def estimate_tokens(messages: Sequence[BaseMessage]) -> int:
     return max(1, total_chars // 4) if total_chars else 0
 
 
+def effective_compact_threshold(threshold: int, budget: int) -> int:
+    """Resolve when ``maybe_compact_messages`` should fire (M7 + M37).
+
+    - Both ``<= 0`` → disabled (0).
+    - ``budget <= 0`` → M7 threshold only.
+    - ``threshold <= 0`` → soft budget only.
+    - Both ``> 0`` → ``min(threshold, budget)`` so a soft budget can tighten
+      the legacy threshold without raising it.
+    """
+    if threshold <= 0 and budget <= 0:
+        return 0
+    if budget <= 0:
+        return max(0, threshold)
+    if threshold <= 0:
+        return max(0, budget)
+    return min(threshold, budget)
+
+
 def _message_text(message: BaseMessage) -> str:
     content = message.content
     if content is None:

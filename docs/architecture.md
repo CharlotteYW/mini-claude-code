@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M36 complete  
+**Last updated:** M37 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M36)
+## Current status (M37)
 
 | Piece | Status |
 |---|---|
@@ -27,6 +27,7 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Observability traces (LangSmith / JSONL) | **M34 Done** |
 | Multi-agent handoff (swarm-lite) | **M35 Done** |
 | RAG / agent eval quality (hit@k) | **M36 Done** |
+| Prompt cache + budgeted compaction | **M37 Done** |
 
 Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
@@ -73,10 +74,11 @@ flowchart TB
     MCP[MCP tool merge]
     Plugins[Plugin pack merge plus trust M25]
     ContentPolicy[Content policy M26]
-    Compact[Context compact]
+    Compact[Context compact plus soft budget M37]
     Memory[Memory inject]
+    PromptCache[Prompt cache Anthropic M37]
     Retry[LLM retry backoff]
-    Usage[Token usage accounting]
+    Usage[Token usage plus cache footer]
     Ship[ship_check gate]
   end
   subgraph eval [Eval harness outside graph]
@@ -85,7 +87,8 @@ flowchart TB
   CLI --> Compact
   Slack --> Compact
   Compact --> Memory
-  Memory --> Model
+  Memory --> PromptCache
+  PromptCache --> Model
   Model --> Retry
   Retry --> Usage
   Tools --> Hooks
@@ -170,4 +173,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M34 Done** — [milestones/M34-observability-traces.md](milestones/M34-observability-traces.md)
 - **M35 Done** — [milestones/M35-multi-agent-handoff.md](milestones/M35-multi-agent-handoff.md)
 - **M36 Done** — [milestones/M36-rag-agent-eval-quality.md](milestones/M36-rag-agent-eval-quality.md)
+- **M37 Done** — [milestones/M37-prompt-cache-budget.md](milestones/M37-prompt-cache-budget.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

@@ -91,6 +91,11 @@ class Settings(BaseSettings):
         default=6000, alias="CONTEXT_COMPACT_THRESHOLD"
     )
     context_keep_recent: int = Field(default=12, alias="CONTEXT_KEEP_RECENT")
+    # Soft token budget (M37). <=0 disables. When both threshold and budget > 0,
+    # compact fires at min(threshold, budget). See effective_compact_threshold.
+    context_token_budget: int = Field(default=0, alias="CONTEXT_TOKEN_BUDGET")
+    # Anthropic prompt-cache breakpoints (M37). No-op for ollama/openai/openrouter.
+    prompt_cache_enabled: bool = Field(default=True, alias="PROMPT_CACHE_ENABLED")
 
     # Minimal semantic notes (M8-B). Requires an Ollama embedding model pulled locally.
     embedding_model: str = Field(
