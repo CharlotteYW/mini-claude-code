@@ -2,60 +2,109 @@
 
 ## Status
 
-Planned
+Done
 
 ## Goal
 
-Beyond M12 parent→child `run_subagent`: peer **handoff** / supervisor pattern with an explicit transfer tool, isolated message views, and anti-ping-pong caps.
+Teach **control transfer** beyond M12 `run_subagent`: sidecar supervisor + researcher/writer with explicit `handoff_to` / `finish`, isolated views, bounce cap. Main ReAct unchanged.
 
 ## Why this milestone
 
-Hierarchical subagents ≠ multi-agent control transfer. Swarm/handoff is how many “teams of agents” products actually route work.
+Hierarchical nested invoke ≠ peer/supervisor handoff. Swarm-lite fails via ping-pong and context leak — caps + filters make that visible.
 
 ## Concepts introduced
 
-- Handoff as control transfer
-- Context isolation vs shared scratchpad
-- Termination / bounce limits
+- Handoff vs nested subagent
+- Supervisor-star topology
+- Isolated message views + scratchpad
+- Bounce cap
+- `Command(update=…, goto=…)` from tools
 
 ## Design decisions & alternatives considered
 
-| Decision | Tentative choice | Alternatives |
+| Decision | Choice | Alternatives |
 |---|---|---|
-| Pattern | Supervisor + 2 specialists | Fully connected swarm (harder to teach) |
-| State | Separate threads or named graphs | One shared MessagesState (leak risk) |
+| Surface | Sidecar + `--handoff-demo` | Rewrite main ReAct |
+| Topology | Supervisor star | Fully connected swarm |
+| Primitive | `handoff_to` / `finish` + Command | Prompt-only role switch |
 
-## Architecture graph (planned)
+## Architecture graph (planned / as-built)
 
 ```mermaid
-flowchart LR
-  Sup[supervisor] -->|handoff| A[specialist A]
-  Sup -->|handoff| B[specialist B]
-  A -->|done| Sup
-  B -->|done| Sup
+flowchart TB
+  subgraph product [Default — unchanged]
+    CM[call_model] <--> PT[PolicyToolNode]
+  end
+  subgraph handoff [M35 sidecar]
+    CLI[--handoff-demo] --> Agent[agent node]
+    Agent --> Tools[ToolNode handoff_to/finish]
+    Tools -->|Command goto| Agent
+    Tools -->|finish| End([END])
+  end
 ```
 
 ## Testing (planned)
 
 ### Unit
 
-- [ ] Handoff tool updates active agent; bounce cap enforced
+- [x] apply_handoff / cap / filter / fake graph
 
 ### Integration
 
-- [ ] Fake LLMs complete a two-step handoff (no network)
+- [x] Fake two-step handoff (no network)
 
 ## Tasks
 
-- [ ] Plan detail + approve
-- [ ] Implement pattern + demo
-- [ ] Tests; Results + LEARNING_LOG; commit + push
+- [x] `handoff.py` + CLI + demo + tests + docs; commit + push
 
 ## Demo / acceptance criteria
 
-1. Task transfers to specialist and returns without infinite loop.
-2. Docs contrast handoff vs `run_subagent`.
+1. Transfer + return without infinite loop — **met**.
+2. Contrast vs `run_subagent` — **met**.
+3. Main topology unchanged — **met**.
 
 ## Results
 
-_(fill after implementation)_
+### What we did
+
+- **`agent/handoff.py`:** state, `apply_handoff`, `filter_messages_for_agent`, `build_handoff_graph`, `run_handoff_demo`.
+- **CLI:** `--handoff-demo`.
+- **Demo:** `./scripts/m35-demo.sh`.
+
+### Commands & how to reproduce
+
+```bash
+./scripts/test.sh tests/unit/test_m35_handoff.py -v
+./scripts/test.sh tests/integration/test_m35_handoff_live.py -v
+./scripts/m35-demo.sh
+# mcc-agent --handoff-demo 'Research then draft a one-line summary'
+```
+
+### As-built graph + delta
+
+Product ReAct **unchanged**. Delta = sidecar handoff graph only.
+
+### Why this approach
+
+Same sidecar teaching style as M33/M34; control-transfer is the new concept.
+
+### Deviations
+
+Specialists have no FS tools (reason from task/scratchpad) — keeps demo focused on control flow.
+
+### Pitfalls
+
+- `Command` from tools must include matching `ToolMessage` for the `tool_call_id`.
+- Star only: researcher cannot hand off directly to writer.
+- Plain text without `finish` ends the demo (avoid free-chat loops).
+
+### Testing results
+
+```
+7 passed (unit)
+1 passed (integration fake) — 2026-09-12
+```
+
+### Open questions / next dig
+
+- M36 RAG eval quality; optional fully connected swarm dig.

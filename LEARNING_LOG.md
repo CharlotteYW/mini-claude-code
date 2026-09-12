@@ -13,6 +13,23 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M35: Multi-agent handoff (swarm-lite)
+
+- Shipped: `handoff.py` supervisor star; `handoff_to`/`finish` via `Command`; `--handoff-demo`; bounce cap + message filters.
+- Insight: M12 nested invoke keeps parent in control; M35 **transfers** `active_agent` (different failure mode: ping-pong).
+- Insight: Tool `Command` updates must include a matching `ToolMessage` for the `tool_call_id`.
+- See Concept Q&A index (M35); Results: [M35](docs/milestones/M35-multi-agent-handoff.md).
+
+---
+
+## 2026-09-12 — Dig: handoff vs subagent (not just another form)
+
+- **Q: Is M35 handoff just a different form of subagent?**  
+  A: **Related family, different control contract.** **M12 `run_subagent`** = hierarchical *nested invoke*: parent stays in control, child runs in a tool call, returns a summary, parent continues. **M35 handoff** = *control transfer*: `active_agent` changes; the specialist owns the next turn(s) until it hands back / done. Same “multiple roles” intuition; failure modes differ (nested depth vs ping-pong / context leak). Not “subagent with another API name.”
+- Link: [M35 Plan](docs/milestones/M35-multi-agent-handoff.md), [M12](docs/milestones/M12-sub-agents.md)
+
+---
+
 ## 2026-09-12 — M34: Observability traces
 
 - Shipped: `tracing.py` (`enrich_run_config`, redact, `JsonlTraceHandler`); CLI banner + `--trace-local`; LangSmith env docs.
@@ -563,7 +580,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M34 study guide)
+## Concept Q&A index (M0–M35 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -604,6 +621,16 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M35 — Multi-agent handoff (swarm-lite)
+
+- **Q: Is handoff just another form of subagent?**  
+  A: **No.** Same “multi-role” family, different **control contract**. M12 = nested invoke (parent keeps control). M35 = `active_agent` **transfers** until handoff back / finish.
+- **Q: How do we stop A↔B ping-pong?**  
+  A: Hard **bounce cap** on `handoff_count`; disallowed edges (star: specialists → supervisor only).
+- **Q: How is context isolated?**  
+  A: Specialists see turn-local messages + shared **scratchpad**, not peer `ToolMessage` soup; supervisor strips raw tool bodies.
+- Link: [M35](docs/milestones/M35-multi-agent-handoff.md)
 
 ### M34 — Observability traces
 

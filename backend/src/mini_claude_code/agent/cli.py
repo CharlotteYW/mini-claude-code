@@ -53,6 +53,10 @@ from mini_claude_code.agent.structured import (
     invoke_forced_tool,
     invoke_structured,
 )
+from mini_claude_code.agent.handoff import (
+    contrast_blurb as handoff_contrast_blurb,
+    run_handoff_demo,
+)
 from mini_claude_code.agent.tracing import (
     JsonlTraceHandler,
     attach_callbacks,
@@ -542,6 +546,11 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         help="M34: append redacted LLM/tool span events to a JSONL file (offline traces).",
     )
+    parser.add_argument(
+        "--handoff-demo",
+        action="store_true",
+        help="M35 sidecar: supervisor↔specialist handoff graph (not main ReAct).",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -560,6 +569,7 @@ def main(argv: list[str] | None = None) -> int:
         and not args.fork_from
         and not args.structured_route
         and not args.force_tool
+        and not args.handoff_demo
     ):
         args.prompt = (
             "Use write_file to create demo.txt with contents hello, then read_file it."
@@ -570,6 +580,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.structured_route and args.force_tool:
             print(
                 "ERROR: use only one of --structured-route / --force-tool",
+                file=sys.stderr,
+            )
+            return 1
+        if args.handoff_demo:
+            print(
+                "ERROR: --handoff-demo cannot combine with M33 sidecars",
                 file=sys.stderr,
             )
             return 1
@@ -605,6 +621,37 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # noqa: BLE001 — CLI surfaces provider errors
             print(f"ERROR: M33 sidecar failed: {exc}", file=sys.stderr)
             return 1
+
+    # M35 handoff sidecar (swarm-lite) — not the product ReAct graph.
+    if args.handoff_demo:
+        prompt = (args.prompt or "").strip()
+        if not prompt:
+            print("ERROR: --handoff-demo requires a prompt", file=sys.stderr)
+            return 1
+        print("mini-claude-code M35 handoff demo (main ReAct graph not used)")
+        print(f"  provider:  {settings.llm_provider}")
+        print(f"  model:     {settings.llm_model}")
+        print(f"  contrast:  {handoff_contrast_blurb()}")
+        print()
+        llm = create_chat_model(settings)
+        try:
+            out = run_handoff_demo(llm, prompt)
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: M35 handoff failed: {exc}", file=sys.stderr)
+            return 1
+        print(f"status:         {out.get('status')}")
+        print(f"active_agent:   {out.get('active_agent')}")
+        print(f"handoff_count:  {out.get('handoff_count')}")
+        pad = (out.get("scratchpad") or "").strip()
+        if pad:
+            print("scratchpad:")
+            print(pad)
+        print("messages (tail):")
+        for m in list(out.get("messages") or [])[-8:]:
+            role = type(m).__name__
+            content = getattr(m, "content", "")
+            print(f"  [{role}] {content!r}")
+        return 0
 
     workspace = resolve_workspace_root(settings)
     plugins = resolve_plugins(settings, workspace_root=workspace)
