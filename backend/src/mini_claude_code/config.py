@@ -145,6 +145,10 @@ class Settings(BaseSettings):
     llm_retry_backoff_sec: float = Field(default=1.0, alias="LLM_RETRY_BACKOFF_SEC")
     usage_report: bool = Field(default=False, alias="USAGE_REPORT")
 
+    # Traces (M34): LangSmith is env opt-in (LANGCHAIN_TRACING_V2 + LANGSMITH_API_KEY).
+    # Optional local JSONL path for offline span dumps (CLI --trace-local overrides).
+    trace_local_path: str = Field(default="", alias="MCC_TRACE_JSONL")
+
     # Slack channel adapter (M18).
     slack_client_id: str = Field(default="", alias="SLACK_CLIENT_ID")
     slack_client_secret: str = Field(default="", alias="SLACK_CLIENT_SECRET")

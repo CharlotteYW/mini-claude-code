@@ -13,6 +13,15 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
+## 2026-09-12 — M34: Observability traces
+
+- Shipped: `tracing.py` (`enrich_run_config`, redact, `JsonlTraceHandler`); CLI banner + `--trace-local`; LangSmith env docs.
+- Insight: stream / `--usage` / traces / checkpoints solve different jobs — traces = durable LLM→tool span trees.
+- Insight: Topology unchanged; tracing is config + callbacks (sidecar), like M17 usage.
+- See Concept Q&A index (M34); Results: [M34](docs/milestones/M34-observability-traces.md).
+
+---
+
 ## 2026-09-12 — Dig: how structured.py is invoked
 
 - **Q: How is `structured.py` called?**  
@@ -554,7 +563,7 @@ Dated entries after each completed milestone. Keep entries short; full detail li
 
 ---
 
-## Concept Q&A index (M0–M33 study guide)
+## Concept Q&A index (M0–M34 study guide)
 
 Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 Done).
 
@@ -595,6 +604,18 @@ Study this before starting any dig beyond the plugin lane (M23–M25 Done; M26 D
 - **Q: What is still deferred?**  
   A: **M24** shell hook runners / richer discovery; **M25** install CLI + trust allowlist.
 - Link: [M23](docs/milestones/M23-plugin-pack-expansion.md)
+
+### M34 — Observability traces
+
+- **Q: Stream vs usage vs traces vs checkpoints?**  
+  A: **Stream (M6)** = live UX. **`--usage` (M17)** = local token footer. **Traces (M34)** = durable LLM/tool span tree (LangSmith or JSONL). **Checkpoints (M31)** = session time-travel, not span debug.
+- **Q: Did tracing change the graph?**  
+  A: **No.** Enrich `RunnableConfig` metadata/tags + optional callbacks. Same `call_model` ⇄ `PolicyToolNode`.
+- **Q: How does LangSmith turn on?**  
+  A: Env opt-in: `LANGCHAIN_TRACING_V2=true` + `LANGSMITH_API_KEY` (+ project). Framework emits runs when config is passed; we stamp `thread_id`/model metadata.
+- **Q: What is local JSONL for?**  
+  A: Offline teaching without SaaS — `--trace-local` / `MCC_TRACE_JSONL` writes redacted llm/tool events.
+- Link: [M34](docs/milestones/M34-observability-traces.md)
 
 ### M33 — Structured outputs & forced tool choice
 

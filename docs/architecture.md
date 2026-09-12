@@ -2,14 +2,14 @@
 
 Current end-to-end picture. Historical planned/as-built graphs live in `docs/milestones/`.
 
-**Last updated:** M33 complete  
+**Last updated:** M34 complete  
 **Chosen approach:** Option B — layered runtime
 
 ## Goals
 
 Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces deeply enough to design agents independently after this project.
 
-## Current status (M33)
+## Current status (M34)
 
 | Piece | Status |
 |---|---|
@@ -24,6 +24,7 @@ Build a mini Claude Code while learning LangGraph + LangChain ecosystem pieces d
 | Time-travel / fork sessions | **M31 Done** |
 | Parallel tools / fan-out policy | **M32 Done** |
 | Structured output / forced tool_choice | **M33 Done** |
+| Observability traces (LangSmith / JSONL) | **M34 Done** |
 
 Ship: `ship_check` → fix loop → gated `open_pull_request` (`SHIP_REQUIRE_GREEN`). Optional `SHIP_MODE=push` + `git_push` (ask).
 
@@ -164,4 +165,5 @@ Sub-agents (M12) are orchestration in *our* runtime — supported on all four pr
 - **M31 Done** — [milestones/M31-time-travel-branch.md](milestones/M31-time-travel-branch.md)
 - **M32 Done** — [milestones/M32-parallel-tools-fanout.md](milestones/M32-parallel-tools-fanout.md)
 - **M33 Done** — [milestones/M33-structured-output-tool-choice.md](milestones/M33-structured-output-tool-choice.md)
+- **M34 Done** — [milestones/M34-observability-traces.md](milestones/M34-observability-traces.md)
 - Full list: [ROADMAP.md](ROADMAP.md)

@@ -53,6 +53,12 @@ from mini_claude_code.agent.structured import (
     invoke_forced_tool,
     invoke_structured,
 )
+from mini_claude_code.agent.tracing import (
+    JsonlTraceHandler,
+    attach_callbacks,
+    enrich_run_config,
+    tracing_status,
+)
 from mini_claude_code.agent.tty_input import read_tty_line
 from mini_claude_code.agent.usage import USAGE_ACCUMULATOR_KEY, UsageAccumulator
 from mini_claude_code.config import get_settings, resolve_workspace_root
@@ -530,6 +536,12 @@ def main(argv: list[str] | None = None) -> int:
         metavar="NAME",
         help="M33 sidecar: bind_tools tool_choice=NAME (or none|any); print tool_calls and exit.",
     )
+    parser.add_argument(
+        "--trace-local",
+        default=None,
+        metavar="PATH",
+        help="M34: append redacted LLM/tool span events to a JSONL file (offline traces).",
+    )
     args = parser.parse_args(argv)
 
     _load_dotenv_from_repo_root()
@@ -722,6 +734,10 @@ def main(argv: list[str] | None = None) -> int:
         print("  session:      off")
     store_kind = resolve_store_backend(settings)
     print(f"  store:        {store_kind} ns={store_namespace(settings)!r}")
+    trace_local = (args.trace_local or settings.trace_local_path or "").strip()
+    tstatus = tracing_status(local_path=trace_local or None)
+    for line in tstatus.banner_lines():
+        print(line)
     if args.fork_from:
         print(f"  fork_from:    {args.fork_from}")
     if args.list_checkpoints:
@@ -743,6 +759,19 @@ def main(argv: list[str] | None = None) -> int:
     if usage_acc is not None:
         config.setdefault("configurable", {})[USAGE_ACCUMULATOR_KEY] = usage_acc
 
+    config = dict(
+        enrich_run_config(
+            config,
+            settings=settings,
+            thread_id=thread_id,
+            run_name="mcc-agent",
+        )
+    )
+    trace_handler: JsonlTraceHandler | None = None
+    if trace_local:
+        trace_handler = JsonlTraceHandler(trace_local)
+        config = dict(attach_callbacks(config, trace_handler))
+
     def _build(checkpointer=None, store=None):
         return build_agent_graph(
             settings=settings,
@@ -754,6 +783,19 @@ def main(argv: list[str] | None = None) -> int:
             ask_callback=None,
             usage_accumulator=usage_acc,
         )
+
+    def _close_trace(status: str = "ok") -> None:
+        if trace_handler is None:
+            return
+        extra: dict = {}
+        if usage_acc is not None:
+            extra["usage_total_tokens"] = usage_acc.total_tokens
+            extra["usage_llm_calls"] = usage_acc.llm_calls
+        if thread_id:
+            extra["thread_id"] = thread_id
+        trace_handler.close_run(status=status, extra=extra or None)
+
+    _trace_close_status = {"status": "ok"}
 
     try:
         # Default async path needs AsyncPostgresSaver (aget_tuple). Sync
@@ -936,11 +978,15 @@ def main(argv: list[str] | None = None) -> int:
 
         return asyncio.run(_async_no_checkpoint())
     except ValueError as exc:
+        _trace_close_status["status"] = "error"
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     except Exception as exc:  # noqa: BLE001
+        _trace_close_status["status"] = "error"
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
+    finally:
+        _close_trace(status=_trace_close_status["status"])
 
 
 if __name__ == "__main__":

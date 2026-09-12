@@ -4,7 +4,7 @@ A learning project: build a **mini Claude Code** with LangGraph — an agent tha
 
 The goal is not a production product. The goal is to understand **every component and middleware**: why it exists, what degrades without it, and what alternatives look like in the industry.
 
-**Status:** Milestones **M0–M33 Done**. Tier 5 continues (**M34–M38** Planned) — see [docs/ROADMAP.md](docs/ROADMAP.md).
+**Status:** Milestones **M0–M34 Done**. Tier 5 continues (**M35–M38** Planned) — see [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Learning outcomes
 
@@ -53,7 +53,7 @@ mini-claude-code/
 │   ├── architecture.md
 │   ├── ROADMAP.md
 │   ├── notes/testing.md
-│   └── milestones/              # M0–M33 Done; M34–M38 Planned stubs
+│   └── milestones/              # M0–M34 Done; M35–M38 Planned stubs
 ├── backend/                     # uv package + pytest (unit / integration)
 ├── mcp_servers/                 # echo_math, fake_docs (teaching MCP)
 ├── workspace/                   # agent cwd + plugin packs
@@ -176,7 +176,7 @@ Integration twins live under `backend/tests/integration/` (`*_live.py`).
 | 2 | M7–M11 | Compact, memory, permissions, HITL, Docker sandbox |
 | 3 | M12–M16 | Subagents, skills, MCP, hooks, plugins/slash |
 | 4 | M17–M26 | Eval, Slack, ship gate, ingest/ES, async, plugin packs/trust, content policy |
-| 5 | M27–M38 | Depth digs (M27–M33 Done; M34+ Planned: traces, handoff, …) |
+| 5 | M27–M38 | Depth digs (M27–M34 Done; M35+ Planned: handoff, …) |
 
 ## Collaboration workflow
 
